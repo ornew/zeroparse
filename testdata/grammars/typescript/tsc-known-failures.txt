@@ -1,5 +1,0 @@
-compiler/amdModuleName2.ts amdModuleName2.ts
-compiler/invalidReferenceSyntax1.ts invalidReferenceSyntax1.ts
-conformance/classes/constructorDeclarations/quotedConstructors.ts quotedConstructors.ts
-conformance/jsx/tsxOpeningClosingNames.tsx file.tsx
-conformance/node/nodeModulesTripleSlashReferenceModeOverrideModeError.ts /index.ts
