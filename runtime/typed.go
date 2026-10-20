@@ -1,4 +1,4 @@
-package genrt
+package runtime
 
 import (
 	"fmt"
@@ -22,6 +22,9 @@ import (
 //
 // Of its fields and methods, TSetSpan, TSpan are for generated parsers; not a stable API.
 type Span struct{ Start, End int }
+
+// Range returns the start and the end (exclusive) of the span.
+func (s Span) Range() (start, end int) { return s.Start, s.End }
 
 func (s *Span) TSpan() (int, int)       { return s.Start, s.End }
 func (s *Span) TSetSpan(start, end int) { s.Start, s.End = start, end }
@@ -99,64 +102,91 @@ type TError struct {
 	fresh bool
 }
 
+// NewTError returns a fresh error value for the input range [start, end) that recovery skipped.
+//
+// NewTError is for generated parsers; not a stable API.
+func NewTError(start, end int, text, message string) *TError {
+	return &TError{Error{Span: Span{Start: start, End: end}, Text: text, Message: message}, true}
+}
+
 // TPub returns the public form of a value: *TNode[string] and *Error for TMatch and TError, a
 // *TNode[any] for a tuple or list node and a []any for a tuple or list value, with the public
 // forms of their elements.
 //
 // TPub is for generated parsers; not a stable API.
-func TPub(v any) any { return TPubIn(nil, v) }
+func TPub(h *TPubHooks, v any) any { return TPubIn(h, nil, v) }
 
 // TPubIn is TPub with the generated code's chunks a (a *tslabs, or nil), which the public forms of
 // values of named node types (tnodeType.pub) are made from and remembered in.
 //
 // TPubIn is for generated parsers; not a stable API.
-func TPubIn(a any, v any) any {
+func TPubIn(h *TPubHooks, a any, v any) any {
 	switch x := v.(type) {
 	case *TMatch:
 		if x.Nt != 0 {
 			return tnodeTypeOf(x.Nt).pub(a, x)
 		}
-		return &x.TNode
+		return h.Match(&x.TNode)
 	case *TError:
-		return &x.Error
+		return h.Error(&x.Error)
 	case *TSeq:
 		if x.nt != 0 {
 			return tnodeTypeOf(x.nt).pub(a, x)
 		}
-		return tpubElems(a, x)
+		return tpubElems(h, a, x)
 	}
 	return v
 }
 
+// TPubHooks makes the public forms of the values the typed runtime builds that the generated
+// package defines types for: a string node, an error value and a node of a statically unknown
+// value are public values of the package's own types, which implement the package's unions.
+// Back is the inverse: it returns the runtime's form of such a public value, and any other value
+// unchanged.
+//
+// TPubHooks is for generated parsers; not a stable API.
+type TPubHooks struct {
+	Match func(*TNode[string]) any
+	Error func(*Error) any
+	Node  func(*TNode[any]) any
+	Back  func(any) any
+}
+
 // tpubElems returns the public form of a tuple or list node, or a tuple or list value, x as a
 // plain node or value (also for a node of a named node type).
-func tpubElems(a any, x *TSeq) any {
-	elems := make([]any, len(x.Kids))
-	for i, k := range x.Kids {
-		elems[i] = TPubIn(a, k)
-	}
+func tpubElems(h *TPubHooks, a any, x *TSeq) any {
+	elems := tpubKids(h, a, x)
 	if x.Typ == TypeTupleValue || x.Typ == TypeListValue {
 		return elems
 	}
-	return &TNode[any]{x.Span, elems}
+	return h.Node(&TNode[any]{x.Span, elems})
+}
+
+// tpubKids returns the public forms of the elements of x.
+func tpubKids(h *TPubHooks, a any, x *TSeq) []any {
+	elems := make([]any, len(x.Kids))
+	for i, k := range x.Kids {
+		elems[i] = TPubIn(h, a, k)
+	}
+	return elems
 }
 
 // TPubNode returns the public form of a node of a statically unknown value: a TNode[any], also for
 // a node of a named node type, as the node it was converted from.
 //
 // TPubNode is for generated parsers; not a stable API.
-func TPubNode(v any) *TNode[any] { return TPubNodeIn(nil, v) }
+func TPubNode(h *TPubHooks, v any) *TNode[any] { return TPubNodeIn(h, nil, v) }
 
 // TPubNodeIn is TPubNode with the chunks a (see TPubIn).
 //
 // TPubNodeIn is for generated parsers; not a stable API.
-func TPubNodeIn(a any, v any) *TNode[any] {
+func TPubNodeIn(h *TPubHooks, a any, v any) *TNode[any] {
 	switch x := v.(type) {
 	case *TMatch:
 		return &TNode[any]{x.Span, x.Value}
 	case *TSeq:
-		if n, ok := tpubElems(a, x).(*TNode[any]); ok {
-			return n
+		if x.Typ != TypeTupleValue && x.Typ != TypeListValue {
+			return &TNode[any]{x.Span, tpubKids(h, a, x)}
 		}
 	}
 	return nil
@@ -362,8 +392,8 @@ type TRule struct {
 	Body          func(p *TParser, min int) (any, bool)
 	Action        func(c *TActCtx) any
 	OperatorsRule *TOperatorsRule
-	// tcheck checks the rule's value against its declared type (nil if it needs no check).
-	tcheck func(p *TParser, v any)
+	// TCheck checks the rule's value against its declared type (nil if it needs no check).
+	TCheck func(p *TParser, v any)
 	// Entry is the generated method that calls the rule as call(r, 0) does (u<id> or s<id>), for
 	// rules that have one. A direct rule (see gen_direct.go) has no body or action and is called
 	// only through it.
@@ -384,7 +414,7 @@ func TAs[T any](v any) T {
 	return t
 }
 
-// TPtr and tderef return the value of a field of a pointer type as a value of the typed runtime.
+// TPtr and TDeref return the value of a field of a pointer type as a value of the typed runtime.
 //
 // TPtr is for generated parsers; not a stable API.
 func TPtr[T any](p *T) any {
@@ -399,7 +429,8 @@ func TPtr[T any](p *T) any {
 // TPub, except that a tuple or list node becomes a tuple node and a []any a tuple value.
 //
 // TBack is for generated parsers; not a stable API.
-func TBack(v any) any {
+func TBack(h *TPubHooks, v any) any {
+	v = h.Back(v)
 	switch x := v.(type) {
 	case *TNode[string]:
 		if x == nil {
@@ -419,11 +450,11 @@ func TBack(v any) any {
 		case string:
 			return &TMatch{TNode: TNode[string]{x.Span, y}}
 		case []any:
-			return &TSeq{Span: x.Span, Typ: "tuple", Kids: tbackAll(y)}
+			return &TSeq{Span: x.Span, Typ: "tuple", Kids: tbackAll(h, y)}
 		}
 		return nil
 	case []any:
-		return &TSeq{Typ: TypeTupleValue, Kids: tbackAll(x)}
+		return &TSeq{Typ: TypeTupleValue, Kids: tbackAll(h, x)}
 	}
 	return v
 }
@@ -447,15 +478,15 @@ func tnodeValue(n *TSeq) any {
 	return &TSeq{Span: n.Span, Typ: typ, Kids: n.Kids}
 }
 
-func tbackAll(vs []any) []any {
+func tbackAll(h *TPubHooks, vs []any) []any {
 	out := make([]any, len(vs))
 	for i, v := range vs {
-		out[i] = TBack(v)
+		out[i] = TBack(h, v)
 	}
 	return out
 }
 
-func tderef[T any](p *T) any {
+func TDeref[T any](p *T) any {
 	if p == nil {
 		return nil
 	}
@@ -1252,8 +1283,8 @@ func (p *TParser) Finish(r *TRule, f *TCaptureFrame, v any, start int) any {
 		body = TFreshNode(v)
 	}
 	v = p.finishValue(r, f, v, start)
-	if r.tcheck != nil {
-		r.tcheck(p, v)
+	if r.TCheck != nil {
+		r.TCheck(p, v)
 	}
 	if r.Nt != 0 {
 		v = p.TConvertResultOwned(r, v, body)
@@ -1495,7 +1526,7 @@ func (p *TParser) MatchLiteral(rs []rune, text string, desc ExpID, build bool) (
 	if !build {
 		return nil, true
 	}
-	return p.NewMatch(start, p.Pos, p.literalText(start, text), true), true
+	return p.NewMatch(start, p.Pos, p.LiteralText(start, text), true), true
 }
 
 // MatchLiteralOrdinary is MatchLiteral in an ordinary parse (parser.ExpectOrdinary).
@@ -1507,7 +1538,7 @@ func (p *TParser) MatchLiteralOrdinary(rs []rune, text string, desc ExpID, build
 	if !build {
 		return nil, true
 	}
-	return p.NewMatchOrdinary(start, p.Pos, p.literalText(start, text), true), true
+	return p.NewMatchOrdinary(start, p.Pos, p.LiteralText(start, text), true), true
 }
 
 // MatchAnyOrdinary is MatchAny in an ordinary parse (parser.ExpectOrdinary).
@@ -1828,27 +1859,27 @@ type tstrFields interface {
 	TStrField(name string) (string, bool)
 }
 
-// fieldOperand reads x.Name as member does, keeping a string field of a struct unboxed.
-func (c *TActCtx) fieldOperand(x any, name string) toperand {
+// FieldOperand reads x.Name as member does, keeping a string field of a struct unboxed.
+func (c *TActCtx) FieldOperand(x any, name string) TOperand {
 	// A string field of a struct costs no steps to read under work controls either: see TFieldWork.
 	if n, ok := x.(tstrFields); ok {
 		if s, ok := n.TStrField(name); ok {
-			return toperand{str: s, isStr: true}
+			return TOperand{Str: s, IsStr: true}
 		}
 	}
-	return toperand{v: c.Member(x, name)}
+	return TOperand{V: c.Member(x, name)}
 }
 
-// compare applies a comparison operator as binary does, comparing two strings directly.
-func (c *TActCtx) compare(op string, l, r toperand) any {
-	if !l.isStr {
-		l.str, l.isStr = l.v.(string)
+// Compare applies a comparison operator as binary does, comparing two strings directly.
+func (c *TActCtx) Compare(op string, l, r TOperand) any {
+	if !l.IsStr {
+		l.Str, l.IsStr = l.V.(string)
 	}
-	if !r.isStr {
-		r.str, r.isStr = r.v.(string)
+	if !r.IsStr {
+		r.Str, r.IsStr = r.V.(string)
 	}
-	if l.isStr && r.isStr {
-		if v, ok := c.P.compareStrings(op, l.str, r.str); ok {
+	if l.IsStr && r.IsStr {
+		if v, ok := c.P.compareStrings(op, l.Str, r.Str); ok {
 			return v
 		}
 	}
@@ -2079,7 +2110,7 @@ func (c *TActCtx) MapList(list any, f func(item any) any) any {
 	return c.EndList(base)
 }
 
-func (c *TActCtx) filterList(list any, f func(item any) any) any {
+func (c *TActCtx) FilterList(list any, f func(item any) any) any {
 	base := len(c.P.KidStack)
 	for _, item := range c.ListItems("filter", list) {
 		c.P.StepWork()
@@ -2150,7 +2181,7 @@ type TOperatorsRuleLine struct {
 	// Value makes the value of an operand line without an action, and of an operator line's
 	// operator, from the value of the line's expression.
 	Value Shaper
-	check func(p *TParser, v any) // checks the line's value against the rule's declared type
+	Check func(p *TParser, v any) // checks the line's value against the rule's declared type
 }
 
 // TOperatorsRuleOp is for generated parsers; not a stable API.
@@ -2328,8 +2359,8 @@ func (p *TParser) lineResult(r *TRule, l *TOperatorsRuleLine, f *TCaptureFrame, 
 		return nil
 	}
 	v = p.lineValue(r, l, f, v, start)
-	if l.check != nil {
-		l.check(p, v)
+	if l.Check != nil {
+		l.Check(p, v)
 	}
 	return v
 }
@@ -2378,8 +2409,8 @@ func (p *TParser) operatorsRuleBuild(r *TRule, a *toperatorsRuleAttempt, lhs, rh
 		c := p.UseCtx(TActCtx{P: p, F: a.frame, Start: start, End: end, Cbase: len(p.Created),
 			Op: opv, Lhs: lhs, Rhs: rhs})
 		v := c.Result(l.Action, r.Name)
-		if l.check != nil {
-			l.check(p, v)
+		if l.Check != nil {
+			l.Check(p, v)
 		}
 		if r.OpNt != 0 {
 			v = p.convertOperator(r, v)
@@ -2407,9 +2438,9 @@ func (p *TParser) operatorsRuleBuild(r *TRule, a *toperatorsRuleAttempt, lhs, rh
 	n := p.NewNode("tuple", start, end, kids)
 	n.fresh = false
 	n.fields = fields
-	if l.check != nil {
+	if l.Check != nil {
 		// Without type checking, the tuple node is checked like an action's result.
-		l.check(p, n)
+		l.Check(p, n)
 		if r.OpNt != 0 {
 			return p.convertOperator(r, n)
 		}

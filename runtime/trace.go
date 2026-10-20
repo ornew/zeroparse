@@ -1,4 +1,4 @@
-package genrt
+package runtime
 
 // TraceKind distinguishes entered calls, completed calls and skipped dispatch.
 type TraceKind uint8

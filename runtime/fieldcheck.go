@@ -1,4 +1,4 @@
-package genrt
+package runtime
 
 // FieldType is a declared struct field type that a constructor checks a dynamically typed value
 // against. Generated code declares one for each checked field.
@@ -7,7 +7,7 @@ package genrt
 type FieldType struct {
 	Kind byte // i int, s string, b bool, z nil, n node[_], S node[string], v node[elem], E error, N struct or named node type, l list, t tuple (alts), o optional, u union, _ top
 	Name string
-	elem *FieldType
+	Elem *FieldType
 	Alts []*FieldType
 	Text string
 }
@@ -38,9 +38,9 @@ func (c *ActCtx) Cast(v any, t *FieldType) any {
 	return v
 }
 
-// checkResult fails the parse if v, a result of rule rule, does not fit t, the rule's declared
+// CheckResult fails the parse if v, a result of rule rule, does not fit t, the rule's declared
 // type.
-func (p *Parser) checkResult(v *Node, t *FieldType, rule string) {
+func (p *Parser) CheckResult(v *Node, t *FieldType, rule string) {
 	if u := UnboxNode(v); !p.fieldConforms(t, u) {
 		panic(fatal{resultError("cannot use " + typeName(u) + " as " + t.Text + " in result of rule " + rule)})
 	}
@@ -78,7 +78,7 @@ func (p *Parser) fieldConforms(t *FieldType, v any) bool {
 	case 'z':
 		return v == nil
 	case 'o':
-		return v == nil || p.fieldConforms(t.elem, v)
+		return v == nil || p.fieldConforms(t.Elem, v)
 	case 'u':
 		for _, a := range t.Alts {
 			if p.fieldConforms(a, v) {
@@ -102,11 +102,11 @@ func (p *Parser) fieldConforms(t *FieldType, v any) bool {
 	case 'N':
 		return n.Type() == t.Name
 	case 'l':
-		return shape == shapeListValue && p.elemsConform(t.elem, n.RawChildren)
+		return shape == shapeListValue && p.elemsConform(t.Elem, n.RawChildren)
 	case 't':
 		return shape == shapeTupleValue && p.tupleConforms(t.Alts, n.RawChildren)
 	case 'v':
-		return p.nodeValueConforms(t.elem, n, shape)
+		return p.nodeValueConforms(t.Elem, n, shape)
 	}
 	return false
 }
@@ -120,11 +120,11 @@ func (p *Parser) nodeValueConforms(t *FieldType, n *Node, shape nodeShape) bool 
 	case 's':
 		return shape == shapeString
 	case 'l':
-		return shape == shapeList && p.elemsConform(t.elem, n.RawChildren)
+		return shape == shapeList && p.elemsConform(t.Elem, n.RawChildren)
 	case 't':
 		return shape == shapeTuple && p.tupleConforms(t.Alts, n.RawChildren)
 	case 'o':
-		return p.nodeValueConforms(t.elem, n, shape) // a node always has a value
+		return p.nodeValueConforms(t.Elem, n, shape) // a node always has a value
 	case 'u':
 		for _, a := range t.Alts {
 			if p.nodeValueConforms(a, n, shape) {
@@ -165,8 +165,6 @@ func (p *Parser) tupleConforms(ts []*FieldType, elems []*Node) bool {
 	return true
 }
 
-// fieldcheck:typed:begin
-
 // CheckField returns v if it fits t, the type of field field of struct typ, and raises an
 // evaluation error otherwise.
 func (c *TActCtx) CheckField(v any, t *FieldType, field, typ string) any {
@@ -193,8 +191,8 @@ func (c *TActCtx) Cast(v any, t *FieldType) any {
 	return v
 }
 
-// tcheckResult is checkResult for the values of the typed runtime.
-func (p *TParser) tcheckResult(v any, t *FieldType, rule string) {
+// TCheckResult is CheckResult for the values of the typed runtime.
+func (p *TParser) TCheckResult(v any, t *FieldType, rule string) {
 	if !tfieldConforms(p.Parser, t, v) {
 		panic(fatal{resultError("cannot use " + ttypeName(v) + " as " + t.Text + " in result of rule " + rule)})
 	}
@@ -217,7 +215,7 @@ func tfieldConforms(p *Parser, t *FieldType, v any) bool {
 	case 'z':
 		return v == nil
 	case 'o':
-		return v == nil || tfieldConforms(p, t.elem, v)
+		return v == nil || tfieldConforms(p, t.Elem, v)
 	case 'u':
 		for _, a := range t.Alts {
 			if tfieldConforms(p, a, v) {
@@ -242,11 +240,11 @@ func tfieldConforms(p *Parser, t *FieldType, v any) bool {
 	case 'N':
 		return n.TName() == t.Name
 	case 'l':
-		return shape == shapeListValue && telemsConform(p, t.elem, n.TKids())
+		return shape == shapeListValue && telemsConform(p, t.Elem, n.TKids())
 	case 't':
 		return shape == shapeTupleValue && ttupleConforms(p, t.Alts, n.TKids())
 	case 'v':
-		return tnodeValueConforms(p, t.elem, n, shape)
+		return tnodeValueConforms(p, t.Elem, n, shape)
 	}
 	return false
 }
@@ -259,11 +257,11 @@ func tnodeValueConforms(p *Parser, t *FieldType, n TVal, shape nodeShape) bool {
 	case 's':
 		return shape == shapeString
 	case 'l':
-		return shape == shapeList && telemsConform(p, t.elem, n.TKids())
+		return shape == shapeList && telemsConform(p, t.Elem, n.TKids())
 	case 't':
 		return shape == shapeTuple && ttupleConforms(p, t.Alts, n.TKids())
 	case 'o':
-		return tnodeValueConforms(p, t.elem, n, shape)
+		return tnodeValueConforms(p, t.Elem, n, shape)
 	case 'u':
 		for _, a := range t.Alts {
 			if tnodeValueConforms(p, a, n, shape) {
@@ -301,5 +299,3 @@ func ttupleConforms(p *Parser, ts []*FieldType, elems []any) bool {
 	}
 	return true
 }
-
-// fieldcheck:typed:end

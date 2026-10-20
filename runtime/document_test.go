@@ -1,4 +1,4 @@
-package genrt
+package runtime
 
 import (
 	"context"

@@ -1,4 +1,4 @@
-package genrt
+package runtime
 
 import (
 	"context"
@@ -423,12 +423,12 @@ func parseConversionInput(r *Rule, input string, o parseOptions) (n *Node, err e
 }
 
 // WorkRange is for generated parsers; not a stable API.
-type WorkRange struct{ lo, hi rune }
+type WorkRange struct{ Lo, Hi rune }
 
 func (p *Parser) RejectWorkClass(ch rune, ranges []WorkRange, negated bool) bool {
 	for _, r := range ranges {
 		p.StepWork()
-		if ch >= r.lo && ch <= r.hi {
+		if ch >= r.Lo && ch <= r.Hi {
 			return negated
 		}
 	}
@@ -762,12 +762,10 @@ func (p *Parser) makeControlledError(pos int, expected []ExpID) *SyntaxError {
 		}
 	}
 	p.sortExpected(e.Expected)
-	// stream:begin
 	if p.Stream != nil {
 		e.Line, e.Col = p.streamLineCol(pos)
 		return e
 	}
-	// stream:end
 	if p.lines == nil {
 		p.lines = append(p.lines, 0)
 		for i := 0; i < p.n; i++ {
@@ -916,7 +914,6 @@ func (p *Parser) lookupEnvControlled(name string) (any, bool) {
 }
 
 func (p *Parser) memoGet(rule, pos, min int, key []any) *memoEntry {
-	// stream:begin
 	if p.Stream != nil {
 		// A call at a position before the pruned memo needs no entry (a
 		// start rule called at 0, or still growing there).
@@ -924,7 +921,6 @@ func (p *Parser) memoGet(rule, pos, min int, key []any) *memoEntry {
 			return nil
 		}
 	}
-	// stream:end
 	if !WorkControlsEnabled || p.Control == nil {
 		return p.memo.get(rule, pos, min, key)
 	}
@@ -942,13 +938,11 @@ func (p *Parser) memoGet(rule, pos, min int, key []any) *memoEntry {
 }
 
 func (p *Parser) memoPut(rule, pos, min int, key []any, e *memoEntry) {
-	// stream:begin
 	if p.Stream != nil {
 		if pos -= p.Stream.memoBase; pos < 0 {
 			return
 		}
 	}
-	// stream:end
 	if !WorkControlsEnabled || p.Control == nil {
 		p.memo.put(rule, pos, min, key, e)
 		return

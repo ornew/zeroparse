@@ -1,4 +1,4 @@
-package genrt
+package runtime
 
 import (
 	"bufio"
@@ -607,7 +607,7 @@ func (p *Parser) streamMatchLiteral(rs []rune, text string, desc ExpID, build bo
 	if !build {
 		return nil, true
 	}
-	return p.NewNode(Node{RawKind: RawKindMatch, RawStart: int32(start), RawEnd: int32(p.Pos), RawText: p.literalText(start, text), RawTerminal: true, RawFresh: true}), true
+	return p.NewNode(Node{RawKind: RawKindMatch, RawStart: int32(start), RawEnd: int32(p.Pos), RawText: p.LiteralText(start, text), RawTerminal: true, RawFresh: true}), true
 }
 
 func (p *Parser) streamAtLineStart() bool {
@@ -737,3 +737,8 @@ func (p *Parser) streamLineCol(pos int) (int, int) {
 	}
 	return line, col
 }
+
+// NewStreamIterator returns the iterator over the elements pull yields.
+//
+// NewStreamIterator is for generated parsers; not a stable API.
+func NewStreamIterator(pull *StreamPull[*Node]) *StreamIterator { return &StreamIterator{pull} }

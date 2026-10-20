@@ -1,6 +1,6 @@
-package genrt
+package runtime
 
-// The functions in this file build and change nodes for the tests of packages outside genrt, which
+// The functions in this file build and change nodes for the tests of packages outside runtime, which
 // cannot reach the fields of a Node. pego gen does not embed this file, so generated parsers do not
 // have them; they are functions rather than methods so that they are not part of the Node API.
 

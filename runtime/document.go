@@ -1,4 +1,4 @@
-package genrt
+package runtime
 
 import (
 	"fmt"
@@ -109,11 +109,9 @@ func (d *Document) ResolveParseOptions(opts []ParseOption) (parseOptions, error)
 	if !WorkControlsEnabled && (o.context != nil || o.limits != (WorkLimits{})) {
 		return o, fmt.Errorf("work controls are disabled in this generated reference parser")
 	}
-	// stream:begin
 	if err := o.validateDiagnostics(); err != nil {
 		return o, err
 	}
-	// stream:end
 	return o, nil
 }
 
