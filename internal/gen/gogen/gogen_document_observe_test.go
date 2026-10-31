@@ -222,17 +222,20 @@ func observedRuntime(t *testing.T) string {
 			return replace(src, "p.Observation = newObservation(&o.observe)\n\tdefer p.releaseObservation()",
 				"p.Observation = newObservation(&o.observe)\n\tif ProbeHook != nil {\n\t\tProbeHook(p.Observation)\n\t}\n\tdefer p.releaseObservation()", 1)
 		case "call.go", "call_exec.go":
-			// The hand-written call names the stored entry e, the printed one entry.
-			stored := "e"
+			// The hand-written calls name the stored entry e and its typed record m, the printed ones
+			// entry and meta.
+			stored, meta := "e", "m"
 			if name == "call_exec.go" {
-				stored = "entry"
+				stored, meta = "entry", "meta"
 			}
-			old := stored + ".examined, " + stored + ".reuse = p.docHigh, p.docReuse\n"
-			src = replace(src, old, "FrontierHook(r.Name, start, min, p.docHigh, false); "+old, 1)
-			return replace(src, "p.documentTouch(e.examined)\n", "p.documentTouch(e.examined)\n\t\t\tFrontierHook(r.Name, start, min, e.examined, true)\n", 1)
-		case "typed.go":
-			src = replace(src, "\tp.TypedDocument.meta[e] = typedDocumentMeta{examined: p.docHigh,", "\tFrontierHook(r.Name, start, min, p.docHigh, false)\n\tp.TypedDocument.meta[e] = typedDocumentMeta{examined: p.docHigh,", 1)
-			return replace(src, "p.documentTouch(m.examined)\n", "p.documentTouch(m.examined)\n\t\tFrontierHook(r.Name, start, min, m.examined, true)\n", 1)
+			keep := "FrontierHook(r.Name, start, min, p.docHigh, false); "
+			for _, old := range []string{stored + ".examined, " + stored + ".reuse = p.docHigh, p.docReuse\n", "p.TypedDocument.meta[" + stored + "] = typedDocumentMeta{examined: p.docHigh,"} {
+				src = replace(src, old, keep+old, 1)
+			}
+			for _, examined := range []string{"e.examined", meta + ".examined"} {
+				old := "p.documentTouch(" + examined + ")\n"
+				src = replace(src, old, old+"FrontierHook(r.Name, start, min, "+examined+", true)\n", 1)
+			}
 		}
 		return src
 	}, map[string]string{"zz_hooks.go": `package runtime

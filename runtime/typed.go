@@ -7,7 +7,7 @@ import (
 	"unsafe"
 )
 
-// The typed runtime, appended to generated parsers made with pego gen -types. It parses like the
+// The typed runtime, appended to generated parsers made with zp gen -types. It parses like the
 // runtime in runtime.go, but builds the values of the grammar's types directly, as Go values,
 // instead of Node trees: the value of an expression is an any holding a pointer to a struct
 // type, *TMatch (a string node), *TError (an error value), an int, string or bool, nil,
@@ -220,20 +220,20 @@ func TPubError(v any) *Error {
 	return nil
 }
 
-// workControlSetter is implemented by the output values a typed parse hands its work control to
+// budgetControlSetter is implemented by the output values a typed parse hands its budget control to
 // (the generated converters).
 //
-// SetWorkControl is for generated parsers; not a stable API.
-type workControlSetter interface{ SetWorkControl(*WorkControl) }
+// SetBudgetControl is for generated parsers; not a stable API.
+type budgetControlSetter interface{ SetBudgetControl(*BudgetControl) }
 
-// tfieldWorker is implemented by struct values that read a field while charging work.
+// tfieldSpender is implemented by struct values that read a field while spending budget.
 //
-// TFieldWork is for generated parsers; not a stable API.
-type tfieldWorker interface {
-	TFieldWork(*TParser, string) (any, bool)
+// TFieldSpend is for generated parsers; not a stable API.
+type tfieldSpender interface {
+	TFieldSpend(*TParser, string) (any, bool)
 }
 
-// stepCharger charges steps to a work control.
+// stepCharger charges steps to a budget control.
 //
 // Step is for generated parsers; not a stable API.
 type stepCharger interface{ Step(uint64) }
@@ -408,6 +408,8 @@ const (
 	RuleNovalue
 	RuleDocMemo
 	RuleSplice
+	RuleRec
+	RuleMember
 )
 
 // RuleExtra holds the fields of the Rule with the Id that are rarely set.
@@ -450,7 +452,8 @@ func NewRules[S ~struct {
 			r.Value = *s.Value
 		}
 		r.Memo, r.Leader, r.Novalue = s.Flags&RuleMemo != 0, s.Flags&RuleLeader != 0, s.Flags&RuleNovalue != 0
-		r.DocMemo, r.Splice = s.Flags&RuleDocMemo != 0, s.Flags&RuleSplice != 0
+		r.DocMemo, r.Splice, r.Rec = s.Flags&RuleDocMemo != 0, s.Flags&RuleSplice != 0, s.Flags&RuleRec != 0
+		r.Member = s.Flags&RuleMember != 0
 		r.Scope, r.Vars = strs[s.Scope], strs[s.Vars]
 	}
 	for _, extra := range extras {
@@ -484,8 +487,8 @@ type TRule struct {
 	OperatorsRule *TOperatorsRule
 	// Entry is the generated method that calls the rule as call(r, 0) does (u<id> or s<id>). The
 	// generated parser sets it only for the start rules, which TParse runs through it; every other
-	// rule is called through the generated methods that name it. A flat rule (see gen_flowrule.go)
-	// has no body or action and is called only through it.
+	// rule is called through the generated methods that name it. A flat rule (one the generator prints
+	// as one function) has no body or action and is called only through it.
 	Entry func(p *TParser) (any, bool)
 	// Nt is the registered index of the named node type the rule's value is converted to
 	// (rule.NodeType), or 0.
@@ -624,7 +627,7 @@ func TParse[T any](r *TRule, input string, opts []ParseOption, ext any, conv fun
 // TParseResolved is for generated parsers; not a stable API.
 func TParseResolved[T any](r *TRule, input string, o parseOptions, ext any, conv func(any) T) (res T, err error) {
 	defer recoverParse(&res, &err)
-	o = prepareOptions(o)
+	o = prepareText(o, input)
 	p, _ := tpool.Get().(*TParser)
 	if p == nil {
 		p = &TParser{Parser: &Parser{}}
@@ -633,9 +636,9 @@ func TParseResolved[T any](r *TRule, input string, o parseOptions, ext any, conv
 	p.Control = o.control
 	p.Observation = newObservation(&o.observe)
 	if o.control != nil {
-		if target, ok := ext.(workControlSetter); ok {
-			target.SetWorkControl(o.control)
-			defer target.SetWorkControl(nil)
+		if target, ok := ext.(budgetControlSetter); ok {
+			target.SetBudgetControl(o.control)
+			defer target.SetBudgetControl(nil)
 		}
 	}
 	v, err := p.run(r, input, o, ext)
@@ -653,6 +656,7 @@ func (p *TParser) run(r *TRule, input string, o parseOptions, ext any) (v any, e
 	p.MaxDepth = o.maxDepth
 	p.Ext = ext
 	p.setGrammar(r.g)
+	p.Expectations = o.expectations
 	if o.unit == Bytes {
 		// p.In stays empty: direct rules read code points from it while p.Pos < len(p.In).
 		p.unit, p.bs, p.n, p.In = Bytes, input, len(input), p.In[:0]
@@ -712,6 +716,9 @@ func (p *TParser) recycle() {
 	// Retain useful sparse pages for large inputs, capped at 32 MiB of backing
 	// storage. The next small parse trims this cache when it finishes.
 	memo.resetSeen(max(1<<20, min(q.n, 4<<20)))
+	// The words of the first-call bits are charged when a parse extends them, so a parse starts
+	// from none, as after Parser.release; only the capacity is kept.
+	memo.seen = memo.seen[:0]
 	in, offs := q.In[:0], q.offs[:0]
 	if cap(in) > 1<<20 { // do not keep the buffers of a large input for every later parse
 		in, offs = nil, nil
@@ -841,7 +848,7 @@ func (p *TParser) DropTrail(base int) {
 }
 
 func (p *TParser) SetCapture(slot int, v any) {
-	p.StepWork()
+	p.Spend()
 	p.Trail = append(p.Trail, tundo{f: p.Frame, slot: slot, old: p.Frame.Vals[slot]})
 	p.Frame.Vals[slot] = v
 }
@@ -856,14 +863,14 @@ func (p *TParser) SetCaptureOrdinary(slot int, v any) {
 // --- Allocation ---
 
 func (p *TParser) NewNode(typ string, start, end int, kids []any) *TSeq {
-	p.StepWork()
+	p.Spend()
 	n := p.nodes.one()
 	*n = TSeq{Span: Span{start, end}, Typ: typ, Kids: kids, fresh: true}
 	return n
 }
 
 func (p *TParser) NewMatch(start, end int, text string, fresh bool) *TMatch {
-	p.StepWork()
+	p.Spend()
 	if len(p.matches) == 0 {
 		p.matches = make([]TMatch, nodeChunk)
 	}
@@ -904,7 +911,7 @@ func (p *TParser) tfields(n int) []tfield {
 // Kids returns p.KidStack[base:] as a value list and pops it.
 func (p *TParser) Kids(base int) []any {
 	ks := p.NewVals(len(p.KidStack) - base)
-	copyWork(p.Parser, ks, p.KidStack[base:])
+	copySpend(p.Parser, ks, p.KidStack[base:])
 	p.DropKids(base)
 	return ks
 }
@@ -946,7 +953,8 @@ type tmemoEntry struct {
 	min      int32
 	ok       bool
 	silent   bool
-	growing  bool // matched whatever the variable values, as in memoEntry
+	growing  bool  // matched whatever the variable values, as in memoEntry
+	depth    int32 // as in memoEntry
 }
 
 func (p *TParser) memoGet(rule, pos, min int, env []any) *tmemoEntry {
@@ -965,12 +973,12 @@ func (p *TParser) memoGet(rule, pos, min int, env []any) *tmemoEntry {
 }
 
 func (p *TParser) memoGetControlled(rule, pos, min int, key []any) *tmemoEntry {
-	p.StepWork()
+	p.Spend()
 	if pos >= len(p.memoSlots) {
 		return nil
 	}
 	for e := p.memoSlots[pos]; e != nil; e = e.next {
-		p.StepWork()
+		p.Spend()
 		if e.rule == int32(rule) && e.min == int32(min) && (e.growing || p.memoKeyEqual(e.env, key)) {
 			return e
 		}
@@ -1006,10 +1014,10 @@ func (p *TParser) memoPut(rule, pos, min int, env []any, e *tmemoEntry) {
 }
 
 func (p *TParser) memoPutControlled(rule, pos, min int, key []any, e *tmemoEntry) {
-	p.StepWork()
+	p.Spend()
 	slots := p.memoSlots
 	if pos >= len(slots) {
-		p.growthWork(len(slots), pos+1)
+		p.growthSpend(len(slots), pos+1)
 		if pos < cap(slots) {
 			slots = slots[:pos+1]
 		} else {
@@ -1021,13 +1029,13 @@ func (p *TParser) memoPutControlled(rule, pos, min int, key []any, e *tmemoEntry
 	link := &slots[pos]
 	var replaced *tmemoEntry
 	for x := *link; x != nil; link, x = &x.next, x.next {
-		p.StepWork()
+		p.Spend()
 		if x == e || x.rule == int32(rule) && x.min == int32(min) && p.memoKeyEqual(x.env, key) {
 			replaced = x
 			break
 		}
 	}
-	p.StepWork()
+	p.Spend()
 	p.memoSlots = slots
 	e.rule, e.min, e.env = int32(rule), int32(min), key
 	if replaced != nil {
@@ -1048,17 +1056,45 @@ type typedDocumentState struct {
 	owner *documentState
 	slots []*tmemoEntry
 	meta  map[*tmemoEntry]typedDocumentMeta
+	// parseOnly are the entries the current parse stored with reuseInParse, which are removed
+	// when it ends (removeParseOnly).
+	parseOnly []tmemoPlace
+}
+
+// tmemoPlace is a typed memo entry and its position.
+type tmemoPlace struct {
+	pos int
+	e   *tmemoEntry
+}
+
+// removeParseOnly removes the entries of the parse that only that parse reuses (reuseInParse) from
+// the memo and the metadata.
+func (d *typedDocumentState) removeParseOnly() {
+	for _, x := range d.parseOnly {
+		delete(d.meta, x.e)
+		if x.pos >= len(d.slots) {
+			continue
+		}
+		for link := &d.slots[x.pos]; *link != nil; link = &(*link).next {
+			if *link == x.e {
+				*link = x.e.next
+				break
+			}
+		}
+	}
+	clear(d.parseOnly)
+	d.parseOnly = d.parseOnly[:0]
 }
 
 type typedDocumentMeta struct {
-	examined    int
-	provisional bool
+	examined int
+	reuse    docReuse
 }
 
 // invalidate drops the memo entries that an edit at start can change, relinking the chains in place.
 // No parse runs during an edit (Document.parsing rejects it), and results hold values, not memo entries
 // or chains, so no TParser or result refers to the chains while they change. Entries whose examined frontier reaches
-// start, growing entries and provisional entries are dropped, as are all entries from start onward.
+// start, growing entries and entries that are not reused after edits (docReuse) are dropped, as are all entries from start onward.
 func (d *typedDocumentState) invalidate(start int) {
 	kept := min(start, len(d.slots))
 	for pos := kept; pos < len(d.slots); pos++ {
@@ -1071,7 +1107,7 @@ func (d *typedDocumentState) invalidate(start int) {
 		link := &d.slots[pos]
 		for e := *link; e != nil; e = *link {
 			m, complete := d.meta[e]
-			if complete && !e.growing && !m.provisional && m.examined <= start {
+			if complete && !e.growing && m.reuse == reuseAfterEdits && m.examined <= start {
 				link = &e.next
 				continue
 			}
@@ -1080,87 +1116,6 @@ func (d *typedDocumentState) invalidate(start int) {
 		}
 	}
 	d.slots = d.slots[:kept]
-}
-
-// DocumentCall memoizes typed rule entries (rule.DocMemo), including generated
-// direct wrappers. Examined and provisional metadata stays outside batch memo
-// entries.
-func (p *TParser) DocumentCall(r *TRule, min int, inv func(*TParser) (any, bool)) (any, bool) {
-	p.StepWork()
-	start := p.Pos
-	oldHigh, oldProvisional := p.docHigh, p.docProvisional
-	p.docHigh, p.docProvisional = start+1, false
-	defer func() { p.docHigh = max(oldHigh, p.docHigh); p.docProvisional = oldProvisional || p.docProvisional }()
-	if !r.DocMemo {
-		rec := len(p.Recovered)
-		var v any
-		var ok bool
-		if inv != nil {
-			p.Document.stats.Evaluated++
-			v, ok = inv(p)
-		} else {
-			v, ok = p.invoke(r, min)
-		}
-		if !ok {
-			p.Pos = start
-			p.Recovered = p.Recovered[:rec]
-		}
-		return v, ok
-	}
-	env := p.memoEnv(r.Rule)
-	old := p.memoGet(r.Id, start, min, env)
-	if old != nil && (old.growing || (!old.silent || p.Silent > 0) && (len(old.errs) == 0 || old.silent == (p.Silent > 0))) {
-		m := p.TypedDocument.meta[old]
-		p.documentTouch(m.examined)
-		p.docProvisional = p.docProvisional || old.growing || m.provisional
-		p.Document.stats.Reused++
-		p.Observation.memoHit()
-		if !old.growing {
-			p.MergeExpected(old.far, old.expected)
-		}
-		if !old.ok {
-			return nil, false
-		}
-		p.Pos = old.end
-		p.Recovered = p.copyErrors(p.Recovered, old.errs)
-		return old.val, true
-	}
-	// A context-incompatible entry may be replaced. Do not keep it alive through
-	// stale metadata once its memo chain no longer refers to it.
-	if old != nil {
-		delete(p.TypedDocument.meta, old)
-	}
-	rec := len(p.Recovered)
-	m := p.Isolate(start)
-	var v any
-	var ok bool
-	var e *tmemoEntry
-	if r.Leader {
-		v, ok = p.grow(r, min, env)
-		e = p.memoGet(r.Id, start, min, env)
-	} else {
-		if inv != nil {
-			p.Document.stats.Evaluated++
-			v, ok = inv(p)
-		} else {
-			v, ok = p.invoke(r, min)
-		}
-		if !ok {
-			p.Recovered = p.Recovered[:rec]
-		}
-		e = p.memoSlab.one()
-		*e = tmemoEntry{val: v, ok: ok, end: p.Pos, silent: p.Silent > 0, errs: p.copyErrors(nil, p.Recovered[rec:])}
-		p.memoPut(r.Id, start, min, env, e)
-	}
-	far, inner := p.Unisolate(m)
-	e.far, e.expected = far, p.Keep(inner)
-	p.documentTouch(p.Pos + 1)
-	p.TypedDocument.meta[e] = typedDocumentMeta{examined: p.docHigh, provisional: p.docProvisional || r.Leader}
-	p.MergeExpected(far, inner)
-	if !ok {
-		p.Pos = start
-	}
-	return v, ok
 }
 
 // --- Rule calls ---
@@ -1172,138 +1127,6 @@ func (p *TParser) Call(r *TRule, min int) (any, bool) {
 	return p.callBody(r, min)
 }
 
-// callObserved is call in an observed parse.
-func (p *TParser) callObserved(r *TRule, min int) (any, bool) {
-	p.Observation.Enter(r.Name, p.Pos, min)
-	h := p.ExaminedBegin()
-	v, ok := p.callBody(r, min)
-	x, known := p.ExaminedEnd(h)
-	p.Observation.Exit(ok, p.Pos, x, known)
-	return v, ok
-}
-
-// callBody is call without observation.
-func (p *TParser) callBody(r *TRule, min int) (any, bool) {
-	if p.TypedDocument != nil {
-		return p.DocumentCall(r, min, nil)
-	}
-	p.StepWork()
-	start := p.Pos
-	if !r.Memo && !r.Leader || p.FirstCall(r.Rule) {
-		if len(r.Scope) == 0 {
-			return p.invokePlainBody(r, min)
-		}
-		rec := len(p.Recovered)
-		v, ok := p.invoke(r, min)
-		if !ok {
-			p.Pos = start
-			p.Recovered = p.Recovered[:rec]
-		}
-		return v, ok
-	}
-	env := p.memoEnv(r.Rule)
-	if e := p.memoGet(r.Id, start, min, env); e != nil && (e.growing || (!e.silent || p.Silent > 0) && (len(e.errs) == 0 || e.silent == (p.Silent > 0))) {
-		p.Observation.memoHit()
-		if !e.growing {
-			p.MergeExpected(e.far, e.expected)
-		}
-		if !e.ok {
-			return nil, false
-		}
-		p.Pos = e.end
-		p.Recovered = p.copyErrors(p.Recovered, e.errs)
-		return e.val, true
-	}
-	rec := len(p.Recovered)
-	m := p.Isolate(start)
-	var v any
-	var ok bool
-	var e *tmemoEntry
-	if r.Leader {
-		v, ok = p.grow(r, min, env)
-		e = p.memoGet(r.Id, start, min, env)
-	} else {
-		v, ok = p.invoke(r, min)
-		if !ok {
-			p.Recovered = p.Recovered[:rec]
-		}
-		e = p.memoSlab.one()
-		*e = tmemoEntry{val: v, ok: ok, end: p.Pos, silent: p.Silent > 0,
-			errs: p.copyErrors(nil, p.Recovered[rec:])}
-		p.memoPut(r.Id, start, min, env, e)
-	}
-	far, inner := p.Unisolate(m)
-	e.far, e.expected = far, p.Keep(inner)
-	p.MergeExpected(far, inner)
-	if !ok {
-		p.Pos = start
-	}
-	return v, ok
-}
-
-// CallMemo is the memoized part of call, for the rule r invoked by inv (the generated i<id>):
-// the rule is called at the position again, or its memoization is no longer deferred.
-func (p *TParser) CallMemo(r *TRule, inv func(*TParser) (any, bool)) (any, bool) {
-	if p.TypedDocument != nil {
-		return p.DocumentCall(r, 0, inv)
-	}
-	start := p.Pos
-	env := p.memoEnv(r.Rule)
-	if e := p.memoGet(r.Id, start, 0, env); e != nil && (e.growing || (!e.silent || p.Silent > 0) && (len(e.errs) == 0 || e.silent == (p.Silent > 0))) {
-		p.Observation.memoHit()
-		if !e.growing {
-			p.MergeExpected(e.far, e.expected)
-		}
-		if !e.ok {
-			return nil, false
-		}
-		p.Pos = e.end
-		p.Recovered = p.copyErrors(p.Recovered, e.errs)
-		return e.val, true
-	}
-	rec := len(p.Recovered)
-	m := p.Isolate(start)
-	v, ok := inv(p)
-	if !ok {
-		p.Recovered = p.Recovered[:rec]
-	}
-	e := p.memoSlab.one()
-	*e = tmemoEntry{val: v, ok: ok, end: p.Pos, silent: p.Silent > 0,
-		errs: p.copyErrors(nil, p.Recovered[rec:])}
-	p.memoPut(r.Id, start, 0, env, e)
-	far, inner := p.Unisolate(m)
-	e.far, e.expected = far, p.Keep(inner)
-	p.MergeExpected(far, inner)
-	if !ok {
-		p.Pos = start
-	}
-	return v, ok
-}
-
-func (p *TParser) grow(r *TRule, min int, env []any) (any, bool) {
-	start := p.Pos
-	rec := len(p.Recovered)
-	best := p.memoSlab.one()
-	*best = tmemoEntry{end: start, growing: true}
-	p.memoPut(r.Id, start, min, env, best)
-	for {
-		v, ok := p.invoke(r, min)
-		if !ok || (best.ok && p.Pos <= best.end) {
-			break
-		}
-		best = p.memoSlab.one()
-		*best = tmemoEntry{val: v, ok: true, end: p.Pos, growing: true, errs: p.copyErrors(nil, p.Recovered[rec:])}
-		p.memoPut(r.Id, start, min, env, best)
-		p.Pos = start
-		p.Recovered = p.Recovered[:rec]
-	}
-	best.growing = false
-	best.silent = p.Silent > 0
-	p.Pos = best.end
-	p.Recovered = p.copyErrors(p.Recovered[:rec], best.errs)
-	return best.val, best.ok
-}
-
 func (p *TParser) invoke(r *TRule, min int) (any, bool) {
 	if p.TypedDocument != nil {
 		p.Document.stats.Evaluated++
@@ -1311,14 +1134,15 @@ func (p *TParser) invoke(r *TRule, min int) (any, bool) {
 	f := p.NewFrame(len(r.Scope))
 	prevFrame, prevEnv, prevCut, trail := p.Frame, p.Env, p.Cut, len(p.Trail)
 	p.Frame, p.Cut = f, false
-	p.Depth++
-	if p.Depth > p.MaxDepth {
-		p.TooDeep()
+	if r.Rec {
+		p.Enter()
 	}
 	start := p.Pos
 	p.Observation.Evaluated()
 	v, ok := r.Body(p, min)
-	p.Depth--
+	if r.Rec {
+		p.Depth--
+	}
 	p.Frame, p.Cut = prevFrame, prevCut
 	p.DropTrail(trail)
 	if ok {
@@ -1336,28 +1160,19 @@ func (p *TParser) InvokePlain(r *TRule, min int) (any, bool) {
 	return p.invokePlainBody(r, min)
 }
 
-// invokePlainObserved is InvokePlain in an observed parse.
-func (p *TParser) invokePlainObserved(r *TRule, min int) (any, bool) {
-	p.Observation.Enter(r.Name, p.Pos, min)
-	h := p.ExaminedBegin()
-	v, ok := p.invokePlainBody(r, min)
-	x, known := p.ExaminedEnd(h)
-	p.Observation.Exit(ok, p.Pos, x, known)
-	return v, ok
-}
-
 // invokePlainBody is InvokePlain without observation.
 func (p *TParser) invokePlainBody(r *TRule, min int) (any, bool) {
 	start, rec, trail := p.Pos, len(p.Recovered), len(p.Trail)
 	prevEnv, prevCut := p.Env, p.Cut
 	p.Cut = false
-	p.Depth++
-	if p.Depth > p.MaxDepth {
-		p.TooDeep()
+	if r.Rec {
+		p.Enter()
 	}
 	p.Observation.Evaluated()
 	v, ok := r.Body(p, min)
-	p.Depth--
+	if r.Rec {
+		p.Depth--
+	}
 	p.Cut = prevCut
 	p.DropTrail(trail)
 	if ok {
@@ -1501,6 +1316,9 @@ func (p *TParser) finishValue(r *TRule, f *TCaptureFrame, v any, start int) any 
 	}
 	if r.Action != nil {
 		c := p.UseCtx(TActCtx{P: p, F: f, Start: start, End: p.Pos, Cbase: len(p.Created)})
+		if r.OperatorsRule != nil {
+			c.Value = v
+		}
 		return c.Result(r.Action, r.where())
 	}
 	if r.Splice {
@@ -1531,7 +1349,7 @@ func (p *TParser) AttachCaptures(v any, names []string, vals []any, start, end i
 	found := false
 	wrap := n == nil || !n.TFresh()
 	for _, c := range vals {
-		p.StepWork()
+		p.Spend()
 		if c != nil {
 			found = true
 		}
@@ -1552,7 +1370,7 @@ func (p *TParser) AttachCaptures(v any, names []string, vals []any, start, end i
 		t.fields = p.tfields(len(names))
 	}
 	for i, name := range names {
-		p.StepWork()
+		p.Spend()
 		if vals[i] != nil {
 			p.setValueField(t, name, vals[i])
 		}
@@ -1757,6 +1575,7 @@ type TActCtx struct {
 	Start, End   int
 	Cbase        int
 	Lhs, Rhs, Op any
+	Value        any // the folded value of an Operators Rule, in its whole-rule action
 }
 
 func (p *TParser) UseCtx(c TActCtx) *TActCtx {
@@ -1781,7 +1600,7 @@ func (c *TActCtx) Finish(v any) any {
 	t := AsTval(v)
 	if t != nil {
 		for _, x := range c.P.Created[c.Cbase:] {
-			c.P.StepWork()
+			c.P.Spend()
 			if x == t {
 				t.TSetSpan(c.Start, c.End)
 				break
@@ -1828,7 +1647,7 @@ func (p *TParser) Predicate(t func(*TActCtx) any) (ok bool) {
 }
 
 // Bind is Parser.Bind for the typed runtime.
-func (p *TParser) Bind(name string, t func(*TActCtx) any) (ok bool) {
+func (p *TParser) Bind(slot int, t func(*TActCtx) any) (ok bool) {
 	base, kids := len(p.Created), len(p.KidStack)
 	defer func() {
 		p.DropCreated(base)
@@ -1845,7 +1664,7 @@ func (p *TParser) Bind(name string, t func(*TActCtx) any) (ok bool) {
 	if _, isFn := v.(func(...any) any); isFn {
 		return false
 	}
-	p.bind(name, v)
+	p.bind(slot, v)
 	return true
 }
 
@@ -1854,23 +1673,8 @@ func tvalOrNil(v any) any { return v }
 
 func (c *TActCtx) Cap(slot int) any { return tvalOrNil(c.F.Vals[slot]) }
 
-func (c *TActCtx) Lookup(name string) any {
-	if c.P.Control != nil {
-		if v, ok := c.P.lookupEnvControlled(name); ok {
-			return v
-		}
-		c.P.evalErrorf("variable %s is not defined", name)
-		return nil
-	}
-
-	for e := c.P.Env; e != nil; e = e.next {
-		if e.name == name {
-			return e.val
-		}
-	}
-	c.P.evalErrorf("variable %s is not defined", name)
-	return nil
-}
+// Var returns the value of the variable in slot i.
+func (c *TActCtx) Var(slot int) any { return c.P.variable(slot) }
 
 // ttypeName is typeName for values of the typed runtime.
 func ttypeName(v any) string {
@@ -1924,7 +1728,7 @@ func (c *TActCtx) MadeOf(n TVal, fields ...any) any {
 
 func (c *TActCtx) NewList(items []any) any {
 	kids := c.P.NewVals(len(items))
-	copyWork(c.P.Parser, kids, items)
+	copySpend(c.P.Parser, kids, items)
 	return c.listNode(kids)
 }
 
@@ -1936,7 +1740,7 @@ func (c *TActCtx) listNode(kids []any) *TSeq { return c.valueNode(TypeListValue,
 func (c *TActCtx) Tuple(args ...any) any {
 	base := len(c.P.KidStack)
 	for _, a := range args {
-		c.P.StepWork()
+		c.P.Spend()
 		c.P.KidStack = append(c.P.KidStack, c.asNode("tuple", a))
 	}
 	return c.valueNode(TypeTupleValue, c.P.Kids(base))
@@ -1947,7 +1751,7 @@ func (c *TActCtx) valueNode(typ string, kids []any) *TSeq {
 	n.fresh = false
 	first := true
 	for _, it := range kids {
-		c.P.StepWork()
+		c.P.Spend()
 		t := AsTval(it)
 		if t == nil {
 			continue
@@ -1974,7 +1778,7 @@ type tstrFields interface {
 
 // FieldOperand reads x.Name as member does, keeping a string field of a struct unboxed.
 func (c *TActCtx) FieldOperand(x any, name string) TOperand {
-	// A string field of a struct costs no steps to read under work controls either: see TFieldWork.
+	// A string field of a struct costs no steps to read under budget controls either: see TFieldSpend.
 	if n, ok := x.(tstrFields); ok {
 		if s, ok := n.TStrField(name); ok {
 			return TOperand{Str: s, IsStr: true}
@@ -2153,8 +1957,11 @@ func (c *TActCtx) Length(x any) any {
 		return 0
 	}
 	if n, ok := x.(TVal); ok {
-		if text, ok := n.TText(); ok {
-			return c.P.unitLen(text)
+		if _, ok := n.TText(); ok {
+			// The text of a string node or an error value is the input of its range, whose
+			// length the range holds in the position unit.
+			start, end := n.TSpan()
+			return end - start
 		}
 		return len(n.TKids())
 	}
@@ -2226,7 +2033,7 @@ func (c *TActCtx) MapList(list any, f func(item any) any) any {
 func (c *TActCtx) FilterList(list any, f func(item any) any) any {
 	base := len(c.P.KidStack)
 	for _, item := range c.ListItems("filter", list) {
-		c.P.StepWork()
+		c.P.Spend()
 		value := f(tvalOrNil(item))
 		keep, ok := value.(bool)
 		if !ok {
@@ -2248,7 +2055,7 @@ func (c *TActCtx) List(args ...any) any {
 func (c *TActCtx) Concat(args ...any) any {
 	base := len(c.P.KidStack)
 	for _, a := range args {
-		c.P.StepWork()
+		c.P.Spend()
 		c.PushItems(a)
 	}
 	return c.EndList(base)
@@ -2256,20 +2063,20 @@ func (c *TActCtx) Concat(args ...any) any {
 
 func (c *TActCtx) PushMap(list any, f func(item any) any) {
 	for _, it := range c.ListItems("map", list) {
-		c.P.StepWork()
+		c.P.Spend()
 		c.P.KidStack = append(c.P.KidStack, c.asNode("map", f(tvalOrNil(it))))
 	}
 }
 
 func (c *TActCtx) PushList(args ...any) {
 	for _, a := range args {
-		c.P.StepWork()
+		c.P.Spend()
 		c.P.KidStack = append(c.P.KidStack, c.asNode("list", a))
 	}
 }
 
 func (c *TActCtx) PushItems(v any) {
-	c.P.KidStack = appendWork(c.P.Parser, c.P.KidStack, c.ListItems("concat", v))
+	c.P.KidStack = appendSpend(c.P.Parser, c.P.KidStack, c.ListItems("concat", v))
 }
 
 func (c *TActCtx) EndList(base int) any {
@@ -2331,7 +2138,7 @@ func (p *TParser) skipTrivia(pr *TOperatorsRule) {
 func (p *TParser) longest(ops []*TOperatorsRuleOp) (best toperatorsRuleAttempt, cutFailed bool) {
 	m0 := p.Mark()
 	for _, op := range ops {
-		p.StepWork()
+		p.Spend()
 		prevFrame, prevCut := p.Frame, p.Cut
 		f := p.NewFrame(len(op.Line.Scope))
 		p.Frame, p.Cut = f, false
@@ -2352,9 +2159,9 @@ func (p *TParser) longest(ops []*TOperatorsRuleOp) (best toperatorsRuleAttempt, 
 			p.Reset(m0)
 			continue
 		}
-		p.saved = appendWork(p.Parser, p.saved[:0], f.Vals)
+		p.saved = appendSpend(p.Parser, p.saved[:0], f.Vals)
 		p.Reset(m0)
-		copyWork(p.Parser, f.Vals, p.saved)
+		copySpend(p.Parser, f.Vals, p.saved)
 	}
 	return best, cutFailed
 }
@@ -2461,7 +2268,7 @@ func (p *TParser) operatorsRuleNud(r *TRule) (any, int, bool) {
 		return nil, 0, false
 	}
 	for _, o := range pr.Operands {
-		p.StepWork()
+		p.Spend()
 		prevFrame, prevCut := p.Frame, p.Cut
 		f := p.NewFrame(len(o.Scope))
 		p.Frame, p.Cut = f, false
@@ -2580,12 +2387,12 @@ func (c *TActCtx) Binary(op string, l, r any) any {
 		return v
 	}
 	if c.P.Control != nil {
-		return trtBinaryWork(c.P.Parser, op, l, r)
+		return trtBinarySpend(c.P.Parser, op, l, r)
 	}
 	return trtBinary(op, l, r)
 }
 
-func (p *TParser) PushKid(v any) { p.StepWork(); p.KidStack = append(p.KidStack, v) }
+func (p *TParser) PushKid(v any) { p.Spend(); p.KidStack = append(p.KidStack, v) }
 func (p *TParser) setValueField(n *TSeq, name string, v any) {
 	if p.Control != nil {
 		p.setValueFieldControlled(n, name, v)
@@ -2596,18 +2403,18 @@ func (p *TParser) setValueField(n *TSeq, name string, v any) {
 
 func (p *TParser) setValueFieldControlled(n *TSeq, name string, v any) {
 	for i := range n.fields {
-		p.StepWork()
+		p.Spend()
 		if p.rawValueEqual(n.fields[i].name, name) {
 			n.fields[i].val = v
 			return
 		}
 	}
-	p.StepWork()
+	p.Spend()
 	n.fields = append(n.fields, tfield{name, v})
 }
 func (p *TParser) undoCaptures(from int) {
 	for i := len(p.Trail) - 1; i >= from; i-- {
-		p.StepWork()
+		p.Spend()
 		u := p.Trail[i]
 		u.f.Vals[u.slot] = u.old
 	}
@@ -2623,13 +2430,13 @@ func (p *TParser) valueField(n TVal, name string) (any, bool) {
 func (p *TParser) valueFieldControlled(n TVal, name string) (any, bool) {
 	t, transient := n.(*TSeq)
 	if !transient {
-		if controlled, ok := n.(tfieldWorker); ok {
-			return controlled.TFieldWork(p, name)
+		if controlled, ok := n.(tfieldSpender); ok {
+			return controlled.TFieldSpend(p, name)
 		}
 		return n.TField(name)
 	}
 	for _, field := range t.fields {
-		p.StepWork()
+		p.Spend()
 		if p.rawValueEqual(field.name, name) {
 			return field.val, true
 		}
@@ -2646,7 +2453,7 @@ func (c *TActCtx) Fold(fn string, right bool, acc, list any, f func(acc, item an
 func (c *TActCtx) foldControlled(fn string, right bool, acc, list any, f func(acc, item any) any) any {
 	items := c.ListItems(fn, list)
 	for i := range items {
-		c.P.StepWork()
+		c.P.Spend()
 		item := items[i]
 		if right {
 			item = items[len(items)-1-i]
@@ -2657,12 +2464,12 @@ func (c *TActCtx) foldControlled(fn string, right bool, acc, list any, f func(ac
 }
 
 // ListField materializes a typed struct's list field during an action read.
-// The ordinary TField path remains independent of a parser or work controller.
+// The ordinary TField path remains independent of a parser or budget controller.
 func (p *TParser) ListField(kids []any) any {
 	n := &TSeq{Typ: TypeListValue, Kids: kids}
 	first := true
 	for _, it := range kids {
-		p.StepWork()
+		p.Spend()
 		t := AsTval(it)
 		if t == nil {
 			continue
@@ -2679,7 +2486,7 @@ func (p *TParser) ListField(kids []any) any {
 	return n
 }
 
-func trtUnaryWork(p *Parser, op string, x any) any {
+func trtUnarySpend(p *Parser, op string, x any) any {
 	switch op {
 	case "-":
 		if i, ok := x.(int); ok {
@@ -2694,7 +2501,7 @@ func trtUnaryWork(p *Parser, op string, x any) any {
 	return nil
 }
 
-func trtBoolWork(p *Parser, op string, v any) bool {
+func trtBoolSpend(p *Parser, op string, v any) bool {
 	b, ok := v.(bool)
 	if !ok {
 		p.evalErrorf("invalid operand %s for %s", ttypeName(v), op)
@@ -2702,14 +2509,14 @@ func trtBoolWork(p *Parser, op string, v any) bool {
 	return b
 }
 
-func trtBinaryWork(p *Parser, op string, l, r any) any {
+func trtBinarySpend(p *Parser, op string, l, r any) any {
 	switch op {
 	case "==":
 		return trtEqual(l, r)
 	case "!=":
 		return !trtEqual(l, r)
 	case "[]":
-		items := tlistItemsWork(p, "[]", l)
+		items := tlistItemsSpend(p, "[]", l)
 		return items[rtIndex(p, r, len(items), ttypeName)]
 	}
 	switch l := l.(type) {
@@ -2760,7 +2567,7 @@ func trtBinaryWork(p *Parser, op string, l, r any) any {
 	return nil
 }
 
-func tlistItemsWork(p *Parser, fn string, v any) []any {
+func tlistItemsSpend(p *Parser, fn string, v any) []any {
 	if v == nil {
 		return nil
 	}
@@ -2771,7 +2578,7 @@ func tlistItemsWork(p *Parser, fn string, v any) []any {
 	return nil
 }
 
-func tasNodeWork(p *Parser, fn string, v any) any {
+func tasNodeSpend(p *Parser, fn string, v any) any {
 	if v == nil {
 		return nil
 	}
@@ -2791,7 +2598,7 @@ func (c *TActCtx) Unary(op string, v any) any {
 }
 
 func (c *TActCtx) unaryControlled(op string, v any) any {
-	return trtUnaryWork(c.P.Parser, op, v)
+	return trtUnarySpend(c.P.Parser, op, v)
 }
 func (c *TActCtx) And(l any, r func() any) any {
 	if c.P.Control != nil {
@@ -2801,10 +2608,10 @@ func (c *TActCtx) And(l any, r func() any) any {
 }
 
 func (c *TActCtx) andControlled(l any, r func() any) any {
-	if !trtBoolWork(c.P.Parser, "&&", l) {
+	if !trtBoolSpend(c.P.Parser, "&&", l) {
 		return false
 	}
-	return trtBoolWork(c.P.Parser, "&&", r())
+	return trtBoolSpend(c.P.Parser, "&&", r())
 }
 func (c *TActCtx) Or(l any, r func() any) any {
 	if c.P.Control != nil {
@@ -2814,10 +2621,10 @@ func (c *TActCtx) Or(l any, r func() any) any {
 }
 
 func (c *TActCtx) orControlled(l any, r func() any) any {
-	if trtBoolWork(c.P.Parser, "||", l) {
+	if trtBoolSpend(c.P.Parser, "||", l) {
 		return true
 	}
-	return trtBoolWork(c.P.Parser, "||", r())
+	return trtBoolSpend(c.P.Parser, "||", r())
 }
 func (c *TActCtx) ListItems(fn string, v any) []any {
 	if c.P.Control != nil {
@@ -2827,7 +2634,7 @@ func (c *TActCtx) ListItems(fn string, v any) []any {
 }
 
 func (c *TActCtx) listItemsControlled(fn string, v any) []any {
-	return tlistItemsWork(c.P.Parser, fn, v)
+	return tlistItemsSpend(c.P.Parser, fn, v)
 }
 func (c *TActCtx) asNode(fn string, v any) any {
 	if c.P.Control != nil {
@@ -2837,5 +2644,5 @@ func (c *TActCtx) asNode(fn string, v any) any {
 }
 
 func (c *TActCtx) asNodeControlled(fn string, v any) any {
-	return tasNodeWork(c.P.Parser, fn, v)
+	return tasNodeSpend(c.P.Parser, fn, v)
 }

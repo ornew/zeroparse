@@ -54,6 +54,8 @@ var goSpecs = []goSpec{
 	{fn: "memoized", on: []string{ops.Document, ops.Observe, ops.Stream}, name: "callMemo"},
 	{fn: "body", on: []string{ops.Document}, name: "callBody"},
 	{fn: "tracked", on: []string{ops.Document, ops.Observe}, name: "callTracked"},
+	// The rule call of a Document parse in the typed runtime.
+	{fn: "typedDocument", typed: true, on: []string{ops.Document, ops.Observe, ops.Typed}, name: "DocumentCall"},
 }
 
 // GoRuntime returns the Go file of the printed compositions for package runtime, built with
@@ -188,7 +190,14 @@ func goTarget(s goSpec) *execgo.Target {
 		case "doc.touch":
 			return "p.documentTouch(" + a[0] + ")"
 		case "doc.readEntry":
+			if typed {
+				return fmt.Sprintf("meta := p.TypedDocument.meta[%s]\np.documentTouch(meta.examined)\np.docReuse = max(p.docReuse, meta.reuse)", a[0])
+			}
 			return fmt.Sprintf("p.documentTouch(%s.examined)\np.docReuse = max(p.docReuse, %s.reuse)", a[0], a[0])
+		case "doc.evaluated":
+			return "p.Document.stats.Evaluated++"
+		case "memo.forgetDoc":
+			return "delete(p.TypedDocument.meta, " + a[0] + ")"
 		case "doc.reuse":
 			return "p.docReuse"
 		case "doc.setReuse":
@@ -198,12 +207,18 @@ func goTarget(s goSpec) *execgo.Target {
 		case "doc.reused":
 			return "p.Document.stats.Reused++"
 		case "doc.parseOnly":
+			if typed {
+				return fmt.Sprintf("p.TypedDocument.parseOnly = append(p.TypedDocument.parseOnly, tmemoPlace{%s, %s})", a[0], a[1])
+			}
 			return fmt.Sprintf("p.docParseOnly = append(p.docParseOnly, memoPlace{%s, %s})", a[0], a[1])
 		case "reuse.untilEdit":
 			return "reuseUntilEdit"
 		case "reuse.inParse":
 			return "reuseInParse"
 		case "memo.recordDoc":
+			if typed {
+				return "p.TypedDocument.meta[" + a[0] + "] = typedDocumentMeta{examined: p.docHigh, reuse: p.docReuse}"
+			}
 			return a[0] + ".examined, " + a[0] + ".reuse = p.docHigh, p.docReuse"
 		case "call.body":
 			return fmt.Sprintf("p.%s(%s, %s)", s.body, a[0], a[1])
