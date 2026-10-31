@@ -69,15 +69,16 @@ chapter states the guarantee and not this mechanism.
   failure with its expected items.
   - *Recording.* A run is recorded for a repetition that matched outside a
     lookahead and a `skip`. Its element has no predicate, calls no rule that
-    reads variables, and writes no capture to an enclosing scope. During the
-    run no call recovered an error, and no call read the current result of a
-    growth, or an entry stored by a call that did, even of a growth that
-    started and ended within the run.
+    reads variables, and writes no capture to an enclosing scope. No
+    recovered error remains at the end of the run. During the run no call
+    read the current result of a growth, directly or through an entry stored
+    by a call that did, even of a growth that started and ended within the
+    run.
   - *Resuming.* A repetition resumes a record only outside a lookahead and a
-    `skip`, and not at the position of an open growth. It resumes in one of
-    two ways. **Whole**: the record of the same repetition at the same
-    position, stored earlier in the same parse, or by the previous parse when
-    no edit came since; it reuses every recorded iteration. **Across one
+    `skip`. It resumes in one of two ways. **Whole**: the record of the same
+    repetition at the same position, stored earlier in the same parse, or by
+    an earlier parse of the same text with no edit since; it reuses every
+    recorded iteration. **Across one
     edit**: the record of the previous parse when exactly one edit $[a, b)$
     with $\delta$ came since, stored at $p$, or at $p - \delta$ when
     $p \ge b + \delta$. It reuses the recorded iterations from the first on
@@ -128,9 +129,8 @@ position $3$ moves from line 2, column 2, to line 1, column 4.
 
 ## Lemma 2 (Carried Entries)
 
-*Let every entry that a completed parse of $t_{k-1}$ leaves be sound for
-$t_{k-1}$. After edit $k$ applied by (E), every entry that remains is sound for
-$t_k$.*
+*Let every entry be sound for $t_{k-1}$. After edit $k$ applied by (E), every
+entry that remains is sound for $t_k$.*
 
 *Proof.* Let an entry have key position $p$, outcome $\omega$ and recorded
 range $[l', h')$, which by soundness contains the range $[l, h)$ of the call
@@ -156,32 +156,29 @@ same order, so it gives the same entry. $\square$
 evaluation that completed before it in this parse satisfy the invariant
 (I1) to (I3) of the
 [memoization theorem](memoization.md#theorem-memoization-never-changes-the-result).
-Let the record have been stored in this parse, or in the previous parse, whose
+Let the record have been stored in this parse, or in an earlier parse whose
 completed evaluations satisfied the invariant on its text. Then the repetition
 ends where it ends in $\mathcal{R}$, with the same value, and records into the
 enclosing evaluation the outcome that the iterations record in $\mathcal{R}$
 and a range that contains theirs.*
 
-*Proof.* First, no iteration that the run reuses reads an open growth in
-$\mathcal{R}$. An iteration at $r$ that read a growth of $L$ open at $p_L$
-would, as in
-[Lemma 2 of the memoization proof](memoization.md#lemma-2-reading-an-open-growth),
-start within the evaluation of $L$, so $r \ge p_L$, and call $L$ at $p_L$, so
-$r \le p_L$. Every iteration but the first starts at the end of an iteration
-that consumed input, after $p \ge p_L$, and the first starts at $p$, where (R)
-allows no growth to be open. So each reused iteration is an evaluation of the
-element at its start in a state that reads no open growth. The element reads
+*Proof.* When the record was stored, its iterations were evaluations of
+$\mathcal{M}$ that completed and recovered no error, and by (R) none of them
+read a current result, directly or through an entry. By (I1) and (I2) of the
+parse that stored it, each recorded outcome is the outcome in $\mathcal{R}$ on
+that text, each recorded range contains the range in $\mathcal{R}$, and the
+evaluation in $\mathcal{R}$ reads no current result either, since a call that
+$\mathcal{M}$ answered from an entry is in $\mathcal{R}$ the evaluation that
+stored it. By Lemma 4 below, each reused iteration reads no growth open at its
+start in $\mathcal{R}$ when the run resumes. The element reads
 no variable and no capture from outside, its cut decides only between its own
 alternatives and whether the repetition fails, and its level does not change
 within the repetition, so by Lemma 1 of the memoization proof its outcome
 $G(r)$ in $\mathcal{R}$ is a function of its start $r$ and the text.
 
-When the record was stored, its iterations were evaluations of $\mathcal{M}$
-that completed, read no current result and recovered no error, by (R). By (I1)
-and (I2) of the parse that stored it, each recorded outcome is $G(r_i)$ on that
-text, and each recorded range contains the range in $\mathcal{R}$. Let the
-recorded iterations start at $r_0 < r_1 < \dots < r_m$, each ending where the
-next starts.
+So each recorded outcome is $G(r_i)$ on the text on which it was recorded.
+Let the recorded iterations start at $r_0 < r_1 < \dots < r_m$, each ending
+where the next starts.
 
 - *Whole.* The text is the one the record was stored on, so the recorded
   outcomes are $G(r_i)$ on $t_k$. The run reuses all of them in order, each
@@ -215,6 +212,55 @@ and the operation $\cdot$ and the hull of
 [Skip Runs](skip-runs.md#setting) are associative, so the run leaves the
 enclosing evaluation with the same record. $\square$
 
+## Lemma 4 (Recorded Iterations Read No Open Growth)
+
+*Let an iteration $I$ of a record that (R) allows to be reused be evaluated in
+$\mathcal{R}$ at its start $r$ when the run resumes. Then it reads no growth
+open at its start.*
+
+*Proof.* Call $A$ the evaluation of $I$ in $\mathcal{R}$ on the text on which
+it was recorded, which reads no current result at all, as the proof of Lemma 3
+shows, and $B$ its evaluation when the run resumes. Every slot that $A$
+examines lies in the recorded range of $I$, where the two texts agree, shifted
+for an iteration after the edit, as in the cases of Lemma 3. Two segments of
+evaluation that start with the same expression at corresponding positions in
+the same state therefore take the same steps, examining corresponding slots,
+until one of them is answered with a current result.
+
+Suppose that $B$ reads a growth open at its start. As in
+[Lemma 2 of the memoization proof](memoization.md#lemma-2-reading-an-open-growth),
+that growth is at $r$. Let $G_1, \dots, G_m$ be the growths open at $r$ when
+$I$ starts, of leaders $L_1, \dots, L_m$, in the order in which they started.
+
+1. Compare $B$ with $A$ from their start. $A$ is never answered with a current
+   result, so the first difference is a call $x$ of $B$ that is. A growth that
+   started within $I$ before $x$ started in $A$ too, where reading it would be
+   a difference in $A$, so $x$ reads some $G_j$, and is a call of $L_j$ at
+   $r$. In $A$, the corresponding call of $L_j$ at $r$ finds no growth of
+   $L_j$ open, so $A$ grows $L_j$ there, and its first step evaluates the body
+   of $L_j$ at $r$ with a failing seed.
+2. In $B$, $I$ and $x$ lie within the current step of $G_j$, which evaluated
+   the body of $L_j$ at $r$ and reached $x$ through calls that consume no
+   input. Compare that segment of $B$ with the first step of $L_j$ in $A$. The
+   variables do not enter, since no rule that $I$ calls reads variables. If $B$
+   is not answered with a current result before $x$, then $A$ reaches the
+   corresponding call of $L_j$ at $r$ while it grows $L_j$ there, and reads
+   its current result, which $A$ never does. Otherwise let $z$ be the first
+   call of the segment of $B$ that is. It cannot read a growth that started
+   within the segment, nor $G_j$, because $A$ would read the corresponding
+   growth, which is open in $A$ too. So $z$ reads some $G_i$ with $i < j$, and
+   in $A$ the corresponding call of $L_i$ at $r$ grows $L_i$.
+3. Repeat step 2 with $i$ and $z$ in place of $j$ and $x$. The index decreases
+   each time, and no growth at $r$ started before $G_1$, so the repetition
+   ends in the contradiction of step 2.
+
+So $B$ reads no growth open at its start. $\square$
+
+The argument uses the recording condition of (R) for the growths that start
+and end within the run: a run that grew a leader within its first iteration
+and read that leader's current result is not recorded, and that is the case
+that reusing it at the position of an open growth would get wrong.
+
 ## Theorem (Document Parses Equal Fresh Parses)
 
 *A parse of a Document after any sequence of edits, batches, parses,
@@ -223,13 +269,14 @@ and the syntax error that a parse of its current text from scratch returns,
 when no limit stops it.*
 
 *Proof.* By induction on the parses of the Document. Every entry and record
-that a parse can use was stored by the previous completed parse, or earlier in
-the same parse: a batch, an interrupted parse and an aborted parse clear them
-by (P). By the induction hypothesis, the previous completed parse satisfied the
-invariant of the
+that a parse can use was left by earlier completed parses, with the edits since
+applied, or stored earlier in the same parse: a batch, an interrupted parse
+and an aborted parse clear them by (P). By the induction hypothesis, every
+completed parse satisfied the invariant of the
 [memoization theorem](memoization.md#theorem-memoization-never-changes-the-result),
-so its entries were sound for its text, and by Lemma 2, applied to each edit
-in turn, the entries are sound for the current text when the parse starts.
+so the entries it left were sound for its text, and by Lemma 2, applied to each
+edit in turn, including consecutive edits with no parse between them, the
+entries are sound for the current text when the parse starts.
 
 The parse then follows the induction of the memoization theorem, with one more
 kind of evaluation: a repetition that resumes a record, and so skips the

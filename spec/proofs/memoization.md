@@ -71,9 +71,8 @@ evaluating it, under these conditions:
   cycle included, is evaluated, not answered from an entry.
 
 (S) is the third item of
-[Evaluations of Rules](../runtime/parsing.md#evaluations-of-rules), and (C)
-is its second item in the form that covers every rule of the cycle other
-than the growing leader. Which outcomes $\mathcal{M}$ stores, and when it uses
+[Evaluations of Rules](../runtime/parsing.md#evaluations-of-rules); (L) and
+(C) are assumptions (A2) and (A4) below. Which outcomes $\mathcal{M}$ stores, and when it uses
 them, is otherwise free. Storing none, storing from the second call at a
 position, or not storing the results of some rules are all instances of
 $\mathcal{M}$.
@@ -99,11 +98,20 @@ The proof relies on the following, which the specification does not state.
   farthest failure there.
 - **(A2) Reuse across lookahead states.** Condition (L), which the reference
   implementation applies and the specification does not mention.
-- **(A3) Node identity.** No action or predicate compares nodes with `==` or
-  `!=`. Nodes compare by identity, which memoization decides
-  ([Operators](../language/actions.md#operators-and-functions)), so a
-  predicate that compares them can decide differently with and without the
-  memo.
+- **(A3) Node equality.** `==` and `!=` compare two nodes by their rule and
+  their range, not by identity. [Operators](../language/actions.md#operators-and-functions)
+  states that nodes compare by identity, which memoization decides; this proof
+  assumes the rule by rule and range that the chapter is to state instead. The
+  rule and the range of a node are part of the value, so by (I1) of the
+  theorem a comparison of two nodes decides alike in both parses: in
+  particular, two calls of one rule at one position have equal results, and
+  their nodes compare equal. A comparison with `nil` depends only on whether a
+  value is `nil`, which is also part of the value.
+- **(A4) Cycles.** Condition (C), the revision of the second item of
+  [Evaluations of Rules](../runtime/parsing.md#evaluations-of-rules) that
+  covers every rule of the cycle other than the growing leader. That item
+  excludes all the leaders of the cycle, and the reference implementation
+  does not yet apply the revision.
 
 ## Lemma 1 (Context)
 
@@ -143,14 +151,14 @@ of $A$ at $p$ depends on the following state and on nothing else:
   annotated expression: their positions, their lines and columns, their
   expected items, and the messages of the error values in $v$.
 
-None of what $\lambda$ changes reaches a decision of the parser. An action or
-predicate cannot read the message of an error value: `text` accepts a string,
-a node or `nil`, so `text($x)` on an error value is a compile-time error, and
-an error value has no field that holds its message
-([Built-In Functions](../language/actions.md#built-in-functions)). Error
-values are not nodes, and a value of another kind does not compare equal
-([Operators](../language/actions.md#operators-and-functions)), so `==` does
-not see the message either. By (A3) no predicate compares nodes. So $s$, $q$,
+None of what $\lambda$ changes reaches a decision of the parser. An error value
+is a node of the kind error whose text is its message
+([`#recover`](../language/pragmas.md#recover)), but an action or predicate
+cannot read that text: `text` does not accept a value of the type `error`, so
+`text($x)` on an error value is a compile-time error, and the type `error`
+declares no field ([Built-In Functions](../language/actions.md#built-in-functions)).
+By (A3), `==` compares an error node by its rule and range, which do not
+depend on $\lambda$, and never reads its message. So $s$, $q$,
 the run-time error and the examined range are the same for both states, each
 `#recover` recovers in both or in neither, and $\varepsilon$ has the same
 length. When $\varepsilon$ is empty, no recovery took place on the path that
@@ -223,6 +231,8 @@ following.
 
 1. *A terminal, an anchor, a predicate or an action.* These read the same state
    in both parses, so they have the same outcome and examine the same input.
+   The values they read are equal by (I1), though they may be different nodes,
+   and by (A3) a comparison of nodes reads only their rule and range.
 2. *A combinator.* A sequence, choice, repetition, option, lookahead, cut,
    capture or `#recover` combines the outcomes of its parts by the rules of
    [Rule Expressions](../language/parser-expressions.md) and records them in
