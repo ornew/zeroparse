@@ -2,7 +2,7 @@ package runtime
 
 import "fmt"
 
-// The typed Document runtime, appended to generated parsers made with both pego gen -types and
+// The typed Document runtime, appended to generated parsers made with both zp gen -types and
 // -document: Document.ParseAST parses directly into typed values, which a typed Document keeps
 // privately (typedDocumentState) and publishes as read-only values that later results may share.
 // The generated CloneAST copies a published value.
@@ -12,7 +12,7 @@ import "fmt"
 //
 // TypedDocumentCloneBase is for generated parsers; not a stable API.
 type TypedDocumentCloneBase struct {
-	Control *WorkControl
+	Control *BudgetControl
 	Values  map[any]any
 	Slices  map[DocumentSliceKey]any
 	Tasks   []TypedDocumentCloneTask
@@ -23,11 +23,11 @@ type TypedDocumentCloneBase struct {
 // TypedDocumentCloneTask is for generated parsers; not a stable API.
 type TypedDocumentCloneTask struct{ Source, Target any }
 
-func (c *TypedDocumentCloneBase) Begin(control *WorkControl) { c.Control = control }
+func (c *TypedDocumentCloneBase) Begin(control *BudgetControl) { c.Control = control }
 
 func (c *TypedDocumentCloneBase) Step(n uint64) {
-	if WorkControlsEnabled && c.Control != nil {
-		c.Control.Charge(0, n)
+	if c.Control != nil {
+		c.Control.Charge(n)
 	}
 }
 
@@ -48,12 +48,15 @@ func (c *TypedDocumentCloneBase) ReleaseBase() {
 // code's allocation chunks.
 //
 // TypedDocumentParse is for generated parsers; not a stable API.
-func TypedDocumentParse[T any](d *Document, root *TRule, o parseOptions, a workControlSetter, publish func(any) T) (res T, err error) {
+func TypedDocumentParse[T any](d *Document, root *TRule, o parseOptions, a budgetControlSetter, publish func(any) T) (res T, err error) {
 	defer recoverParse(&res, &err)
 	if o.unit != d.State.unit {
 		return res, fmt.Errorf("document parse cannot change unit")
 	}
-	o = prepareOptions(o)
+	if o.expectations != d.State.expectations {
+		return res, fmt.Errorf("document parse cannot change expectations")
+	}
+	o = prepareText(o, d.State.text)
 	cache, ok := d.typedMemo.(*typedDocumentState)
 	if !ok {
 		cache = &typedDocumentState{owner: d.State, meta: make(map[*tmemoEntry]typedDocumentMeta)}
@@ -71,11 +74,11 @@ func TypedDocumentParse[T any](d *Document, root *TRule, o parseOptions, a workC
 	p.Observation = newObservation(&o.observe)
 	defer p.releaseObservation()
 	// Do not recycle p: memo values and expectations may refer into its arenas.
-	a.SetWorkControl(o.control)
-	defer a.SetWorkControl(nil)
+	a.SetBudgetControl(o.control)
+	defer a.SetBudgetControl(nil)
 	d.State.stats = documentStats{}
 	v, parseErr := p.run(root, d.State.text, o, a)
-	// Context implementations may return any public error type. Fatal work
+	// Context implementations may return any public error type. Fatal budget
 	// interruption must not be mistaken for a completed syntax failure.
 	if o.control != nil && o.control.interrupted {
 		return res, parseErr
@@ -93,6 +96,7 @@ func TypedDocumentParse[T any](d *Document, root *TRule, o parseOptions, a workC
 	}
 	err = typedDocumentError(parseErr, o.control)
 	cache.slots = p.memoSlots
+	cache.removeParseOnly()
 	completed = true
 	return res, err
 }
@@ -100,27 +104,27 @@ func TypedDocumentParse[T any](d *Document, root *TRule, o parseOptions, a workC
 // typedDocumentError copies the diagnostics of err, charging c. Diagnostics are private memo data
 // too; publishing their original pointers or Expected/Messages slices would let caller mutation
 // alter a later parse.
-func typedDocumentError(err error, control *WorkControl) error {
+func typedDocumentError(err error, control *BudgetControl) error {
 	clone := func(e *SyntaxError) *SyntaxError {
-		control.Charge(0, 1)
+		control.Charge(1)
 		if e == nil {
 			return nil
 		}
 		out := new(SyntaxError)
 		*out = *e
 		if e.Expected != nil {
-			control.Charge(0, uint64(len(e.Expected)))
+			control.Charge(uint64(len(e.Expected)))
 			out.Expected = make([]string, len(e.Expected))
 			for i, s := range e.Expected {
-				control.Charge(0, 1)
+				control.Charge(1)
 				out.Expected[i] = s
 			}
 		}
 		if e.Messages != nil {
-			control.Charge(0, uint64(len(e.Messages)))
+			control.Charge(uint64(len(e.Messages)))
 			out.Messages = make([]string, len(e.Messages))
 			for i, s := range e.Messages {
-				control.Charge(0, 1)
+				control.Charge(1)
 				out.Messages[i] = s
 			}
 		}
@@ -130,7 +134,7 @@ func typedDocumentError(err error, control *WorkControl) error {
 	case *SyntaxError:
 		return clone(e)
 	case SyntaxErrors:
-		control.Charge(0, uint64(len(e)))
+		control.Charge(uint64(len(e)))
 		out := make(SyntaxErrors, len(e))
 		for i, item := range e {
 			out[i] = clone(item)

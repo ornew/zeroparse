@@ -28,7 +28,7 @@
 //
 // Performance. The grammar follows the compiler's order of alternatives, which tries what is rare before what is
 // common, and a rule that fails at once still costs a call and records what it expected. What paid, measured
-// as rule calls (pego profile) and as time on the benchmarks of the package (see the README):
+// as rule calls (zp profile) and as time on the benchmarks of the package (see the README):
 //   - A silent lookahead of the next character in front of an alternative or an operator (&(?...)), which
 //     records no expectation: the operators of binaryExpression and the postfix operators of the
 //     left-hand side, whose Operators Rule loops try every operator after every operand; the ws and sp rules, which
@@ -655,7 +655,7 @@ rule nlAhead = sp ([\n\r\u{2028}\u{2029}] / "/*")
 // ===================================================================
 
 // isDeclaration: modifiers on the same line followed by a declaration keyword.
-// (declarationStart and typeStart recurse at the end, after a modifier or "(", so pego lint hints that a Document
+// (declarationStart and typeStart recurse at the end, after a modifier or "(", so zp lint hints that a Document
 // would evaluate them again after an edit; they are lookaheads over a few tokens of a generated parser.)
 rule declarationStart = (
     ("var" / "let" / "const" / "function" / "class" / "enum") !idPart

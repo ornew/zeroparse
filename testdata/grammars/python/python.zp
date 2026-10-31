@@ -41,7 +41,7 @@
 // and the literal parts of f-strings and t-strings, are their source text (see python.go for their
 // values); FormattedValue and Interpolation keep the source text of their expression (Str) and of
 // their `=` (Debug) and their conversion character as a string. Python's List and Match are ListExpr
-// and MatchStmt (List and Match are reserved in PEGO), and its Expr statement is ExprStmt.
+// and MatchStmt (List and Match are reserved in ZeroParse), and its Expr statement is ExprStmt.
 package python
 
 // lv packs the lexical state of the parse: the nesting level and the flags that depend on it.
