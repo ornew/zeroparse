@@ -200,6 +200,37 @@ func Build() *Module {
 		b.Return(Add(Add(L("n"), C("box.get", L("w"))), C("box.get", L("r2"))),
 			And(And(L("found"), ok), And(Not(L("rok")), L("rok2"))))
 	})
+	// Protect: the cleanup runs after the values of a return are computed, on each return of the
+	// body and when the body runs to its end, and sees the locals declared before the Protect.
+	m.AddFunc("guarded", []Param{P("x", TInt)}, []Type{TBool, TInt}, nil, func(b *Builder) {
+		b.Let("n", Add(L("x"), Int(5)))
+		b.Protect(func(b *Builder) {
+			note(b, Int(1))
+			b.If(C("log.flag", Lt(L("x"), Int(0))), func(b *Builder) {
+				b.Return(C("log.flag", BoolC(false)), L("n"))
+			})
+			b.Let("m", Add(L("n"), Int(1)))
+			note(b, L("m"))
+			b.Return(C("log.flag", BoolC(true)), L("m"))
+		}, func(b *Builder) {
+			b.Let("c", Add(L("n"), Int(100)))
+			b.If(Lt(L("x"), Int(0)), func(b *Builder) { b.Set("c", Bin("-", Int(0), L("c"))) })
+			note(b, L("c"))
+		})
+	})
+	m.AddFunc("cleaned", []Param{P("x", TInt)}, nil, nil, func(b *Builder) {
+		b.Protect(func(b *Builder) {
+			b.If(Lt(L("x"), Int(0)), func(b *Builder) { b.Return() })
+			note(b, L("x"))
+		}, func(b *Builder) { note(b, Add(L("x"), Int(1000))) })
+	})
+	m.AddFunc("protects", nil, []Type{TBool, TInt, TBool, TInt}, nil, func(b *Builder) {
+		b.Do("cleaned", Int(-3))
+		b.Do("cleaned", Int(3))
+		b.LetN([]string{"a", "n"}, C("guarded", Int(-7)))
+		b.LetN([]string{"c", "m"}, C("guarded", Int(2)))
+		b.Return(L("a"), L("n"), L("c"), L("m"))
+	})
 	// Specialization: one function printed for two sets of features.
 	spec := m.AddFunc("special", nil, []Type{TInt}, []string{"extra"}, func(b *Builder) {
 		b.Let("n", Int(1))

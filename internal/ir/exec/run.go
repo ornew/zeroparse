@@ -199,6 +199,13 @@ func (r *runner) stmt(fr *frame, st Stmt, declared *[]string) signal {
 			vals[i] = r.eval(fr, x)
 		}
 		return signal{kind: sigReturn, values: vals}
+	case *Protect:
+		var s signal
+		func() {
+			defer r.block(fr, st.Finally)
+			s = r.block(fr, st.Body)
+		}()
+		return s
 	case *Assert:
 		if !r.eval(fr, st.Cond).(bool) {
 			panic(&AssertionError{Func: fr.f.Name, Msg: st.Msg})

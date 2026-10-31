@@ -94,3 +94,25 @@ func TestRun(t *testing.T) {
 		t.Fatalf("fails = %v, want the assertion", err)
 	}
 }
+
+// TestRunProtect checks that the interpreter runs the cleanup of a Protect when an operation in its
+// body interrupts the run, and when the body returns.
+func TestRunProtect(t *testing.T) {
+	m := testModule()
+	charged := m.AddFunc("charged", []Param{P("n", TU64)}, []Type{TInt}, []string{"budget"}, func(b *Builder) {
+		b.Protect(func(b *Builder) {
+			b.Do("counter.charge", L("n"))
+			b.Return(Int(1))
+		}, func(b *Builder) { b.Do("counter.next") })
+	})
+	if err := Verify(m); err != nil {
+		t.Fatal(err)
+	}
+	c := &counter{}
+	if res, err := Run(m, charged, c, uint64(2)); err != nil || res[0] != int64(1) || c.n != 1 {
+		t.Fatalf("charged(2) = %v, %v with the cleanup run %d times, want 1", res, err, c.n)
+	}
+	if _, err := Run(m, charged, c, uint64(2)); !errors.As(err, new(Interrupt)) || c.n != 2 {
+		t.Fatalf("charged(2) again = %v with the cleanup run %d times, want an interrupt and 2", err, c.n)
+	}
+}

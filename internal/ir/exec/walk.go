@@ -62,6 +62,9 @@ func Walk(b *Block, stmt func(Stmt), expr func(Expr)) {
 				if st.Else != nil {
 					blk(st.Else)
 				}
+			case *Protect:
+				blk(st.Body)
+				blk(st.Finally)
 			case *Let:
 				x(st.Value)
 			case *Do:

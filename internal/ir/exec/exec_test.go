@@ -141,6 +141,87 @@ func TestVerifyRejects(t *testing.T) {
 				})
 			})
 		}, "the end of a function with results is reachable"},
+		{"protect not last", func(m *Module) {
+			m.AddFunc("f", nil, nil, nil, func(b *Builder) {
+				b.Protect(func(b *Builder) {}, func(b *Builder) {})
+				b.Comment("after")
+			})
+		}, "a protect that is not the last statement of the function body"},
+		{"nested protect", func(m *Module) {
+			m.AddFunc("f", nil, nil, nil, func(b *Builder) {
+				b.Protect(func(b *Builder) {
+					b.Protect(func(b *Builder) {}, func(b *Builder) {})
+				}, func(b *Builder) {})
+			})
+		}, "a protect that is not the last statement of the function body"},
+		{"return in a cleanup", func(m *Module) {
+			m.AddFunc("f", nil, nil, nil, func(b *Builder) {
+				b.Protect(func(b *Builder) {}, func(b *Builder) { b.Return() })
+			})
+		}, "a cleanup with a *exec.Return"},
+		{"exit from a cleanup", func(m *Module) {
+			m.AddFunc("f", nil, nil, nil, func(b *Builder) {
+				b.Block("out", func(b *Builder) {
+					b.Protect(func(b *Builder) {}, func(b *Builder) { b.Exit("out") })
+				})
+			})
+		}, "a cleanup with a *exec.Exit"},
+		{"loop in a cleanup", func(m *Module) {
+			m.AddFunc("f", nil, nil, nil, func(b *Builder) {
+				b.Protect(func(b *Builder) {}, func(b *Builder) {
+					b.Loop("l", func(b *Builder) { b.Break("l") })
+				})
+			})
+		}, "a cleanup with a *exec.Loop"},
+		{"cleanup assigns an outer local", func(m *Module) {
+			m.AddFunc("f", nil, nil, nil, func(b *Builder) {
+				b.Let("x", Int(1))
+				b.Protect(func(b *Builder) {}, func(b *Builder) { b.Set("x", Int(2)) })
+			})
+		}, "a cleanup assigns x, which it does not declare"},
+		{"cleanup assigns a register", func(m *Module) {
+			m.AddFunc("f", nil, nil, nil, func(b *Builder) {
+				b.Protect(func(b *Builder) {}, func(b *Builder) { b.SetReg("pos", Int(2)) })
+			})
+		}, "a cleanup assigns register pos"},
+		{"cleanup reads a register", func(m *Module) {
+			m.AddFunc("f", nil, nil, nil, func(b *Builder) {
+				b.Protect(func(b *Builder) {}, func(b *Builder) { b.Let("x", R("pos")) })
+			})
+		}, "a cleanup reads register pos"},
+		{"cleanup reads a local of the body", func(m *Module) {
+			m.AddFunc("f", nil, nil, nil, func(b *Builder) {
+				b.Protect(func(b *Builder) { b.Let("x", Int(1)) }, func(b *Builder) { b.Let("y", L("x")) })
+			})
+		}, "read of undeclared local x"},
+		{"cleanup may end the parse", func(m *Module) {
+			m.AddFunc("f", nil, nil, []string{"budget"}, func(b *Builder) {
+				b.Protect(func(b *Builder) {}, func(b *Builder) { b.Do("counter.charge", U64(1)) })
+			})
+		}, "a cleanup calls counter.charge, which may end the parse"},
+		{"cleanup moves a register", func(m *Module) {
+			m.AddOp(&Op{Name: "counter.skip", Component: "counter", Writes: []string{"pos"}, Contract: "skip"})
+			m.AddFunc("f", nil, nil, nil, func(b *Builder) {
+				b.Protect(func(b *Builder) {}, func(b *Builder) { b.Do("counter.skip") })
+			})
+		}, "a cleanup calls counter.skip, which writes register pos"},
+		{"cleanup reads a register through an operation", func(m *Module) {
+			m.AddOp(&Op{Name: "counter.peek", Component: "counter", Reads: []string{"pos"}, Contract: "peek"})
+			m.AddFunc("f", nil, nil, nil, func(b *Builder) {
+				b.Protect(func(b *Builder) {}, func(b *Builder) { b.Do("counter.peek") })
+			})
+		}, "a cleanup calls counter.peek, which reads register pos"},
+		{"cleanup calls a function", func(m *Module) {
+			m.AddFunc("g", nil, nil, nil, func(b *Builder) {})
+			m.AddFunc("f", nil, nil, nil, func(b *Builder) {
+				b.Protect(func(b *Builder) {}, func(b *Builder) { b.Do("g") })
+			})
+		}, "a cleanup calls g, which is not an operation"},
+		{"protected end reachable", func(m *Module) {
+			m.AddFunc("f", nil, []Type{TInt}, nil, func(b *Builder) {
+				b.Protect(func(b *Builder) {}, func(b *Builder) {})
+			})
+		}, "the end of a function with results is reachable"},
 		{"shadowing", func(m *Module) {
 			m.AddFunc("f", []Param{P("x", TInt)}, nil, nil, func(b *Builder) {
 				b.Block("", func(b *Builder) { b.Let("x", Int(1)) })

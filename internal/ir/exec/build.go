@@ -84,6 +84,11 @@ func (b *Builder) For(label string, init *Set, cond Expr, post *Set, body func(b
 	b.add(&Loop{Label: label, Init: init, Cond: cond, Post: post, Body: b.nested("", body)})
 }
 
+// Protect appends a Protect of body with the cleanup finally.
+func (b *Builder) Protect(body, finally func(b *Builder)) {
+	b.add(&Protect{Body: b.nested("", body), Finally: b.nested("", finally)})
+}
+
 // If appends an if without else.
 func (b *Builder) If(cond Expr, then func(b *Builder)) {
 	b.add(&If{Cond: cond, Then: b.nested("", then)})
