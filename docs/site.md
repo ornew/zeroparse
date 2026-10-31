@@ -158,18 +158,21 @@ The build writes two control files into `site/dist`; Workers reads them and does
 - `_headers` is [`site/static/_headers`](../site/static/_headers). It sets a strict `Content-Security-Policy`: the
   pages load scripts, styles and data only from the site itself, and need no inline scripts or styles;
   `'wasm-unsafe-eval'` allows compiling `zp.wasm`, and styles may be inline only because Mermaid sets them while it
-  renders a diagram. The one outside origin is Cloudflare Web Analytics, which Cloudflare injects into the pages: its
-  script from `https://static.cloudflareinsights.com` and its reports to `https://cloudflareinsights.com`. It also sets `X-Content-Type-Options` and `Referrer-Policy`. The WebAssembly binaries
+  renders a diagram. Two outside origins are allowed: Cloudflare Web Analytics, which Cloudflare injects into the
+  pages (its script from `https://static.cloudflareinsights.com` and its reports to `https://cloudflareinsights.com`),
+  and `https://cdn.jsdelivr.net` for the Mermaid build that pages with a diagram load. It also sets `X-Content-Type-Options` and `Referrer-Policy`. The WebAssembly binaries
   (`application/wasm`) and their hashed runtime scripts are cached for a year (`immutable`); the other files are
   revalidated on each visit, which is Workers' default.
 
 Workers limits `_headers` to 100 rules and 2,000 characters per line, and `_redirects` to 2,000 static and 100 dynamic
 rules. The local preview server (`-serve`) applies neither file; `npx wrangler dev` does.
 
-Diagrams are written as `mermaid` fences. Only pages that contain one load `assets/mermaid.js`, which loads the pinned
-Mermaid build vendored in `assets/vendor/` (the policy allows no remote scripts), renders each diagram once per color
-theme and shows the matching image; the fence text remains where scripts do not run. To upgrade Mermaid, replace the
-vendored file and its name, and update the version in `assets/mermaid.js`.
+Diagrams are written as `mermaid` fences. Only pages that contain one load `assets/mermaid.js`, which loads a pinned
+Mermaid build from jsDelivr with its Subresource Integrity hash, renders each diagram once per color theme and shows the
+matching image; the fence text remains where scripts do not run or the build cannot be loaded. The repository keeps no
+copy of Mermaid. To upgrade it, change the version in the URL in `assets/mermaid.js` and replace the hash with
+`sha384-` followed by the base64 SHA-384 digest of the new file
+(`curl -sL <url> | openssl dgst -sha384 -binary | openssl base64 -A`).
 
 Formulas use the delimiters of GitHub's renderer, so one source reads the same on both: `$x$` is inline math, a
 paragraph that begins and ends with `$$` is display math, and a `math` fence is display math too. The
