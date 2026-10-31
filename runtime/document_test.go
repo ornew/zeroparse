@@ -322,3 +322,30 @@ func documentNodeString(n *Node) string {
 	}
 	return s + ")"
 }
+
+// TestCallDocumentRestoresOnPanic checks that a Document call restores the enclosing call's
+// frontier and reuse when its rule panics, memoized and not: the enclosing call keeps the farther
+// frontier and the shorter reuse, which here are its own.
+func TestCallDocumentRestoresOnPanic(t *testing.T) {
+	for _, memo := range []bool{true, false} {
+		r := &Rule{Id: 0, Name: "main", Memo: memo, DocMemo: memo, Seen: -1}
+		r.Body = func(*Parser, int) (*Node, bool) { panic(fatal{err: ErrLimit}) }
+		d := testDocumentState(r, "abc", CodePoints)
+		p := &Parser{unit: d.unit, MaxDepth: defaultMaxDepth}
+		p.setGrammar(d.root.g)
+		p.setSource(d.text)
+		p.Document, p.memo = d, d.memo
+		p.Pos, p.docHigh, p.docReuse = 1, 3, reuseInParse
+		func() {
+			defer func() {
+				if x := recover(); x == nil {
+					t.Fatalf("memo=%v: the call did not panic", memo)
+				}
+			}()
+			p.callDocument(r, 0)
+		}()
+		if p.docHigh != 3 || p.docReuse != reuseInParse {
+			t.Errorf("memo=%v: the panic left the frontier %d and reuse %d, want 3 and %d", memo, p.docHigh, p.docReuse, reuseInParse)
+		}
+	}
+}
