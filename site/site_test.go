@@ -85,7 +85,8 @@ func TestBuild(t *testing.T) {
 		}
 	}
 
-	// Only pages with a mermaid fence load the diagram renderer, and the vendored build it loads exists.
+	// Only pages with a mermaid fence load the diagram renderer, which loads a pinned Mermaid build
+	// from jsDelivr under its integrity hash.
 	withFence := 0
 	err = filepath.WalkDir(out, func(p string, d fs.DirEntry, err error) error {
 		if err != nil || filepath.Ext(p) != ".html" {
@@ -111,8 +112,17 @@ func TestBuild(t *testing.T) {
 	if withFence == 0 {
 		t.Error("no page has a mermaid fence; documentation-style.md shows one")
 	}
-	if _, err := os.Stat(filepath.Join(out, "assets", "vendor", "mermaid-11.12.0.min.js")); err != nil {
-		t.Errorf("vendored Mermaid is not published: %v", err)
+	loader, err := os.ReadFile(filepath.Join(out, "assets", "mermaid.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"https://cdn.jsdelivr.net/npm/mermaid@`, `"sha384-`, "s.integrity = MERMAID_SRI", `s.crossOrigin = "anonymous"`} {
+		if !strings.Contains(string(loader), want) {
+			t.Errorf("assets/mermaid.js lacks %s", want)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(out, "assets", "vendor")); !os.IsNotExist(err) {
+		t.Errorf("a vendored assets directory is published: %v", err)
 	}
 
 	// Formulas are rendered by Nanosite's built-in math support. Only pages with a formula link its

@@ -1,19 +1,22 @@
 // Renders ```mermaid fences as diagrams. The build adds this script only to pages that contain such
-// a fence. The page's Content-Security-Policy allows no remote scripts, so Mermaid is vendored
-// (vendor/). Mermaid styles the SVG it builds inline, which the policy's style-src permits for
+// a fence. It loads a pinned Mermaid build from jsDelivr, checked by its Subresource Integrity
+// hash; the page's Content-Security-Policy allows that origin for this script. Mermaid styles the SVG it builds inline, which the policy's style-src permits for
 // this reason; the finished SVG is shown through <img> elements, so nothing of it stays in the
 // page. Each diagram is rendered once per color theme; the stylesheet shows the one that matches
 // the page. The fence text stays in place when rendering fails or without
 // JavaScript.
-const MERMAID = new URL("vendor/mermaid-11.12.0.min.js", import.meta.url).href;
+const MERMAID = "https://cdn.jsdelivr.net/npm/mermaid@11.12.0/dist/mermaid.min.js";
+const MERMAID_SRI = "sha384-o+g/BxPwhi0C3RK7oQBxQuNimeafQ3GE/ST4iT2BxVI4Wzt60SH4pq9iXVYujjaS";
 const FONT = "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
-// loadMermaid loads the vendored build, which defines the global mermaid.
+// loadMermaid loads the pinned build, which defines the global mermaid.
 function loadMermaid() {
   return new Promise((resolve, reject) => {
     if (globalThis.mermaid) return resolve(globalThis.mermaid);
     const s = document.createElement("script");
     s.src = MERMAID;
+    s.integrity = MERMAID_SRI;
+    s.crossOrigin = "anonymous";
     s.onload = () => resolve(globalThis.mermaid);
     s.onerror = () => reject(new Error("cannot load " + MERMAID));
     document.head.append(s);
