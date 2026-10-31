@@ -136,6 +136,9 @@ func (p *printer) node(n Node, d int) {
 		if n.Project != "" {
 			p.b.WriteString(" project=" + n.Project)
 		}
+		if n.Site != 0 {
+			fmt.Fprintf(&p.b, " site=%d", n.Site)
+		}
 	case *Look:
 		if n.Neg {
 			p.line(d, "not")

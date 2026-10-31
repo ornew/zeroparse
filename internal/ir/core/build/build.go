@@ -624,7 +624,7 @@ func (b *coreBuilder) attributed(e *grammar.Attributed, i int, s *coreScope, bui
 // repeat builds a repetition; with field, a projected repetition gathering the values of the
 // capture field of its elements.
 func (b *coreBuilder) repeat(e *grammar.Repeat, s *coreScope, build bool, field string) (core.Node, error) {
-	n := &core.Repeat{Min: e.Min, Max: e.Max, Project: field}
+	n := &core.Repeat{Min: e.Min, Max: e.Max, Project: field, Site: b.prog.SkipSite(e)}
 	es := s
 	if field != "" || compile.ElementScoped(e.Expr) {
 		es = b.scope(coreLayout(b.prog, b.cur, b.proj, e.Expr, build && field == "").names, e.Expr)

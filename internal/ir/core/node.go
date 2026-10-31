@@ -165,6 +165,9 @@ type Repeat struct {
 	// Project, if not "", is the capture of the element whose values the repetition gathers
 	// (a projected repetition); the element builds no value.
 	Project string
+	// Site, if not 0, is the number of the skip-run site the repetition is (compile.SkipSite): its
+	// walks record where the rest of them from each position ends, and reuse the records.
+	Site int
 }
 
 // Look is a lookahead: a silent scope that restores the position.

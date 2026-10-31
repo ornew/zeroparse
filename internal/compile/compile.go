@@ -64,6 +64,11 @@ type Program struct {
 	NodeKinds map[string]*value.NodeTypeKinds
 	// nodeTypeCache holds the results of nodeTypeOf by type name: a nodeTy, or false.
 	nodeTypeCache sync.Map
+	// skipSites numbers the skip-run sites (skip_sites.go), NumSkipSites of them; inSite holds,
+	// while they are marked, the repetitions inside a site.
+	skipSites    map[*grammar.Repeat]int
+	inSite       map[*grammar.Repeat]bool
+	NumSkipSites int
 }
 
 // Options configures compilation.
@@ -458,6 +463,7 @@ func CompileProgram[M any](g *grammar.Grammar, opts Options, flags []RuleFlags, 
 	if flags == nil && !opts.LeftRecursionBindings {
 		c.checkLeftRecursionBindings(rules, vars)
 	}
+	prog.markSkipSites(control)
 	if opts.Recognize {
 		// Only rules whose values are referenced by predicates, and the rules needed to build those
 		// values, are evaluated as usual; so are the rules with a #stream repetition, whose elements
