@@ -51,6 +51,10 @@ type machine struct {
 	// growing entry (memo.mark), and of an unstable entry 0 (memo.settle).
 	growths, seedPos, readDepth int64
 	depth                       map[*ref.Entry]int64
+	// events lists what the observation was told (obs.enter, obs.exit); high is the examined frontier
+	// of the active call (doc.examinedBegin, doc.examinedEnd).
+	events []string
+	high   int64
 }
 
 func newMachine() *machine {
@@ -189,6 +193,25 @@ func (m *machine) Call(o *exec.Op, args []any) []any {
 	case "obs.memoHit":
 		m.memoHit++
 		return nil
+	case "obs.enter":
+		m.events = append(m.events, fmt.Sprintf("enter %d at %d level %d", args[0].(*trule).id, args[1], args[2]))
+		return nil
+	case "obs.exit":
+		m.events = append(m.events, fmt.Sprintf("exit %v at %d examined %d %v", args[0], args[1], args[2], args[3]))
+		return nil
+	case "doc.examinedBegin":
+		h := m.high
+		m.high = m.pos()
+		return []any{h}
+	case "doc.examinedEnd":
+		x := m.high
+		m.high = max(args[0].(int64), x)
+		return []any{x, true}
+	case "call.body":
+		r := args[0].(*trule)
+		r.runs++
+		v, ok := r.body(m)
+		return []any{v, ok}
 	case "lr.stale":
 		return []any{args[0].(*trule).member && m.growths != 0 && m.seedPos == args[1].(int64)}
 	case "lr.read":
@@ -397,6 +420,39 @@ func TestCallReuseContexts(t *testing.T) {
 			callAt(t, mod, m, f, r, 0)
 			if reused := r.runs == 1; reused != c.reused {
 				t.Errorf("reused %v, want %v", reused, c.reused)
+			}
+		})
+	}
+}
+
+// TestObserved checks that an observed call reports its beginning and its end to the observation,
+// with its outcome, its end and how far its call examined the input, which joins the frontier of the
+// enclosing call.
+func TestObserved(t *testing.T) {
+	mod := Build()
+	f := composition(t, mod, "observed", ops.Document, ops.Observe)
+	for _, ok := range []bool{true, false} {
+		t.Run(fmt.Sprint(ok), func(t *testing.T) {
+			m := newMachine()
+			m.high = 12
+			var at int64 = -1
+			r := &trule{id: 2, body: func(m *machine) (any, bool) {
+				at = m.high
+				m.events = append(m.events, "body")
+				m.advance(2)
+				m.high = 9
+				return "v", ok
+			}}
+			v, got := callAt(t, mod, m, f, r, 3)
+			if got != ok || (ok && v != "v") || r.runs != 1 {
+				t.Errorf("%v %v after %d evaluations, want the body's result after one", v, got, r.runs)
+			}
+			want := []string{"enter 2 at 3 level 0", "body", fmt.Sprintf("exit %v at 5 examined 9 true", ok)}
+			if !slices.Equal(m.events, want) {
+				t.Errorf("observed %q, want %q", m.events, want)
+			}
+			if at != 3 || m.high != 12 {
+				t.Errorf("the body began with the frontier %d and the call left %d, want 3 and 12", at, m.high)
 			}
 		})
 	}

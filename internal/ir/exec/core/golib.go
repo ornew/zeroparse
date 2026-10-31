@@ -29,6 +29,7 @@ type goSpec struct {
 	typed bool
 	on    []string
 	name  string // the Go name
+	body  string // the method that call.body calls
 }
 
 // goSpecs are the functions of the Go runtime that the compositions replace.
@@ -40,6 +41,12 @@ var goSpecs = []goSpec{
 	{fn: "call", typed: true, on: []string{ops.Document, ops.Observe, ops.Typed}, name: "callBody"},
 	{fn: "callMemo", typed: true, on: []string{ops.Document, ops.Observe, ops.Typed}, name: "CallMemo"},
 	{fn: "grow", typed: true, on: []string{ops.Typed}, name: "grow"},
+	// The observed calls and plain invocations of both runtimes, which their callers take in an
+	// observed parse.
+	{fn: "observed", on: []string{ops.Document, ops.Observe}, name: "callObserved", body: "callBody"},
+	{fn: "observed", on: []string{ops.Document, ops.Observe}, name: "invokePlainObserved", body: "invokePlainBody"},
+	{fn: "observed", typed: true, on: []string{ops.Document, ops.Observe}, name: "callObserved", body: "callBody"},
+	{fn: "observed", typed: true, on: []string{ops.Document, ops.Observe}, name: "invokePlainObserved", body: "invokePlainBody"},
 }
 
 // GoRuntime returns the Go file of the printed compositions for package runtime, built with
@@ -53,7 +60,7 @@ func GoRuntime() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		src, err := execgo.Func(m, f, goTarget(s.typed))
+		src, err := execgo.Func(m, f, goTarget(s))
 		if err != nil {
 			return "", err
 		}
@@ -62,8 +69,10 @@ func GoRuntime() (string, error) {
 	return b.String(), nil
 }
 
-// goTarget returns the Go implementation of the operations in the node or the typed runtime.
-func goTarget(typed bool) *execgo.Target {
+// goTarget returns the Go implementation of the operations in the node or the typed runtime, for
+// the printed function s.
+func goTarget(s goSpec) *execgo.Target {
+	typed := s.typed
 	t := &execgo.Target{Recv: "p *Parser", Source: "internal/ir/exec/core"}
 	handles := map[string]string{
 		ops.Rule: "*Rule", ops.Value: "*Node", ops.Entry: "*memoEntry", ops.Values: "[]any", ops.Errs: "[]*SyntaxError",
@@ -80,6 +89,7 @@ func goTarget(typed bool) *execgo.Target {
 		entryType, valueField, alloc = "tmemoEntry", "val", "p.memoSlab.one()"
 		rule = func(r string) string { return r + ".Rule" }
 	}
+	names[s.fn] = s.name
 	t.Handle = func(name string) string { return handles[name] }
 	t.FuncName = func(name string) string { return names[name] }
 	t.Reg = func(name string) string {
@@ -151,6 +161,16 @@ func goTarget(typed bool) *execgo.Target {
 			return fmt.Sprintf("%s.growing = false\n%s.silent = %s", a[0], a[0], a[1])
 		case "obs.memoHit":
 			return "p.Observation.memoHit()"
+		case "obs.enter":
+			return fmt.Sprintf("p.Observation.Enter(%s.Name, %s, %s)", a[0], a[1], a[2])
+		case "obs.exit":
+			return fmt.Sprintf("p.Observation.Exit(%s, %s, %s, %s)", a[0], a[1], a[2], a[3])
+		case "doc.examinedBegin":
+			return "p.ExaminedBegin()"
+		case "doc.examinedEnd":
+			return "p.ExaminedEnd(" + a[0] + ")"
+		case "call.body":
+			return fmt.Sprintf("p.%s(%s, %s)", s.body, a[0], a[1])
 		case "lr.stale":
 			return fmt.Sprintf("p.memberStale(%s.Member, %s)", a[0], a[1])
 		case "lr.read":

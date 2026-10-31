@@ -195,4 +195,30 @@ silent or has recovered errors.`,
 
 	add(&exec.Op{Name: "obs.memoHit", Component: Obs, Writes: []string{Obs}, Features: []string{Observe},
 		Contract: `Counts a reuse of a memo entry in the observation, if the parse is observed.`})
+	add(&exec.Op{Name: "obs.enter", Component: Obs, Params: []exec.Param{exec.P("r", rule), exec.P("pos", exec.TInt), exec.P("min", exec.TInt)},
+		Writes: []string{Obs}, Features: []string{Observe}, NoReturn: true,
+		Contract: `Reports to the observation of the parse that a call of the rule at pos and binding level
+min begins.`,
+		Requires: `The parse is observed.`})
+	add(&exec.Op{Name: "obs.exit", Component: Obs, Params: []exec.Param{exec.P("ok", exec.TBool), exec.P("pos", exec.TInt),
+		exec.P("examined", exec.TInt), exec.P("known", exec.TBool)}, Writes: []string{Obs}, Features: []string{Observe}, NoReturn: true,
+		Contract: `Reports to the observation of the parse that the call that the last unmatched obs.enter began
+ends, with its success ok, at pos, and with the end of the input it examined if known.`,
+		Requires: `The parse is observed.`})
+	add(&exec.Op{Name: "doc.examinedBegin", Component: Call, Results: []exec.Type{exec.TInt}, Reads: []string{Call},
+		Writes: []string{Call}, Features: []string{Document},
+		Contract: `Starts measuring how far an observed call examines the input: in a Document parse, the
+frontier of the call starts at the position. Returns the enclosing call's frontier, for
+doc.examinedEnd. The call itself, and any memo entry it reads or records, extends the frontier as in
+an unobserved parse, so that observation does not change reuse.`})
+	add(&exec.Op{Name: "doc.examinedEnd", Component: Call, Params: []exec.Param{exec.P("enclosing", exec.TInt)},
+		Results: []exec.Type{exec.TInt, exec.TBool}, Reads: []string{Call}, Writes: []string{Call}, Features: []string{Document},
+		Contract: `Ends measuring the frontier of an observed call and merges it into the enclosing one; returns
+the call's frontier and true in a Document parse, and false otherwise. In a provisional context, the
+result is raised to the position without changing the frontier the Document keeps.`,
+		Requires: `enclosing is the result of the matching doc.examinedBegin.`})
+	add(&exec.Op{Name: "call.body", Component: Call, Params: call, Results: result, Writes: append([]string{Call}, regs...),
+		NoReturn: true,
+		Contract: `Calls the rule at the binding level min without observation: the call, or the plain invocation,
+that the target's observed function wraps.`})
 }
