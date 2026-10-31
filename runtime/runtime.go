@@ -2612,16 +2612,6 @@ func (p *Parser) releaseObservation() {
 	p.Observation = nil
 }
 
-// callObserved is call in an observed parse.
-func (p *Parser) callObserved(r *Rule, min int) (*Node, bool) {
-	p.Observation.Enter(r.Name, p.Pos, min)
-	h := p.ExaminedBegin()
-	v, ok := p.callBody(r, min)
-	x, known := p.ExaminedEnd(h)
-	p.Observation.Exit(ok, p.Pos, x, known)
-	return v, ok
-}
-
 // callBody is call with the Document bookkeeping and without observation. A
 // Document parse takes callDocument.
 func (p *Parser) callBody(r *Rule, min int) (*Node, bool) {
@@ -2824,16 +2814,6 @@ func (p *Parser) InvokePlain(r *Rule, min int) (*Node, bool) {
 		return p.invokePlainObserved(r, min)
 	}
 	return p.invokePlainBody(r, min)
-}
-
-// invokePlainObserved is InvokePlain in an observed parse.
-func (p *Parser) invokePlainObserved(r *Rule, min int) (*Node, bool) {
-	p.Observation.Enter(r.Name, p.Pos, min)
-	h := p.ExaminedBegin()
-	v, ok := p.invokePlainBody(r, min)
-	x, known := p.ExaminedEnd(h)
-	p.Observation.Exit(ok, p.Pos, x, known)
-	return v, ok
 }
 
 // invokePlainBody is InvokePlain without observation.

@@ -1231,16 +1231,6 @@ func (p *TParser) Call(r *TRule, min int) (any, bool) {
 	return p.callBody(r, min)
 }
 
-// callObserved is call in an observed parse.
-func (p *TParser) callObserved(r *TRule, min int) (any, bool) {
-	p.Observation.Enter(r.Name, p.Pos, min)
-	h := p.ExaminedBegin()
-	v, ok := p.callBody(r, min)
-	x, known := p.ExaminedEnd(h)
-	p.Observation.Exit(ok, p.Pos, x, known)
-	return v, ok
-}
-
 func (p *TParser) invoke(r *TRule, min int) (any, bool) {
 	if p.TypedDocument != nil {
 		p.Document.stats.Evaluated++
@@ -1272,16 +1262,6 @@ func (p *TParser) InvokePlain(r *TRule, min int) (any, bool) {
 		return p.invokePlainObserved(r, min)
 	}
 	return p.invokePlainBody(r, min)
-}
-
-// invokePlainObserved is InvokePlain in an observed parse.
-func (p *TParser) invokePlainObserved(r *TRule, min int) (any, bool) {
-	p.Observation.Enter(r.Name, p.Pos, min)
-	h := p.ExaminedBegin()
-	v, ok := p.invokePlainBody(r, min)
-	x, known := p.ExaminedEnd(h)
-	p.Observation.Exit(ok, p.Pos, x, known)
-	return v, ok
 }
 
 // invokePlainBody is InvokePlain without observation.

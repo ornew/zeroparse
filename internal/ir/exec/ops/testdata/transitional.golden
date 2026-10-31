@@ -573,3 +573,61 @@ transitional op obs.memoHit()
   cost <= 0
   contract:
     // Counts a reuse of a memo entry in the observation, if the parse is observed.
+
+transitional op obs.enter(r Rule, pos int, min int)
+  component observe
+  writes observe
+  features observe
+  noreturn
+  cost <= 0
+  contract:
+    // Reports to the observation of the parse that a call of the rule at pos and binding level
+    // min begins.
+  requires:
+    // The parse is observed.
+
+transitional op obs.exit(ok bool, pos int, examined int, known bool)
+  component observe
+  writes observe
+  features observe
+  noreturn
+  cost <= 0
+  contract:
+    // Reports to the observation of the parse that the call that the last unmatched obs.enter began
+    // ends, with its success ok, at pos, and with the end of the input it examined if known.
+  requires:
+    // The parse is observed.
+
+transitional op doc.examinedBegin() int
+  component call
+  reads call
+  writes call
+  features document
+  cost <= 0
+  contract:
+    // Starts measuring how far an observed call examines the input: in a Document parse, the
+    // frontier of the call starts at the position. Returns the enclosing call's frontier, for
+    // doc.examinedEnd. The call itself, and any memo entry it reads or records, extends the frontier as in
+    // an unobserved parse, so that observation does not change reuse.
+
+transitional op doc.examinedEnd(enclosing int) (int, bool)
+  component call
+  reads call
+  writes call
+  features document
+  cost <= 0
+  contract:
+    // Ends measuring the frontier of an observed call and merges it into the enclosing one; returns
+    // the call's frontier and true in a Document parse, and false otherwise. In a provisional context, the
+    // result is raised to the position without changing the frontier the Document keeps.
+  requires:
+    // enclosing is the result of the matching doc.examinedBegin.
+
+transitional op call.body(r Rule, min int) (Value, bool)
+  component call
+  writes call, pos, silent
+  noreturn
+  cost <= 0
+  contract:
+    // Calls the rule at the binding level min without observation: the call, or the plain invocation,
+    // that the target's observed function wraps.

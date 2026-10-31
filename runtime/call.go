@@ -2,9 +2,9 @@
 
 package runtime
 
-// The call protocol of a rule and left-recursion growth, as written by hand. Built with the tag
-// zp_exec, the runtime uses the functions that internal/ir/exec/core prints from the shared
-// compositions instead (call_exec.go).
+// The call protocol of a rule, left-recursion growth and the observed calls, as written by hand.
+// Built with the tag zp_exec, the runtime uses the functions that internal/ir/exec/core prints
+// from the shared compositions instead (call_exec.go).
 
 // Call calls rule r at level min. An observed or Document parse takes
 // callTracked, so that the call path of other parses has no observation or
@@ -267,4 +267,44 @@ func (p *TParser) grow(r *TRule, min int, env []any) (any, bool) {
 	p.Pos = best.end
 	p.Recovered = p.copyErrors(p.Recovered[:rec], best.errs)
 	return best.val, best.ok
+}
+
+// callObserved is call in an observed parse.
+func (p *Parser) callObserved(r *Rule, min int) (*Node, bool) {
+	p.Observation.Enter(r.Name, p.Pos, min)
+	h := p.ExaminedBegin()
+	v, ok := p.callBody(r, min)
+	x, known := p.ExaminedEnd(h)
+	p.Observation.Exit(ok, p.Pos, x, known)
+	return v, ok
+}
+
+// invokePlainObserved is InvokePlain in an observed parse.
+func (p *Parser) invokePlainObserved(r *Rule, min int) (*Node, bool) {
+	p.Observation.Enter(r.Name, p.Pos, min)
+	h := p.ExaminedBegin()
+	v, ok := p.invokePlainBody(r, min)
+	x, known := p.ExaminedEnd(h)
+	p.Observation.Exit(ok, p.Pos, x, known)
+	return v, ok
+}
+
+// callObserved is call in an observed parse.
+func (p *TParser) callObserved(r *TRule, min int) (any, bool) {
+	p.Observation.Enter(r.Name, p.Pos, min)
+	h := p.ExaminedBegin()
+	v, ok := p.callBody(r, min)
+	x, known := p.ExaminedEnd(h)
+	p.Observation.Exit(ok, p.Pos, x, known)
+	return v, ok
+}
+
+// invokePlainObserved is InvokePlain in an observed parse.
+func (p *TParser) invokePlainObserved(r *TRule, min int) (any, bool) {
+	p.Observation.Enter(r.Name, p.Pos, min)
+	h := p.ExaminedBegin()
+	v, ok := p.invokePlainBody(r, min)
+	x, known := p.ExaminedEnd(h)
+	p.Observation.Exit(ok, p.Pos, x, known)
+	return v, ok
 }

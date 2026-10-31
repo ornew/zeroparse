@@ -3,7 +3,8 @@
 // internal/ir/exec/ops, and their specializations for each runtime.
 //
 // The compositions are the call protocol of a rule (deferred memoization, memo lookup with its
-// reuse conditions, store and restore on failure) and left-recursion growth. The Go backend prints
+// reuse conditions, store and restore on failure), left-recursion growth and the observation of a
+// call. The Go backend prints
 // them into the generated Go runtime (GoRuntime) and the TypeScript backend into the TypeScript
 // runtime (TSMethods).
 package core
@@ -174,6 +175,18 @@ the rule is called at the position again, or its memoization is no longer deferr
 		})
 	grow.Doc = `grow grows the seed of a left-recursive leader: it memoizes a failure, then evaluates the
 body again while the match gets longer, and keeps the last longer result.`
+
+	observed := m.AddFunc("observed", []Param{P("r", rule), P("min", TInt)}, result,
+		[]string{ops.Document, ops.Observe}, func(b *Builder) {
+			b.Do("obs.enter", r, R(ops.Pos), L("min"))
+			b.Let("h", C("doc.examinedBegin"))
+			b.LetN([]string{"v", "ok"}, C("call.body", r, L("min")))
+			b.LetN([]string{"x", "known"}, C("doc.examinedEnd", L("h")))
+			b.Do("obs.exit", L("ok"), R(ops.Pos), L("x"), L("known"))
+			b.Return(L("v"), L("ok"))
+		})
+	observed.Doc = `observed is a rule call in an observed parse: it reports the call to the observation, with how
+far it examined the input in a Document parse, around the call without observation.`
 	if err := Verify(m); err != nil {
 		panic(err)
 	}

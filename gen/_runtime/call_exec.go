@@ -287,3 +287,55 @@ func (p *TParser) grow(r *TRule, min int, env []any) (any, bool) {
 	p.Recovered = p.copyErrors(p.Recovered, best.errs)
 	return best.val, best.ok
 }
+
+// callObserved is a rule call in an observed parse: it reports the call to the observation, with how
+// far it examined the input in a Document parse, around the call without observation.
+//
+// Printed from Exec IR function observed of internal/ir/exec/core, specialized for document, observe.
+func (p *Parser) callObserved(r *Rule, min int) (*Node, bool) {
+	p.Observation.Enter(r.Name, p.Pos, min)
+	h := p.ExaminedBegin()
+	v, ok := p.callBody(r, min)
+	x, known := p.ExaminedEnd(h)
+	p.Observation.Exit(ok, p.Pos, x, known)
+	return v, ok
+}
+
+// invokePlainObserved is a rule call in an observed parse: it reports the call to the observation, with how
+// far it examined the input in a Document parse, around the call without observation.
+//
+// Printed from Exec IR function observed of internal/ir/exec/core, specialized for document, observe.
+func (p *Parser) invokePlainObserved(r *Rule, min int) (*Node, bool) {
+	p.Observation.Enter(r.Name, p.Pos, min)
+	h := p.ExaminedBegin()
+	v, ok := p.invokePlainBody(r, min)
+	x, known := p.ExaminedEnd(h)
+	p.Observation.Exit(ok, p.Pos, x, known)
+	return v, ok
+}
+
+// callObserved is a rule call in an observed parse: it reports the call to the observation, with how
+// far it examined the input in a Document parse, around the call without observation.
+//
+// Printed from Exec IR function observed of internal/ir/exec/core, specialized for document, observe.
+func (p *TParser) callObserved(r *TRule, min int) (any, bool) {
+	p.Observation.Enter(r.Name, p.Pos, min)
+	h := p.ExaminedBegin()
+	v, ok := p.callBody(r, min)
+	x, known := p.ExaminedEnd(h)
+	p.Observation.Exit(ok, p.Pos, x, known)
+	return v, ok
+}
+
+// invokePlainObserved is a rule call in an observed parse: it reports the call to the observation, with how
+// far it examined the input in a Document parse, around the call without observation.
+//
+// Printed from Exec IR function observed of internal/ir/exec/core, specialized for document, observe.
+func (p *TParser) invokePlainObserved(r *TRule, min int) (any, bool) {
+	p.Observation.Enter(r.Name, p.Pos, min)
+	h := p.ExaminedBegin()
+	v, ok := p.invokePlainBody(r, min)
+	x, known := p.ExaminedEnd(h)
+	p.Observation.Exit(ok, p.Pos, x, known)
+	return v, ok
+}
