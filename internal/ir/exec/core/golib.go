@@ -47,8 +47,9 @@ var goSpecs = []goSpec{
 	{fn: "observed", on: []string{ops.Document, ops.Observe}, name: "invokePlainObserved", body: "invokePlainBody"},
 	{fn: "observed", typed: true, on: []string{ops.Document, ops.Observe}, name: "callObserved", body: "callBody"},
 	{fn: "observed", typed: true, on: []string{ops.Document, ops.Observe}, name: "invokePlainObserved", body: "invokePlainBody"},
-	// The rule call of a Document parse in the node runtime.
+	// The tracked path of the node runtime: the rule call of a Document parse and its unmemoized call.
 	{fn: "document", on: []string{ops.Document}, name: "callDocument"},
+	{fn: "unmemoized", name: "callUnmemoized"},
 }
 
 // GoRuntime returns the Go file of the printed compositions for package runtime, built with
@@ -80,7 +81,7 @@ func goTarget(s goSpec) *execgo.Target {
 		ops.Rule: "*Rule", ops.Value: "*Node", ops.Entry: "*memoEntry", ops.Values: "[]any", ops.Errs: "[]*SyntaxError",
 		ops.Mark: "ExpMark", ops.Set: "[]ExpID", ops.Kept: "[]ExpID", ops.Reuse: "docReuse",
 	}
-	names := map[string]string{"call": "Call", "grow": "grow"}
+	names := map[string]string{"call": "Call", "grow": "grow", "unmemoized": "callUnmemoized"}
 	entryType, valueField, alloc := "memoEntry", "node", "p.memo.alloc()"
 	rule := func(r string) string { return r }
 	if typed {
@@ -175,8 +176,6 @@ func goTarget(s goSpec) *execgo.Target {
 			return "p.ExaminedEnd(" + a[0] + ")"
 		case "doc.leave":
 			return fmt.Sprintf("p.docHigh = max(%s, p.docHigh)\np.docReuse = max(%s, p.docReuse)", a[0], a[1])
-		case "call.unmemoized":
-			return fmt.Sprintf("p.callUnmemoized(%s, %s)", a[0], a[1])
 		case "call.memo":
 			return fmt.Sprintf("p.callMemo(%s, %s)", a[0], a[1])
 		case "call.body":
