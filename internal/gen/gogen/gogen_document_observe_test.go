@@ -221,8 +221,14 @@ func observedRuntime(t *testing.T) string {
 		case "document.go", "typed_document.go":
 			return replace(src, "p.Observation = newObservation(&o.observe)\n\tdefer p.releaseObservation()",
 				"p.Observation = newObservation(&o.observe)\n\tif ProbeHook != nil {\n\t\tProbeHook(p.Observation)\n\t}\n\tdefer p.releaseObservation()", 1)
-		case "runtime.go":
-			src = replace(src, "\t\te.examined = p.docHigh\n", "\t\te.examined = p.docHigh\n\t\tFrontierHook(r.Name, start, min, p.docHigh, false)\n", 1)
+		case "call.go", "call_exec.go":
+			// The hand-written call names the stored entry e, the printed one entry.
+			stored := "e"
+			if name == "call_exec.go" {
+				stored = "entry"
+			}
+			old := stored + ".examined = p.docHigh\n"
+			src = replace(src, old, "FrontierHook(r.Name, start, min, p.docHigh, false); "+old, 1)
 			return replace(src, "p.documentTouch(e.examined)\n", "p.documentTouch(e.examined)\n\t\t\tFrontierHook(r.Name, start, min, e.examined, true)\n", 1)
 		case "typed.go":
 			src = replace(src, "\tp.TypedDocument.meta[e] = typedDocumentMeta{examined: p.docHigh,", "\tFrontierHook(r.Name, start, min, p.docHigh, false)\n\tp.TypedDocument.meta[e] = typedDocumentMeta{examined: p.docHigh,", 1)
