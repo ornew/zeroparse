@@ -127,6 +127,12 @@ func (p *printer) stmt(s Stmt, d int) {
 		p.line(d, "stream start")
 	case *EmitStream:
 		p.line(d, "emit %s", p.expr(s.X))
+	case *SkipBegin:
+		p.line(d, "skip begin %d", s.Site)
+	case *SkipVisit:
+		p.line(d, "skip visit")
+	case *SkipEnd:
+		p.line(d, "skip end")
 	case *Append:
 		spread := ""
 		if s.Spread {
@@ -227,6 +233,8 @@ func (p *printer) expr(x Expr) string {
 		return "kidslen"
 	case *StreamOn:
 		return "streaming"
+	case *SkipHit:
+		return "skiphit"
 	case *Nil:
 		return "nil"
 	case *Int:

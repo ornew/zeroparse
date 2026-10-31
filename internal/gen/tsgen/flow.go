@@ -581,6 +581,12 @@ func (p *tsFlowPrinter) stmt(s flow.Stmt) {
 		p.write(fmt.Sprintf("p.trail.length = %sTrail;\n", m.Name))
 	case *flow.Comment:
 		p.write("// " + s.Text + "\n")
+	case *flow.SkipBegin:
+		p.write(fmt.Sprintf("p.skipBegin(%d);\n", s.Site))
+	case *flow.SkipVisit:
+		p.write("p.skipVisit();\n")
+	case *flow.SkipEnd:
+		p.write("p.skipEnd();\n")
 	case *flow.ObserveSkip:
 		if p.dead || p.dry {
 			return
@@ -891,6 +897,8 @@ func (p *tsFlowPrinter) expr(x flow.Expr) string {
 		return "p.recovered.length"
 	case *flow.KidsLen:
 		return "p.kidStack.length"
+	case *flow.SkipHit:
+		return "p.skipHit()"
 	case *flow.Nil:
 		return "null"
 	case *flow.Int:

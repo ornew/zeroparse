@@ -24,10 +24,15 @@ type streamInput struct {
 	// baseLine and baseCol are the line and column (1-based, in the unit) of base.
 	baseLine, baseCol int
 	eof               bool
+	// maxInput, when positive, is the longest stream the parse accepts, in units (streamFill).
+	maxInput int
+	// start is the Id of the start rule of the stream parse, the one rule whose #stream repetition
+	// streams.
+	start int
 	// Emit receives the committed elements of the start rule's #stream
-	// repetition with the parse's work control. Nil collects the repetition
+	// repetition with the parse's budget control. Nil collects the repetition
 	// as a batch parse does.
-	Emit func(*Node, *WorkControl) error
+	Emit func(*Node, *BudgetControl) error
 	// memoBase is the position of memo.slots[0]; pruned is the position up to
 	// which memo entries were last discarded.
 	memoBase, pruned int
@@ -86,12 +91,12 @@ func (a *frameScratch) rewind(m frameScratchMark) {
 // from that Read ahead of cancellation observed after it.
 type streamReader struct {
 	reader  io.Reader
-	control *WorkControl
+	control *BudgetControl
 }
 
 func (r *streamReader) Read(dst []byte) (int, error) {
 	r.control.Check()
-	r.control.Charge(0, 1)
+	r.control.Charge(1)
 	n, err := r.reader.Read(dst)
 	if r.control.ctx != nil {
 		if cerr := contextErr(r.control.ctx); cerr != nil {
@@ -110,38 +115,40 @@ func (r *streamReader) Read(dst []byte) (int, error) {
 //
 // RunParseStream is for generated parsers; not a stable API.
 func RunParseStream(r *Rule, reader io.Reader, emit func(*Node) error, opts []ParseOption) error {
-	var e func(*Node, *WorkControl) error
+	var e func(*Node, *BudgetControl) error
 	if emit != nil {
-		e = func(n *Node, _ *WorkControl) error { return emit(n) }
+		e = func(n *Node, _ *BudgetControl) error { return emit(n) }
 	}
-	return RunParseStreamWork(r, reader, e, opts)
+	return RunParseStreamWithBudget(r, reader, e, opts)
 }
 
-// RunParseStreamWork is RunParseStream with emit also given the parse's work
+// RunParseStreamWithBudget is RunParseStream with emit also given the parse's budget
 // control, so that converting elements to typed values is charged to it.
 //
-// RunParseStreamWork is for generated parsers; not a stable API.
-func RunParseStreamWork(r *Rule, reader io.Reader, emit func(*Node, *WorkControl) error, opts []ParseOption) (err error) {
+// RunParseStreamWithBudget is for generated parsers; not a stable API.
+func RunParseStreamWithBudget(r *Rule, reader io.Reader, emit func(*Node, *BudgetControl) error, opts []ParseOption) (err error) {
 	o, err := ResolveOptions(r.g, append(opts[:len(opts):len(opts)], streaming))
 	if err != nil {
 		return err
 	}
 	if emit == nil && (o.diagnostic != nil || o.diagnosticLimit > 0) {
 		// A diagnostic-only stream still needs element commit boundaries.
-		emit = func(*Node, *WorkControl) error { return nil }
+		emit = func(*Node, *BudgetControl) error { return nil }
 	}
 	var n *Node
 	defer recoverParse(&n, &err)
-	o = prepareOptions(o)
-	if WorkControlsEnabled && o.control != nil {
+	o = prepareOptions(o, 0, true)
+	if o.control != nil {
 		reader = &streamReader{reader: reader, control: o.control}
 	}
 	p := &Parser{unit: o.unit, MaxDepth: o.maxDepth}
 	p.setGrammar(r.g)
+	p.Expectations = o.expectations
 	p.Control = o.control
 	p.Observation = newObservation(&o.observe)
-	p.Stream = &streamInput{reader: bufio.NewReader(reader), baseLine: 1, baseCol: 1, Emit: emit, diagnostic: o.diagnostic}
+	p.Stream = &streamInput{reader: bufio.NewReader(reader), baseLine: 1, baseCol: 1, Emit: emit, diagnostic: o.diagnostic, start: r.Id}
 	p.Stream.tail.limit = o.diagnosticLimit
+	p.Stream.maxInput = o.maxInput
 	p.Control.Check()
 	_, ok := p.Call(r, 0)
 	p.Control.Check()
@@ -224,6 +231,7 @@ func (p *Parser) streamCommit(pos int) {
 		// its inactive capacity can still refer to committed elements.
 		clear(p.Trail[:cap(p.Trail)])
 		p.pruneStreamMemo(pos)
+		p.pruneSkipRecords(pos)
 		p.Observation.dropDiscarded(pos)
 		s.pruned = pos
 	}
@@ -360,7 +368,7 @@ func (t *streamDiagnosticTail) result(p *Parser) error {
 	}
 	ordered := t.errors
 	if t.head != 0 {
-		p.Control.Charge(0, uint64(len(t.errors)))
+		p.Control.Charge(uint64(len(t.errors)))
 		ordered = append(append(make(SyntaxErrors, 0, len(t.errors)), t.errors[t.head:]...), t.errors[:t.head]...)
 	}
 	p.Control.Check()
@@ -460,10 +468,10 @@ func (p *Parser) streamDiscard(keep int) {
 	}
 	s.baseLine, s.baseCol = p.streamLineCol(keep)
 	if p.unit == Bytes {
-		p.InputWork(uint64(len(s.bs) - n))
+		p.SpendRead(uint64(len(s.bs) - n))
 		s.bs = s.bs[:copy(s.bs, s.bs[n:])]
 	} else {
-		p.InputWork(uint64(len(s.in) - n))
+		p.SpendRead(uint64(len(s.in) - n))
 		s.in = s.in[:copy(s.in, s.in[n:])]
 	}
 	s.base = keep
@@ -479,7 +487,7 @@ func (p *Parser) pruneStreamMemo(pos int) {
 	}
 	for _, head := range t.slots[:min(k, len(t.slots))] {
 		for e := head; e != nil; {
-			p.StepWork()
+			p.Spend()
 			next := e.next
 			if !e.growing {
 				*e = memoEntry{next: t.free}
@@ -508,6 +516,17 @@ func (s *streamInput) loaded() int {
 // it is available. Once the required amount has been read, it reads only what
 // is already buffered and does not wait for more.
 func (p *Parser) streamFill(n int) bool {
+	p.Control.demand(n)
+	ok := p.streamFillTo(n)
+	if max := p.Stream.maxInput; max > 0 && n > max && p.Stream.loaded() > max {
+		// The outcome does not depend on how the reader chunks the stream: the parser needed the
+		// unit at MaxInput and the stream holds it. loaded is at least n unless the stream ended.
+		panic(fatal{err: &LimitError{Kind: LimitInput, Limit: uint64(max), Requested: uint64(min(n, p.Stream.loaded()))}})
+	}
+	return ok
+}
+
+func (p *Parser) streamFillTo(n int) bool {
 	s := p.Stream
 	for s.loaded() < n && !s.eof {
 		p.streamRead()
@@ -525,7 +544,7 @@ func (p *Parser) streamFill(n int) bool {
 
 func (p *Parser) streamRead() {
 	p.Control.Check()
-	p.StepWork()
+	p.Spend()
 	s := p.Stream
 	var err error
 	if p.unit == Bytes {
@@ -549,7 +568,7 @@ func (p *Parser) streamRead() {
 // streamPeek is peek on a stream. A complete character never waits for more
 // input; an incomplete UTF-8 prefix waits for more bytes or the end of input.
 func (p *Parser) streamPeek() (rune, int, bool) {
-	p.InputWork(1)
+	p.SpendRead(1)
 	s := p.Stream
 	if p.Pos < s.base || !p.streamFill(p.Pos+1) {
 		return 0, 0, false
@@ -562,17 +581,17 @@ func (p *Parser) streamPeek() (rune, int, bool) {
 		return rune(b[0]), 1, true
 	}
 	for !s.eof && !utf8.FullRune(b) {
-		p.streamFill(s.loaded() + 1)
+		p.streamFillTo(s.loaded() + 1)
 		b = s.bs[p.Pos-s.base:]
 	}
-	p.InputWork(uint64(min(utf8.UTFMax, len(b))))
+	p.SpendRead(uint64(min(utf8.UTFMax, len(b))))
 	r, size := utf8.DecodeRune(b)
 	return r, size, true
 }
 
 // streamByte returns the byte at position i (Bytes).
 func (p *Parser) streamByte(i int) (byte, bool) {
-	p.InputWork(1)
+	p.SpendRead(1)
 	s := p.Stream
 	if i < s.base || !p.streamFill(i+1) {
 		return 0, false
@@ -595,7 +614,7 @@ func (p *Parser) streamMatchLiteral(rs []rune, text string, desc ExpID, build bo
 		}
 	} else {
 		for _, r := range rs {
-			p.InputWork(1)
+			p.SpendRead(1)
 			if p.Pos < s.base || !p.streamFill(p.Pos+1) || s.in[p.Pos-s.base] != r {
 				p.Pos = start
 				p.Expect(start, desc)
@@ -624,7 +643,7 @@ func (p *Parser) streamAtLineStart() bool {
 }
 
 func (p *Parser) streamAtEnd() bool {
-	p.InputWork(1)
+	p.SpendRead(1)
 	return !p.streamFill(p.Pos + 1)
 }
 
@@ -654,7 +673,7 @@ func (p *Parser) streamText(start, end int) string {
 		*c = snap
 		return snap.source[:end-start]
 	}
-	if WorkControlsEnabled && p.Control != nil {
+	if p.Control != nil {
 		// An interruption while filling must not leave partial offsets in
 		// the snapshot in use, so a controlled parse fills separate storage.
 		snap.offsets = make([]int32, snap.end-snap.base+1)
@@ -666,7 +685,7 @@ func (p *Parser) streamText(start, end int) string {
 	i := 0
 	for off := range snap.source {
 		if i&127 == 0 {
-			p.InputWork(uint64(min(128, snap.end-snap.base-i)))
+			p.SpendRead(uint64(min(128, snap.end-snap.base-i)))
 		}
 		snap.offsets[i] = int32(off)
 		i++
@@ -681,13 +700,13 @@ func (p *Parser) streamCopy(start, end int) string {
 	s := p.Stream
 	start, end = start-s.base, end-s.base
 	if p.unit == Bytes {
-		if WorkControlsEnabled && p.Control != nil {
-			p.Control.Charge(uint64(end-start), 1)
+		if p.Control != nil {
+			p.Control.Charge(uint64(end - start))
 		}
 		return string(s.bs[start:end])
 	}
-	if WorkControlsEnabled && p.Control != nil {
-		p.Control.Charge(uint64(end-start), uint64(end-start))
+	if p.Control != nil {
+		p.Control.Charge(2 * uint64(end-start))
 	}
 	return string(s.in[start:end])
 }
@@ -701,7 +720,7 @@ func (p *Parser) streamLineCol(pos int) (int, int) {
 		if s.lines == nil {
 			s.lines = []int{0}
 			for i := range s.loaded() {
-				p.InputWork(1)
+				p.SpendRead(1)
 				if p.unit == Bytes && s.bs[i] == '\n' || p.unit == CodePoints && s.in[i] == '\n' {
 					s.lines = append(s.lines, i+1)
 				}
@@ -721,7 +740,7 @@ func (p *Parser) streamLineCol(pos int) (int, int) {
 	line, col := s.baseLine, s.baseCol
 	n := s.loaded()
 	for i := s.base; i < pos && i < n; i++ {
-		p.InputWork(1)
+		p.SpendRead(1)
 		var nl bool
 		if p.unit == Bytes {
 			nl = s.bs[i-s.base] == '\n'
@@ -742,3 +761,12 @@ func (p *Parser) streamLineCol(pos int) (int, int) {
 //
 // NewStreamIterator is for generated parsers; not a stable API.
 func NewStreamIterator(pull *StreamPull[*Node]) *StreamIterator { return &StreamIterator{pull} }
+
+// StreamsIn reports whether the #stream repetition of the rule id streams: the parse is a stream
+// parse with a callback, the rule is its start rule, and the rule runs at the top (a recursive
+// rule counts its entries, so its outermost entry is the first; any other rule is entered once).
+//
+// StreamsIn is for generated parsers; not a stable API.
+func (p *Parser) StreamsIn(id int, rec bool) bool {
+	return p.Stream != nil && p.Stream.Emit != nil && p.Stream.start == id && (!rec || p.Depth == 1)
+}

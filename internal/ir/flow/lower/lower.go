@@ -870,6 +870,9 @@ func (l *lowerer) not(n *core.Look, s *scope, fail *flow.Label) flow.Expr {
 }
 
 func (l *lowerer) repeat(n *core.Repeat, s *scope, build bool, fail *flow.Label) flow.Expr {
+	if n.Site != 0 {
+		return l.skipRepeat(n, s, fail)
+	}
 	if l.frame {
 		return l.frameRepeat(n, s, build, fail)
 	}
@@ -939,6 +942,48 @@ func (l *lowerer) repeat(n *core.Repeat, s *scope, build bool, fail *flow.Label)
 	list := l.decl("v", flow.TypeValue)
 	l.set(list, l.branch(true, use(start), &flow.Kids{Base: use(base)}))
 	return use(list)
+}
+
+// skipRepeat lowers the skip-run site n, a value-free repetition without a maximum or a scope of
+// its own, whose iterations are the visits of a walk (SkipBegin): from the minimum on, an iteration
+// first takes the rest of the walk from the record of the position, if there is one.
+func (l *lowerer) skipRepeat(n *core.Repeat, s *scope, fail *flow.Label) flow.Expr {
+	if n.Max >= 0 || n.Scope != nil {
+		panic("flow: a skip-run site has no maximum and no scope of its own")
+	}
+	l.emit(&flow.SkipBegin{Site: n.Site})
+	count := l.decl("x", flow.TypeInt)
+	l.set(count, &flow.Int{})
+	lp := l.newLoop(-1)
+	hit := []flow.Stmt{&flow.If{Cond: &flow.SkipHit{}, Then: []flow.Stmt{&flow.Exit{To: lp.Label}}}}
+	if n.Min > 0 {
+		hit = []flow.Stmt{&flow.If{Cond: &flow.Cmp{Op: ">=", L: use(count), R: &flow.Int{N: n.Min}}, Then: hit}}
+	}
+	for _, st := range hit {
+		l.emit(st)
+	}
+	l.emit(&flow.SkipVisit{})
+	m := l.mark(s, n.Body, false)
+	f := l.label()
+	bf := l.open(f)
+	_, cut := l.cutNode(n.Body, s, false, f)
+	l.emit(&flow.Inc{V: count})
+	l.emit(&flow.If{Cond: &flow.Cmp{Op: "==", L: pos, R: m.at()}, Then: []flow.Stmt{&flow.Exit{To: lp.Label}}})
+	if l.used[f] {
+		l.cont(lp.Label)
+		l.close(bf)
+		l.reset(m)
+		l.cutFail(cut, fail, &flow.SkipEnd{})
+		l.exitLoop(lp)
+	} else {
+		l.close(bf)
+	}
+	l.endLoop()
+	l.emit(&flow.SkipEnd{})
+	if n.Min > 0 {
+		l.failIf(nil, &flow.Cmp{Op: "<", L: use(count), R: &flow.Int{N: n.Min}}, fail)
+	}
+	return &flow.Nil{}
 }
 
 // newLoop begins a loop of at most max iterations (unbounded if max < 0). Each iteration charges one

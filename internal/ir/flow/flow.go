@@ -203,6 +203,17 @@ type DropKids struct{ Base Expr }
 // to run (runtime StreamStart). It is guarded by StreamOn.
 type StreamStart struct{}
 
+// SkipBegin begins a walk of the skip-run site Site (core.Repeat.Site) at the position: the
+// iterations of the repetition that follow are visits of the walk, until SkipEnd.
+type SkipBegin struct{ Site int }
+
+// SkipVisit ends the iteration of the walk before, if any, and begins one at the position.
+type SkipVisit struct{}
+
+// SkipEnd ends the iteration of the walk before, if any, ends the walk and records the rest of it
+// from each position it visited.
+type SkipEnd struct{}
+
 // EmitStream delivers the committed element X, which is nil for a value-free repetition, to the
 // callback of a stream parse; the parse has consumed input up to the position.
 type EmitStream struct{ X Expr }
@@ -270,6 +281,9 @@ func (*PushKid) stmt()       {}
 func (*DropKids) stmt()      {}
 func (*StreamStart) stmt()   {}
 func (*EmitStream) stmt()    {}
+func (*SkipBegin) stmt()     {}
+func (*SkipVisit) stmt()     {}
+func (*SkipEnd) stmt()       {}
 func (*Append) stmt()        {}
 func (*SetWhere) stmt()      {}
 func (*DropCreated) stmt()   {}
@@ -326,6 +340,11 @@ type KidsLen struct{}
 // StreamOn reports that the invocation delivers the elements of its #stream repetition: a stream
 // parse with a callback, at the top call of its start rule.
 type StreamOn struct{}
+
+// SkipHit ends the iteration of the walk before, if any, and reports whether the walk has a
+// record of the position; it then takes the rest of the walk from the record, which moves the
+// position to its end, and the walk stops.
+type SkipHit struct{}
 
 // Nil is the nil value.
 type Nil struct{}
@@ -572,6 +591,7 @@ func (*Read) expr()            {}
 func (*RecLen) expr()          {}
 func (*KidsLen) expr()         {}
 func (*StreamOn) expr()        {}
+func (*SkipHit) expr()         {}
 func (*Nil) expr()             {}
 func (*Int) expr()             {}
 func (*Bool) expr()            {}

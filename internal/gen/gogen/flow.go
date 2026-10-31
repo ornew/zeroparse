@@ -487,6 +487,12 @@ func (p *flowPrinter) stmt(s flow.Stmt) {
 		}
 	case *flow.StreamStart:
 		p.write("p.StreamStart()\n")
+	case *flow.SkipBegin:
+		p.write(fmt.Sprintf("p.SkipBegin(%d)\n", s.Site))
+	case *flow.SkipVisit:
+		p.write("p.SkipVisit()\n")
+	case *flow.SkipEnd:
+		p.write("p.SkipEnd()\n")
 	case *flow.EmitStream:
 		p.read(s.X)
 		p.write(fmt.Sprintf("p.EmitStream(%s, p.Pos)\n", p.expr(s.X)))
@@ -789,6 +795,8 @@ func (p *flowPrinter) expr(x flow.Expr) string {
 		return "len(p.KidStack)"
 	case *flow.StreamOn:
 		return fmt.Sprintf("p.StreamsIn(%d, %v)", p.g.Cur.ID, p.g.Cur.Rec)
+	case *flow.SkipHit:
+		return "p.SkipHit()"
 	case *flow.Nil:
 		return "nil"
 	case *flow.Int:

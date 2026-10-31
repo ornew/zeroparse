@@ -10,7 +10,7 @@ import (
 // of spend). A charge is a Step, a Peek (which charges the spend of the character it reads), or a CallRule (which the runtime charges as a rule call):
 //
 //   - the function charges before it consumes input: before an Advance, a MatchLit, a MatchClass, a
-//     SkipTerminal or a SkipClasses;
+//     SkipTerminal, a SkipClasses or a SkipHit;
 //   - every iteration of a loop without a Counter bound charges: on each path from the start of the
 //     body to a Continue or to the end of the body. A repetition of a character class is lowered to a
 //     loop of Peek and Advance without a Step (an iteration of such a loop charges no step),
@@ -78,7 +78,7 @@ func exprHas(x Expr, pred func(Expr) bool) bool {
 
 func consumes(x Expr) bool {
 	switch x.(type) {
-	case *MatchLit, *MatchClass, *SkipTerminal, *SkipClasses:
+	case *MatchLit, *MatchClass, *SkipTerminal, *SkipClasses, *SkipHit:
 		return true
 	}
 	return false

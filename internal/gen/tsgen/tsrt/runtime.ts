@@ -1523,6 +1523,75 @@ export function newEntry(node: R, ok: boolean, end: number, silent: boolean, gro
 }
 
 export const noExp: number[] = [];
+
+// SkipRecord is what the rest of a walk of a skip-run site from a position did: where it ended, and
+// its farthest failure and the expectations there (see skipBegin).
+interface SkipRecord {
+  end: number;
+  far: number;
+  exp: number[];
+}
+
+// SkipSlots holds the slots of a site: a bit for each position from base on in the 32-bit words
+// marks, set when the slot is not fresh, and the records of the recorded slots by position.
+class SkipSlots {
+  base = 0;
+  marks: number[] = [];
+  recs = new Map<number, SkipRecord>();
+
+  // marked reports whether the slot of pos is not fresh.
+  marked(pos: number): boolean {
+    const i = pos - this.base;
+    return i >= 0 && i >>> 5 < this.marks.length && (this.marks[i >>> 5]! & (1 << (i & 31))) !== 0;
+  }
+
+  // put marks the slot of pos and stores its record r, if any. Room made for bits before base is as
+  // large as the bits, so walks that start farther and farther back copy them a logarithmic number
+  // of times.
+  put(pos: number, r: SkipRecord | null): void {
+    if (this.marks.length === 0) {
+      this.base = pos - (pos & 31);
+    } else if (pos < this.base) {
+      let base = Math.max(0, Math.min(pos, this.base - 32 * this.marks.length));
+      base -= base & 31;
+      const room: number[] = new Array<number>((this.base - base) >>> 5).fill(0);
+      this.marks = room.concat(this.marks);
+      this.base = base;
+    }
+    const w = (pos - this.base) >>> 5;
+    while (this.marks.length <= w) {
+      this.marks.push(0);
+    }
+    this.marks[w] = this.marks[w]! | (1 << ((pos - this.base) & 31));
+    if (r !== null) {
+      this.recs.set(pos, r);
+    }
+  }
+}
+
+// SkipVisit is a recording visit of the walk in progress.
+interface SkipVisit {
+  pos: number;
+  far: number;
+  exp: number[];
+}
+
+// mergeSkipExpected returns the expectations a, then those of b not in a.
+function mergeSkipExpected(a: number[], b: number[]): number[] {
+  if (a.length === 0) {
+    return b;
+  }
+  let out = a;
+  for (const x of b) {
+    if (!a.includes(x)) {
+      if (out === a) {
+        out = a.slice();
+      }
+      out.push(x);
+    }
+  }
+  return out;
+}
 export const noErrs: SyntaxError[] = [];
 
 // sameValues reports whether two lists of variable values are equal.
@@ -1634,6 +1703,24 @@ export class Parser {
   lines: number[] | null = null; // positions where lines start (makeError)
   ac: Actx;
   saved: (Node | null)[] = []; // captures saved across a reset in longest
+
+  // skipTables are the slots of the walks of skip-run sites, indexed by 2*site, plus 1 in a
+  // lookahead. The walk in progress has the slots skipSlots (undefined until a walk of the site
+  // first writes one, at skipTables[skipTable]) and the recording visits skipVisits;
+  // skipRecording reports that it records (it met a position that is not fresh); skipOpen
+  // reports that the last visit's iteration runs with its expectations isolated (the enclosing
+  // record is skipFar and skipBase); skipHitRec is the record the walk stopped at, if any. Walks do
+  // not nest: a site's element runs no #recover, so no other skip expression.
+  skipTables: (SkipSlots | undefined)[] = [];
+  skipSlots: SkipSlots | undefined = undefined;
+  skipTable = 0;
+  skipPrev = -1;
+  skipVisits: SkipVisit[] = [];
+  skipRecording = false;
+  skipOpen = false;
+  skipFar = 0;
+  skipBase = 0;
+  skipHitRec: SkipRecord | null = null;
 
   readonly control: BudgetControl | null;
 
@@ -2195,6 +2282,148 @@ export class Parser {
       this.spend();
       this.expect(far, x);
     }
+  }
+
+  // Skip runs, a mirror of the Go runtime's (runtime/skip_runs.go; see "Skip Runs" in
+  // spec/runtime/parsing.md). A walk of a skip-run site visits positions with one iteration each.
+  // It starts plain, marking the position of each iteration that matched (so a walk that fails at
+  // once touches no slot; skipPrev is the position of the last iteration, or -1), and starts
+  // recording at its first position
+  // that is not fresh: from there on it records, for each visited position, what the rest of the
+  // walk from there did, filling the records backward when it ends. A recording walk that reaches a
+  // recorded position (once it has matched its minimum) takes the rest from the record, as a memo
+  // hit does. The slots of a parse last for that parse.
+
+  // skipBegin starts a walk of the site at the current position.
+  skipBegin(site: number): void {
+    const i = 2 * site + (this.silent > 0 ? 1 : 0);
+    this.skipTable = i;
+    this.skipSlots = this.skipTables[i];
+    this.skipPrev = -1;
+    this.skipVisits.length = 0;
+    this.skipRecording = false;
+    this.skipOpen = false;
+    this.skipHitRec = null;
+  }
+
+  // skipRecords reports whether the walk records from the current position on, which it starts to
+  // at the first position that is not fresh.
+  skipRecords(): boolean {
+    if (!this.skipRecording && this.skipSlots !== undefined && this.skipSlots.marked(this.pos)) {
+      this.skipMarkPrev();
+      this.skipRecording = true;
+    }
+    return this.skipRecording;
+  }
+
+  // skipMarkPrev marks the position of the last iteration of a plain walk, which matched.
+  skipMarkPrev(): void {
+    if (this.skipPrev >= 0) {
+      this.skipSlot(this.skipPrev, null);
+      this.skipPrev = -1;
+    }
+  }
+
+  // skipHit is called before an iteration after the minimum. It ends the iteration before and, in a
+  // recording walk, reports whether the current position has a record, which it then reuses. The
+  // walk then stops.
+  skipHit(): boolean {
+    if (!this.skipRecords()) {
+      return false;
+    }
+    this.skipClose();
+    this.spend();
+    const r = this.skipSlots?.recs.get(this.pos);
+    if (r === undefined) {
+      return false;
+    }
+    this.spend();
+    this.mergeKept(r.far, r.exp);
+    this.pos = r.end;
+    this.skipHitRec = r;
+    return true;
+  }
+
+  // skipVisit begins an iteration at the current position: in a plain walk it marks the position of
+  // the iteration before, which matched, visited; in a recording walk it ends the iteration before
+  // and isolates this one.
+  skipVisit(): void {
+    if (!this.skipRecords()) {
+      this.skipMarkPrev();
+      this.skipPrev = this.pos;
+      return;
+    }
+    this.skipClose();
+    this.skipVisits.push({ pos: this.pos, far: 0, exp: noExp });
+    this.skipOpen = true;
+    this.skipFar = this.farthest;
+    this.skipBase = this.expBase;
+    this.expBase = this.expTop;
+    this.farthest = this.pos;
+  }
+
+  // skipClose ends the running iteration, if any: it keeps its expectations and records them as
+  // usual.
+  skipClose(): void {
+    if (!this.skipOpen) {
+      return;
+    }
+    this.skipOpen = false;
+    const far = this.farthest;
+    const from = this.expBase;
+    const to = this.expTop;
+    this.expTop = this.expBase;
+    this.expBase = this.skipBase;
+    this.farthest = this.skipFar;
+    const v = this.skipVisits[this.skipVisits.length - 1]!;
+    v.far = far;
+    v.exp = this.keep(from, to);
+    this.mergeExpected(far, from, to);
+  }
+
+  // skipEnd ends the walk and records the rest of it from each position it visited recording.
+  skipEnd(): void {
+    this.skipClose();
+    const vs = this.skipVisits;
+    let n = vs.length;
+    let next = this.skipHitRec;
+    if (next === null && n > 0) {
+      // The last iteration failed or matched nothing: the walk ended at its start.
+      const v = vs[--n]!;
+      next = { end: v.pos, far: v.far, exp: v.exp };
+      this.skipPut(v.pos, next);
+    }
+    for (let i = n - 1; i >= 0; i--) {
+      const v = vs[i]!;
+      const r: SkipRecord = { end: next!.end, far: next!.far, exp: next!.exp };
+      if (v.far > r.far) {
+        r.far = v.far;
+        r.exp = v.exp;
+      } else if (v.far === r.far) {
+        r.exp = mergeSkipExpected(v.exp, r.exp);
+      }
+      this.skipPut(v.pos, r);
+      next = r;
+    }
+    vs.length = 0;
+    this.skipHitRec = null;
+  }
+
+  // skipPut stores the record r of the position pos in the slots of the walk.
+  skipPut(pos: number, r: SkipRecord): void {
+    this.spend();
+    this.skipSlot(pos, r);
+  }
+
+  // skipSlot sets the slot of pos in the slots of the walk, making them.
+  skipSlot(pos: number, r: SkipRecord | null): void {
+    let s = this.skipSlots;
+    if (s === undefined) {
+      s = new SkipSlots();
+      this.skipSlots = s;
+      this.skipTables[this.skipTable] = s;
+    }
+    s.put(pos, r);
   }
 
   text(start: number, end: number): string {

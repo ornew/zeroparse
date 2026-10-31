@@ -228,7 +228,11 @@ func (v *verifier) stmt(s Stmt) error {
 		return v.use(s.F)
 	case *AppendError:
 		return v.expr(s.X)
-	case *Step, *Silent, *SetWhere, *DeclareNames, *Comment, *ObserveSkip:
+	case *SkipBegin:
+		if s.Site <= 0 {
+			return fmt.Errorf("%s: skip-run site %d", v.f.Name, s.Site)
+		}
+	case *Step, *Silent, *SetWhere, *DeclareNames, *Comment, *ObserveSkip, *SkipVisit, *SkipEnd:
 	default:
 		return fmt.Errorf("unknown statement %T", s)
 	}
