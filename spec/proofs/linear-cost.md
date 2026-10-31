@@ -8,9 +8,10 @@ splits the cost into the parts that the specification counts and bounds each
 part by one lemma, so that a new condition is added as a lemma, or as a case of
 one, without changing the others.
 
-The theorem and Lemmas 1 and 2 are proved. Lemmas 3 to 6 are given as outlines:
-each states its claim, the conditions it uses, and the steps that its proof
-must still make precise, listed under [Open Steps](#open-steps).
+Lemmas 1 and 2 are proved, and the theorem is proved from the others. Lemmas
+3 to 6 are given as outlines: each states its claim, the conditions it uses,
+and the steps that its proof must still make precise, listed under
+[Open Steps](#open-steps) with the step that the theorem needs besides them.
 
 ## Setting
 
@@ -30,13 +31,32 @@ terminals, repetitions of character classes and lookaheads examine, the
 iterations of repetitions and the operators applied, and the size of the
 values that actions and predicates build.
 
+**Input that a lookahead examines.** This proof counts each examination of
+the input once, for the terminal, character class or `.` that makes it,
+whether or not a lookahead encloses it. The cost of a lookahead itself is
+then a constant for entering and leaving it, and what its expression costs is
+counted for that expression: its scanning sources, such as the repetition in
+`&([^!]* "!")`, are scanning sources of the body, and its other parts are
+local cost. [Cost](../runtime/parsing.md#cost) lists the input that lookaheads
+examine beside the input that terminals examine. If a lookahead were to count
+again what the terminals inside it examine, the count would grow with the
+number of lookaheads that enclose a terminal, which rule calls do not bound.
+
+**Activations.** A growth step is a body evaluation of the leader. An
+**activation** of a scanning source is one unit of its work that evaluates a
+fixed part of the grammar once: an iteration of a repetition without an upper
+bound, an operator that an Operators Rule applies, or an evaluation of the
+skip expression of a `#recover`. The growth of a cycle and the copying
+operations, the other scanning sources, make no calls of their own beyond the
+body evaluations of the growth.
+
 **Local and scanned cost.** An evaluation of a rule body has a **local cost**,
 the cost of the steps that it makes outside the calls it makes and outside its
 scanning sources, and a **scanned cost**, the cost of the steps of its
-scanning sources outside the calls they make. Each call is counted once as a
-body evaluation of the callee, or as a growth step, or as the reuse of an
-entry, in the evaluation that makes it. Every unit of $C$ belongs to exactly
-one of these: the local or scanned cost of one body evaluation, or one call.
+scanning sources outside the calls they make. Each call is counted once, in
+the evaluation that makes it, as a body evaluation of the callee, the steps of
+a growth, or the reuse of an entry. Every unit of $C$ belongs to exactly one
+of these: the local or scanned cost of one body evaluation, or one call.
 
 ## Lemma 1 (Local Cost)
 
@@ -56,14 +76,15 @@ variable, which costs at most $L$ by the definition of $L$. $\square$
 ## Lemma 2 (Calls)
 
 *The number of calls is at most a constant times the number of body
-evaluations plus the number of iterations and applied operators.*
+evaluations, growth steps included, plus the number of activations.*
 
-*Proof.* A call is made by a step of a body evaluation, outside a scanning
-source, or within an iteration of a scanning source or an applied operator.
-By Lemma 1 the first kind is a constant per body evaluation. An iteration or
-an applied operator evaluates a part of the body once, which makes at most a
-constant number of calls outside nested scanning sources, as in Lemma 1.
-$\square$
+*Proof.* Every call is made by a step of a body evaluation, growth steps
+included. That step is either outside the scanning sources of the body, or
+within an activation of one of them, outside the activations of the scanning
+sources nested in it. By the argument of Lemma 1 the first kind makes a
+constant number of calls per body evaluation. An activation evaluates a fixed
+part of the grammar once, and outside its nested scanning sources that part
+makes a constant number of calls, again by the argument of Lemma 1. $\square$
 
 ## Lemma 3 (Body Evaluations)
 
@@ -78,7 +99,7 @@ $2 \cdot |\text{rules}| \cdot |\text{levels}| \cdot K \hat{n}$. Each exception
 of that section is accounted for elsewhere:
 
 - a rule that is not memoized is evaluated once for each of its calls, which
-  Lemma 2 counts;
+  open step 7 bounds;
 - a member of a cycle evaluated again in each step of a growth, and the other
   calls of the cycle at the position of a growth, are a constant number per
   growth step, which Lemma 5 counts;
@@ -89,8 +110,8 @@ of that section is accounted for elsewhere:
 ## Lemma 4 (Scanned Cost)
 
 *Outline.* Under condition 2, the scanned cost of all body evaluations, together
-with the iterations and applied operators of their scanning sources, is at most
-a constant times $K(L + 1)\hat{n}$.
+with the activations of their scanning sources, is at most a constant times
+$K(L + 1)\hat{n}$.
 
 The proof charges each step of a scanning source to a slot of the input that
 it examines, or to the iteration or operator that makes it, and shows that
@@ -161,17 +182,15 @@ parse from the start rule has a cost of at most $c \cdot K \cdot (L + 1) \cdot (
 for a constant $c$. When no variable holds a string and every binding binds a
 literal, $K$ is a constant and $L = 0$, so the cost is at most $c' \cdot (n + 1)$.*
 
-*Proof, given Lemmas 3 to 6.* Each unit of $C$ is the local cost of a body
-evaluation, the scanned cost of one, or a call. By Lemma 1 the local costs add
-up to $c_0 (L + 1)$ times the number of body evaluations, which Lemmas 3 and 5
-bound by a constant times $K \hat{n}$ plus the calls of rules that are not
-memoized. By Lemma 2 the calls are at most a constant times the body
-evaluations plus the iterations and applied operators, which Lemmas 4 and 5
-bound. The scanned cost is bounded by Lemmas 4 and 5 and the values by Lemma 6.
-A rule that is not memoized is called from one place, so its calls do not form
-a recursion of their own, and the substitution of Lemma 2 into Lemma 3 ends
-after at most as many rounds as there are rules. Each bound is a constant
-times $K (L + 1) \hat{n}$. $\square$
+*Proof, given Lemmas 3 to 6 and open step 7.* Each unit of $C$ is the local
+cost of a body evaluation, the scanned cost of one, or a call. By Lemma 1 the
+local costs add up to $c_0 (L + 1)$ times the number of body evaluations, which
+Lemmas 3 and 5 bound by a constant times $K \hat{n}$ plus the evaluations of
+rules that are not memoized. Open step 7 bounds those by a constant times
+$K \hat{n}$ plus the activations. By Lemma 2 the calls are at most a constant
+times the body evaluations plus the activations, which Lemmas 4 and 5 bound.
+The scanned cost is bounded by Lemmas 4 and 5 and the values by Lemma 6. Each
+bound is a constant times $K (L + 1) \hat{n}$. $\square$
 
 The classifier reports the two classes only when the conditions hold, and it
 over-approximates where it cannot decide them
@@ -218,3 +237,14 @@ The outlines leave these steps to be made precise.
 6. **Variables in Lemma 6.** The bound $L = O(n)$ that
    [Classification](../runtime/parsing.md#classification) states, and the
    comparisons of memo keys that hold strings, which cost up to $L$ per lookup.
+7. **Rules that are not memoized.** A rule that calls no rule is a leaf of the
+   calls and is evaluated once per call, which Lemma 2 counts. A rule called
+   from at most one place is not memoized either, and it can be recursive when
+   that place is its own body and the rule is the start rule, as in
+   `main = "a" main "b" / "x"`. Its calls then form a recursion that Lemma 3
+   does not bound, so counting its evaluations by its calls, and its calls by
+   Lemma 2, is circular. The step must bound the evaluations of such a rule
+   directly: each of its recursive calls follows input that its body consumed,
+   so the calls along one chain are at increasing positions, but a call inside
+   an unbounded repetition of its body makes a tree of calls, which the
+   activations of Lemma 4 must account for.
