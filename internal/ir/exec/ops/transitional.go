@@ -207,6 +207,8 @@ silent or has recovered errors.`,
 
 	add(&exec.Op{Name: "obs.memoHit", Component: Obs, Writes: []string{Obs}, Features: []string{Observe},
 		Contract: `Counts a reuse of a memo entry in the observation, if the parse is observed.`})
+	add(&exec.Op{Name: "obs.active", Component: Obs, Results: []exec.Type{exec.TBool}, Reads: []string{Obs}, Features: []string{Observe},
+		Contract: `Reports whether the parse is observed.`})
 	add(&exec.Op{Name: "obs.enter", Component: Obs, Params: []exec.Param{exec.P("r", rule), exec.P("pos", exec.TInt), exec.P("min", exec.TInt)},
 		Writes: []string{Obs}, Features: []string{Observe}, NoReturn: true,
 		Contract: `Reports to the observation of the parse that a call of the rule at pos and binding level
