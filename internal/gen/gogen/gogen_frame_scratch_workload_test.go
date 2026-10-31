@@ -46,7 +46,7 @@ func testGeneratedNodeFrameScratchWorkloads(t *testing.T) {
 rule main Tok = t:(("é" / "�")* $$) #atomic => Tok{Text: text($t)}`, `func frameInputs() (string,string,string) {return "é",strings.Repeat("é",5000),"é!"}`},
 	}
 	if os.Getenv("ZP_NODE_FRAME_TYPESCRIPT") != "" {
-		source, err := os.ReadFile("../../../parsers/typescript/typescript.zp")
+		source, err := os.ReadFile("../../../testdata/grammars/typescript/typescript.zp")
 		if err != nil {
 			t.Fatal(err)
 		}

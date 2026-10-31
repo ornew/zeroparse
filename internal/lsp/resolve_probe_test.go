@@ -8,7 +8,7 @@ import (
 )
 
 // TestCodeActionResolveProbe (ZP_LSP_RESOLVE_PROBE=1) times the code action requests that cover
-// one fixable finding of a large grammar (with a rule added at the end that nothing uses) (ZP_LSP_EDITOR_GRAMMAR selects parsers/<name>/<name>.zp,
+// one fixable finding of a large grammar (with a rule added at the end that nothing uses) (ZP_LSP_EDITOR_GRAMMAR selects testdata/grammars/<name>/<name>.zp,
 // duckdb by default, ZP_LSP_RESOLVE_CHECK the check of the finding): listed with their edits, listed for a client that resolves, and resolved.
 func TestCodeActionResolveProbe(t *testing.T) {
 	if os.Getenv("ZP_LSP_RESOLVE_PROBE") != "1" {
@@ -18,7 +18,7 @@ func TestCodeActionResolveProbe(t *testing.T) {
 	if name == "" {
 		name = "duckdb"
 	}
-	data, err := os.ReadFile("../../parsers/" + name + "/" + name + ".zp")
+	data, err := os.ReadFile("../../testdata/grammars/" + name + "/" + name + ".zp")
 	if err != nil {
 		t.Fatal(err)
 	}

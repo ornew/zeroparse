@@ -28,7 +28,7 @@ func BenchmarkF08Analyze(b *testing.B) {
 	}
 	fixtures := []struct{ name, source string }{{name: "generated", source: f08BenchmarkGrammar()}}
 	for _, name := range []string{"golang/golang.zp", "python/python.zp"} {
-		data, err := os.ReadFile(filepath.Join("../../parsers", name))
+		data, err := os.ReadFile(filepath.Join("../../testdata/grammars", name))
 		if err != nil {
 			b.Fatal(err)
 		}

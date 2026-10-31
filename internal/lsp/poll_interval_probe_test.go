@@ -129,7 +129,7 @@ func TestPollIntervalProbe(t *testing.T) {
 	if requestHook != nil || analyzeHook != nil {
 		t.Fatal("poll-interval probe requires inactive hooks")
 	}
-	files, err := filepath.Glob("../../parsers/*/*.zp")
+	files, err := filepath.Glob("../../testdata/grammars/*/*.zp")
 	if err != nil {
 		t.Fatal(err)
 	}

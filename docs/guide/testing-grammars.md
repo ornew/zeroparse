@@ -246,7 +246,7 @@ Notes:
   rule of each node), at the price of larger files. A grammar with `#recover` should also print the recovered errors
   (`var recovered zp.SyntaxErrors; errors.As(err, &recovered)`): a parse can return a tree and an error together.
 - Keep a few inputs that **fail**, with the error in the golden file. Error messages are part of a parser's interface.
-- The same layout is used by [examples/](../../examples/) and by every module of [parsers/](../../parsers/); the zp
+- The same layout is used by [examples/](../../examples/) and by every module of [parsers/](https://github.com/zeroparse/alpha-parsers); the zp
   command makes a golden file too: `zp parse -g pairs.zp -f sexpr < testdata/basic.txt`.
 
 ## Fixture Suites
@@ -528,9 +528,9 @@ commit the file, as a regression test. The fuzzer works best with short inputs: 
 If another parser of the language exists (the standard library's, or the language's own), the strongest test is to
 compare the two on the same inputs: accepted or not, and what the result says. Feed both the generated inputs, the
 near misses and the fuzzer's inputs. A test of this kind finds mistakes that no hand-written example does, because the
-reference is right where you misread the specification. The [ready-made parsers](../../parsers/) are checked this way
+reference is right where you misread the specification. The [ready-made parsers](https://github.com/zeroparse/alpha-parsers) are checked this way
 against `encoding/json` (JSON), `encoding/csv`, `encoding/xml`, `go/parser`, CPython's `ast`, the TypeScript compiler,
-cel-go and `cue/parser`, and against conformance suites ([parsers/README.md](../../parsers/README.md)). The shape of the
+cel-go and `cue/parser`, and against conformance suites ([alpha-parsers/README.md](https://github.com/zeroparse/alpha-parsers/blob/main/README.md)). The shape of the
 test is the one of the [sampling guide](sampling-and-fuzzing.md#from-go):
 
 ```go

@@ -33,10 +33,10 @@ How generated inputs fit into a test suite for a grammar is in [testing grammars
 
 `zp sample` prints distinct inputs that the grammar accepts, ten by default (`-n`), each as a Go-quoted string on its
 own line, so that inputs containing line breaks stay on one line. With the JSON grammar of
-[parsers/json](../../parsers/json/json.zp):
+[alpha-parsers/json](../../testdata/grammars/json/json.zp):
 
 ```bash
-zp sample -g parsers/json/json.zp -n 8
+zp sample -g testdata/grammars/json/json.zp -n 8
 ```
 
 ```text
@@ -60,7 +60,7 @@ test case. Across versions of ZeroParse they may differ, as the generator's algo
 inputs themselves (as test files, or in a fuzz corpus) where they must not change. `-f json` prints a JSON document instead:
 
 ```bash
-zp sample -g parsers/json/json.zp -n 2 -seed 5 -f json
+zp sample -g testdata/grammars/json/json.zp -n 2 -seed 5 -f json
 ```
 
 ```text
@@ -206,22 +206,22 @@ An [inline action](actions.md) counts as a rule, because the parser runs it as o
 the rule that holds it: `the inline action in rule main`, or `inline action 2 in rule main` when the rule holds
 several. The alternatives are printed as written, with the inline action in place.
 
-For the XML grammar of [parsers/xml](../../parsers/xml/xml.zp), 50 inputs cover all of it:
+For the XML grammar of [alpha-parsers/xml](../../testdata/grammars/xml/xml.zp), 50 inputs cover all of it:
 
 ```bash
-zp sample -g parsers/xml/xml.zp -n 50 -seed 1 -coverage > /dev/null
+zp sample -g testdata/grammars/xml/xml.zp -n 50 -seed 1 -coverage > /dev/null
 ```
 
 ```text
 rules 74/74 (100%), alternatives 89/89 (100%)
 ```
 
-Not every grammar is like that. The Python grammar of [parsers/python](../../parsers/python/python.zp) keeps the
+Not every grammar is like that. The Python grammar of [alpha-parsers/python](../../testdata/grammars/python/python.zp) keeps the
 indentation of the current block packed in a variable and compares it in predicates (`stmt_sep`, `indented_block`),
 which the generator rarely satisfies by chance, so it misses the rules that need them:
 
 ```bash
-zp sample -g parsers/python/python.zp -n 50 -seed 1 -coverage > /dev/null
+zp sample -g testdata/grammars/python/python.zp -n 50 -seed 1 -coverage > /dev/null
 ```
 
 ```text
@@ -248,7 +248,7 @@ format, each comes with the input it was made from, the mutation (positions are 
 error:
 
 ```bash
-zp sample -g parsers/json/json.zp -n 3 -invalid -f json
+zp sample -g testdata/grammars/json/json.zp -n 3 -invalid -f json
 ```
 
 ```text
@@ -362,12 +362,12 @@ forget, and a seed reproduces any failure. Two kinds of checks work without know
   well-formed error; pretty-printing and parsing again gives the same tree; a converter's output is valid in the target
   format.
 - **Differential tests** against another implementation of the same language. This test (from
-  [sample/sample_test.go](../../sample/sample_test.go)) checks that the JSON grammar of [parsers/json](../../parsers/json/) and Go's
+  [sample/sample_test.go](../../sample/sample_test.go)) checks that the JSON grammar of [alpha-parsers/json](https://github.com/zeroparse/alpha-parsers/tree/main/json/) and Go's
   `encoding/json` agree, on 200 generated documents and on 200 near-miss invalid ones:
 
 ```go
 func TestJSONAgreesWithEncodingJSON(t *testing.T) {
-	p := ... // the parser of parsers/json/json.zp
+	p := ... // the parser of testdata/grammars/json/json.zp
 	g, err := sample.New(p, sample.WithSeed(1), sample.WithCoverage())
 	if err != nil {
 		t.Fatal(err)
@@ -603,7 +603,7 @@ parser would read differently:
 - `!e` must not match; for `&e`, a text for `e` is generated and the input must continue with it;
 - predicates are evaluated on the generated text, with captures, variables, `len`, `text`, comparisons and arithmetic,
   so indentation (as in [examples/outline](../../examples/outline/outline.zp)) and matching tags (as in
-  [parsers/xml](../../parsers/xml/xml.zp)) work;
+  [alpha-parsers/xml](../../testdata/grammars/xml/xml.zp)) work;
 - Operators Rule expressions are generated as chains of operands and operators, avoiding chains of `infix none` operators,
   with the outer infix/postfix tail filtered by level-restricted calls. Prefixes remain available at every operand
   position, including prefixes below the entry level. Their right operands can use operators tighter than the

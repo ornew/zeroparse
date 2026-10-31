@@ -174,7 +174,7 @@ func TestFormatMinusBoundaries(t *testing.T) {
 var formattedGrammarSink string
 
 func BenchmarkFormatGrammar(b *testing.B) {
-	for _, name := range []string{"../../examples/minilang/minilang.zp", "../../parsers/yaml/yaml.zp"} {
+	for _, name := range []string{"../../examples/minilang/minilang.zp", "../../testdata/grammars/yaml/yaml.zp"} {
 		b.Run(filepath.Base(name), func(b *testing.B) {
 			data, err := os.ReadFile(name)
 			if err != nil {
@@ -431,7 +431,7 @@ func stripSource(v reflect.Value) {
 // Formatting every example grammar keeps its grammar and comments.
 func TestFormatExamples(t *testing.T) {
 	var paths []string
-	for _, root := range []string{"../../examples", "../../parsers"} {
+	for _, root := range []string{"../../examples", "../../testdata/grammars"} {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err == nil && !d.IsDir() && strings.HasSuffix(path, ".zp") {
 				paths = append(paths, path)

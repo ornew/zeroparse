@@ -603,7 +603,7 @@ for untrusted input; the goals below make it so.
 | Speed is comparable across tools | Cross-tool report on two machines | None | Credibility (gate) |
 | Recovery is measured | Repair rate and time on a corpus of invalid inputs, two languages first | Unmeasured | Credibility track |
 | Performance improves | The targets of [Performance Leadership](#performance-leadership), tracked per report | See baseline | Performance track |
-| Cost is classified | Classifier labels every grammar in `examples/` and `parsers/` | Specification only; classifier proposed | Safety track (research) |
+| Cost is classified | Classifier labels every grammar in `examples/` and `testdata/grammars/` | Specification only; classifier proposed | Safety track (research) |
 | A user grammar gets editor support | Language server for one ready-made language, setup documented for VS Code and Neovim | `.zp` only | Editor track |
 | TypeScript reaches parity | UTF-16 positions, then `Document` and streaming in generated TypeScript | None of these | TypeScript parity track |
 | Every change is checked automatically | Automated checks run on each change | Paused; local validation only | Ongoing |

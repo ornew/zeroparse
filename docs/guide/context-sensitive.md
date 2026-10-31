@@ -376,11 +376,11 @@ own grammar, see the [performance measurement method](../performance.md#how-to-m
 ### Matching Tags
 
 The closing tag must repeat the name of the opening tag. When both are in the same rule, capture the names and compare
-the text. That is how [parsers/xml](../../parsers/xml/xml.zp) does it (a rule `element`, with
+the text. That is how [alpha-parsers/xml](../../testdata/grammars/xml/xml.zp) does it (a rule `element`, with
 `"<" n:name ... "</" e:name {text($e) == text($n)} @error(message="mismatched end tag")`):
 
 ```bash
-zp parse -g parsers/xml/xml.zp -f sexpr -i '<a><b>text</c></a>'
+zp parse -g testdata/grammars/xml/xml.zp -f sexpr -i '<a><b>text</c></a>'
 ```
 
 ```text
@@ -540,7 +540,7 @@ zp parse -g outline.zp -f sexpr -i $'a\n b\n  c\n d\n'
 The label does not make valid input fail: at a normal block end, `item` fails at the same predicate, but that only
 records a candidate error, which matters only if the parse as a whole fails and this is its farthest failure.
 
-**The Python grammar.** [parsers/python](../../parsers/python/python.zp) uses the same idea at scale. It packs the
+**The Python grammar.** [alpha-parsers/python](../../testdata/grammars/python/python.zp) uses the same idea at scale. It packs the
 indentation of the current block (its column, its column with tabs counted as one, which detects inconsistent use of
 tabs, and the number of enclosing blocks) into one variable, `ind`:
 
@@ -555,7 +555,7 @@ tabs, and the number of enclosing blocks) into one variable, `ind`:
   after the other, and `main` ends with its own message, `invalid syntax`.
 
 ```bash
-zp parse -g parsers/python/python.zp -f sexpr -i $'if x:\npass\n'
+zp parse -g testdata/grammars/python/python.zp -f sexpr -i $'if x:\npass\n'
 ```
 
 ```text
@@ -563,7 +563,7 @@ zp: 2:1: expected an indented block
 ```
 
 ```bash
-zp parse -g parsers/python/python.zp -i $'if x:\n    a = 1\n  b = 2\n'
+zp parse -g testdata/grammars/python/python.zp -i $'if x:\n    a = 1\n  b = 2\n'
 ```
 
 ```text

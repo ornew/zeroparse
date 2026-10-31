@@ -35,8 +35,8 @@ var sink any
 var samples = []struct{ Name, Src string }{
 	{"Small", `rule main = [a-z]+ #atomic`},
 	{"Self", read("zp.zp")},
-	{"Go", read("parsers/golang/golang.zp")},
-	{"Python", read("parsers/python/python.zp")},
+	{"Go", read("testdata/grammars/golang/golang.zp")},
+	{"Python", read("testdata/grammars/python/python.zp")},
 }
 
 func read(p string) string {

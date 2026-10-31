@@ -78,7 +78,7 @@ The engine tests check that the typed output sets one `Entry` (the start rule's)
 it leaves out the methods of a rule no start rule reaches, that a callee the first pass
 left out fails generation, and that the parser with the unreached rules left out
 returns what the one that keeps them returns. The engine tests, the root suite and
-`parsers/test.sh` pass.
+`alpha-parsers/test.sh` pass.
 
 ## Decision and Limits
 

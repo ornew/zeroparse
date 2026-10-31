@@ -145,7 +145,7 @@ Memory (bytes allocated / number of allocations) and file sizes:
 
 | Grammar | Source | Compile from source | `.zpc` parse mode | Load | `.zpc` recognize mode | Load | `.zpc` document mode | Load |
 |:--|--:|--:|--:|--:|--:|--:|--:|--:|
-| json | {{fileSize "parsers/json/json.zp"}} | {{mem "Prepare/json/source"}} | {{fmtBytes (metric "Prepare/json/zpc/parse/bytecode" "file-bytes")}} | {{mem "Prepare/json/zpc/parse/bytecode"}} | {{fmtBytes (metric "Prepare/json/zpc/recognize/bytecode" "file-bytes")}} | {{mem "Prepare/json/zpc/recognize/bytecode"}} | {{fmtBytes (metric "Prepare/json/zpc/document/bytecode" "file-bytes")}} | {{mem "Prepare/json/zpc/document/bytecode"}} |
+| json | {{fileSize "testdata/grammars/json/json.zp"}} | {{mem "Prepare/json/source"}} | {{fmtBytes (metric "Prepare/json/zpc/parse/bytecode" "file-bytes")}} | {{mem "Prepare/json/zpc/parse/bytecode"}} | {{fmtBytes (metric "Prepare/json/zpc/recognize/bytecode" "file-bytes")}} | {{mem "Prepare/json/zpc/recognize/bytecode"}} | {{fmtBytes (metric "Prepare/json/zpc/document/bytecode" "file-bytes")}} | {{mem "Prepare/json/zpc/document/bytecode"}} |
 | minilang | {{fileSize "examples/minilang/minilang.zp"}} | {{mem "Prepare/minilang/source"}} | {{fmtBytes (metric "Prepare/minilang/zpc/parse/bytecode" "file-bytes")}} | {{mem "Prepare/minilang/zpc/parse/bytecode"}} | {{fmtBytes (metric "Prepare/minilang/zpc/recognize/bytecode" "file-bytes")}} | {{mem "Prepare/minilang/zpc/recognize/bytecode"}} | {{fmtBytes (metric "Prepare/minilang/zpc/document/bytecode" "file-bytes")}} | {{mem "Prepare/minilang/zpc/document/bytecode"}} |
 
 {{if hasTS -}}
@@ -165,8 +165,8 @@ Each figure is the median of {{runs "TS/Parse/JSON"}} runs of `bench/ts-parse.mj
 {{if hasSizes -}}
 ### Generated Parser Size
 
-Sizes of the parsers in `parsers/`, generated with the options of `parsers/generate.go`
-(commit {{meta "size.commit"}}, {{meta "size.go"}}). "Go source" is the committed `parser.go`; "Go binary" is a program that
+Sizes of the parsers generated from `testdata/grammars/` with the options of `testdata/grammars/generate.txt`
+(commit {{meta "size.commit"}}, {{meta "size.go"}}). "Go source" is the generated `parser.go`; "Go binary" is a program that
 calls the parser's `ParseAST`, built with `-trimpath -ldflags="-s -w"`, so it includes the ZeroParse runtime and the
 parser's types. "TypeScript" is the generated `parser.ts`, raw and compressed with `gzip -9`; it imports the embedded
 runtime, which is the same for every parser and weighs {{sizeOf "runtime" "ts-raw"}} ({{sizeOf "runtime" "ts-gzip"}} gzipped).

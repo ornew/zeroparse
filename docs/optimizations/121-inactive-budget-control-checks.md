@@ -27,7 +27,7 @@ cancellation points, limits and results of controlled parses are as in the unspl
 ## Results
 
 Reference control: the same source with every budget-control check deleted at build time (the ceiling,
-not a supported build). Generated parsers of `parsers/json`, `duckdb`, `cel` and `golang` (Node,
+not a supported build). Generated parsers of `alpha-parsers/json`, `duckdb`, `cel` and `golang` (Node,
 recognizer and typed, generated without budget controls, embedded runtime), inputs of the benchmark
 suite. Ten interleaved rounds over the build before, the build after, the control and a copy of the
 build before, `-benchtime=500ms`; medians as the change against the build before (the copy of the

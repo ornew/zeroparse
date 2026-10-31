@@ -592,9 +592,9 @@ in strict TypeScript builds.
 ## Trade-Offs
 
 - **Size.** `runtime.ts` is 143,536 bytes (about 4,400 lines, with a 3 KB table of printable characters) and is the same for every grammar; `parser.ts` grows with the
-  grammar. The JSON grammar ([parsers/json](../../parsers/json/json.zp)) generates a 46,364-byte `parser.ts`
+  grammar. The JSON grammar ([alpha-parsers/json](../../testdata/grammars/json/json.zp)) generates a 46,364-byte `parser.ts`
   (55,131 bytes with `-types`, plus a 2,203-byte `types.ts`) and the TypeScript grammar
-  ([parsers/typescript](../../parsers/typescript/typescript.zp)) 2,158,721 bytes. Minified and compressed by a bundler,
+  ([alpha-parsers/typescript](../../testdata/grammars/typescript/typescript.zp)) 2,158,721 bytes. Minified and compressed by a bundler,
   it is a fraction of that.
 - **Speed.** On Node.js 24 (Apple M-series), the JSON grammar parses a 260 KB document in about 18 ms in code points
   and 25 ms in bytes, once the code is warm. That is fine for editors and tools, but no match for `JSON.parse`: use a

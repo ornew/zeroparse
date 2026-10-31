@@ -21,7 +21,7 @@ var (
 // on BenchmarkStream's unchanged CSV grammar and input. Both run to clean EOF.
 // Count ok rather than non-nil nodes: a successful stream element may be nil.
 func BenchmarkStreamDeliveryAdoption(b *testing.B) {
-	p := load(b, "../parsers/csv/csv.zp")
+	p := load(b, "../testdata/grammars/csv/csv.zp")
 	input := inputs.CSVInput(50000)
 	for _, be := range backends {
 		for _, u := range units {
@@ -73,7 +73,7 @@ func BenchmarkStreamDeliveryAdoption(b *testing.B) {
 // until its first committed element. Parsing continues to clean EOF so this
 // measurement does not include a callback-error or early-close path.
 func BenchmarkStreamFirstElementAdoption(b *testing.B) {
-	p := load(b, "../parsers/csv/csv.zp")
+	p := load(b, "../testdata/grammars/csv/csv.zp")
 	input := inputs.CSVInput(50000)
 	for _, be := range backends {
 		for _, u := range units {

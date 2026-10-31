@@ -64,7 +64,7 @@ name stays in `ruleNames`, and the start-rule errors of the generated parser aga
 ## Limits
 
 A typed Go parser has nothing further to leave out at the level of functions: `trules[N].Body` of a rule entered only
-through its wrapper is already not printed (leaving it out of the slot test changes no parser of `parsers/`), and a
+through its wrapper is already not printed (leaving it out of the slot test changes no parser generated from `testdata/grammars/`), and a
 reachability scan from `init`, the exported names and the methods finds no unreferenced top-level declaration in
 `cel`, `cue`, `duckdb`, `golang`, `python` or `typescript`. What remains per unreached rule is its row in the rule
 table (`rulesSpec`, `rulesStrs` and `rulesExtras`), 2.6% (`cel`) to 4.1% (`duckdb`) of `parser.go`. The rows stay: the

@@ -728,7 +728,7 @@ func TestSemanticTokensCaseInsensitiveLiteral(t *testing.T) {
 // resolves to a definition, and that the formatting edits give what zp fmt prints.
 func TestExampleGrammars(t *testing.T) {
 	paths, err := filepath.Glob("../../examples/*/*.zp")
-	more, err2 := filepath.Glob("../../parsers/*/*.zp")
+	more, err2 := filepath.Glob("../../testdata/grammars/*/*.zp")
 	paths = append(paths, more...)
 	if err != nil || err2 != nil || len(paths) == 0 {
 		t.Fatalf("no example grammars: %v", err)
@@ -764,7 +764,7 @@ func TestExampleGrammars(t *testing.T) {
 // grammars.
 func BenchmarkAnalyze(b *testing.B) {
 	for _, name := range []string{"golang/golang.zp", "python/python.zp"} {
-		data, err := os.ReadFile("../../parsers/" + name)
+		data, err := os.ReadFile("../../testdata/grammars/" + name)
 		if err != nil {
 			b.Fatal(err)
 		}

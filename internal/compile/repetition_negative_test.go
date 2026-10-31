@@ -11,7 +11,7 @@ import (
 // already analyzed grammar; source parsing, AST checking and VM setup are out.
 func BenchmarkBytecodeLowering(b *testing.B) {
 	for _, c := range []struct{ name, path string }{
-		{"JSON", "../../parsers/json/json.zp"},
+		{"JSON", "../../testdata/grammars/json/json.zp"},
 		{"Minilang", "../../examples/minilang/minilang.zp"},
 	} {
 		b.Run(c.name, func(b *testing.B) {

@@ -8,7 +8,7 @@ import (
 )
 
 func BenchmarkCharacterRangeValidation(b *testing.B) {
-	for _, tc := range []struct{ name, path string }{{"JSON", "../../parsers/json/json.zp"}, {"Go", "../../parsers/golang/golang.zp"}, {"YAML", "../../parsers/yaml/yaml.zp"}} {
+	for _, tc := range []struct{ name, path string }{{"JSON", "../../testdata/grammars/json/json.zp"}, {"Go", "../../testdata/grammars/golang/golang.zp"}, {"YAML", "../../testdata/grammars/yaml/yaml.zp"}} {
 		b.Run(tc.name, func(b *testing.B) {
 			path := tc.path
 			if tc.name == "YAML" && os.Getenv("ZP_BENCH_YAML_GRAMMAR") != "" {

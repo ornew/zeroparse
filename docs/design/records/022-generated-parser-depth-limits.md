@@ -22,7 +22,7 @@ returns `nesting too deep: more than 100000 rule calls` at 17,000 and 30,000. Go
 three inputs. The exact input is `"package p; var x = " + strings.Repeat("(", n) + "1" + strings.Repeat(")", n)`.
 Both generated `Recognize` and `ParseAST`, with byte positions, show this difference. An isolated
 source overlay changing only the guard to 600,000 accepts all three inputs in both entry points. The existing
-`parsers/golang/TestNesting` passes on the unmodified baseline, including its normal error at 30,000; that expected
+`alpha-parsers/golang/TestNesting` passes on the unmodified baseline, including its normal error at 30,000; that expected
 rejection would no longer hold on the overlay. No stack crash was reproduced.
 
 The engine already exposes `WithMaxDepth`; generated parsers use a fixed constant. A grammar's number of helper

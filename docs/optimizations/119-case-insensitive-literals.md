@@ -68,7 +68,7 @@ measured; the cause of the speed difference was not isolated.
 
 ## Folded Literals in the Core First Set
 
-The grammar is `parsers/duckdb/duckdb.zp` with its 350 keyword rules, such as
+The grammar is `testdata/grammars/duckdb/duckdb.zp` with its 350 keyword rules, such as
 `rule SELECT = [sS][eE][lL][eE][cC][tT] ![...]`, rewritten as `rule SELECT = "select"i ![...]`
 by a script (a regular expression over the rule lines). Both builds generate the typed Go
 parser (`-types -typed-only -runtime import`) and the untyped recognizer (`-recognize`), and
@@ -88,7 +88,7 @@ before it (the noise band), `-benchtime=2s`, medians in ms:
 
 Only the typed Go parser changes: it ran without the guard before. The closure, both
 bytecode backends and the generated recognizer differ inside the noise band. The generated typed `parser.go` grows from 1.39 MB to
-1.48 MB with the guards. The generated code of `parsers/duckdb` as written, with class-form
+1.48 MB with the guards. The generated code of `alpha-parsers/duckdb` as written, with class-form
 keywords, is byte-identical before and after.
 
 Tests: `TestPassesGuardFoldedLiteral` checks the first sets, and `TestIgnoreCaseGeneratedGo`,

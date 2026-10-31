@@ -17,7 +17,7 @@ import (
 // The rules of the Node table are printed from Flow IR (the lean value-free rules by the same route
 // as the recognizer's, gen.Generator.StartRecFlow, and the others as framed bodies). The tests
 // below check the routes the rules take and run the parsers against the engine; the generated text
-// of the ten checked-in grammars is frozen in parsers/testdata/output_manifest.txt.
+// of the ten checked-in grammars is frozen in testdata/output_manifest.txt of the alpha-parsers repository.
 
 // TestGeneratedFlowNodeParity runs the generated Node parsers and recognizers of the generated-corpus
 // harness with the lean rules of the Node table printed from Flow IR, against the engine, and with the
@@ -87,7 +87,7 @@ func TestFlowNodeRulesPrintFromFlow(t *testing.T) {
 		{"document", false, false, true}, {"document+controls", true, false, true}} {
 		for _, name := range names {
 			t.Run(name+"/"+form.name, func(t *testing.T) {
-				src, err := os.ReadFile(filepath.Join("..", "..", "..", "parsers", name, name+".zp"))
+				src, err := os.ReadFile(filepath.Join("..", "..", "..", "testdata", "grammars", name, name+".zp"))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -173,13 +173,13 @@ func testFlowNodeRecognizersOnGrammars(t *testing.T) {
 	}
 	var cases []gentest.Case
 	for _, name := range []string{"json", "cel", "cue", "duckdb", "golang", "python", "xml", "yaml", "csv", "typescript"} {
-		dir := filepath.Join("..", "..", "..", "parsers", name)
+		dir := filepath.Join("..", "..", "..", "testdata", "grammars", name)
 		src, err := os.ReadFile(filepath.Join(dir, name+".zp"))
 		if err != nil {
 			t.Fatal(err)
 		}
 		gc := gentest.Case{Name: name, Src: string(src)}
-		files, err := filepath.Glob(filepath.Join(dir, "testdata", "*.txt"))
+		files, err := filepath.Glob(filepath.Join(dir, "*.txt"))
 		if err != nil || len(files) == 0 {
 			t.Fatalf("%s: no test data inputs (%v)", name, err)
 		}

@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 
@@ -24,9 +23,9 @@ type tsWorkload struct {
 }
 
 var tsWorkloads = []tsWorkload{
-	{"JSON", "parsers/json/json.zp", func() string { return inputs.JSONInput(256 << 10) }},
-	{"CSV", "parsers/csv/csv.zp", func() string { return inputs.CSVInput(5000) }},
-	{"XML", "parsers/xml/xml.zp", func() string { return inputs.XMLInput(256 << 10) }},
+	{"JSON", "testdata/grammars/json/json.zp", func() string { return inputs.JSONInput(256 << 10) }},
+	{"CSV", "testdata/grammars/csv/csv.zp", func() string { return inputs.CSVInput(5000) }},
+	{"XML", "testdata/grammars/xml/xml.zp", func() string { return inputs.XMLInput(256 << 10) }},
 	{"Arith_OperatorsRule", "examples/calculator/calc.zp", func() string { return inputs.ArithInput(20000) }},
 	{"Arith_LeftRec", "examples/calculator/calc_lr.zp", func() string { return inputs.ArithInput(20000) }},
 	{"Minilang", "examples/minilang/minilang.zp", func() string { return inputs.MinilangInput(300, 0) }},
@@ -96,44 +95,46 @@ func captureTS(root, commit, work, node string, count int) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// sizeParsers are the parsers whose generated size is recorded, with their go:generate options
-// read from parsers/generate.go.
+// sizeParsers are the grammars whose generated size is recorded, with the options of
+// testdata/grammars/generate.txt (the options of the ready-made parsers).
 var sizeParsers = []string{"json", "csv", "xml", "yaml", "cel", "cue", "golang", "python", "typescript", "duckdb"}
 
-var genDirective = regexp.MustCompile(`^//go:generate go run \.\./cmd/zp gen (.*)$`)
-
-// parserGenArgs returns the options with which parsers/generate.go generates parser name, adapted
-// to TypeScript: the Go-only options (-module, -runtime import, -nodoc, -typed-only) are dropped.
-func parserGenArgs(root, name string) ([]string, error) {
-	data, err := os.ReadFile(filepath.Join(root, "parsers", "generate.go"))
+// genOptions returns the options of testdata/grammars/generate.txt for grammar name.
+func genOptions(root, name string) ([]string, error) {
+	data, err := os.ReadFile(filepath.Join(root, "testdata", "grammars", "generate.txt"))
 	if err != nil {
 		return nil, err
 	}
 	for _, line := range strings.Split(string(data), "\n") {
-		m := genDirective.FindStringSubmatch(line)
-		if m == nil || !strings.Contains(m[1], "-g "+name+"/") {
-			continue
+		f := strings.Fields(line)
+		if len(f) > 0 && f[0] == name {
+			return f[1:], nil
 		}
-		f := strings.Fields(m[1])
-		var out []string
-		for i := 0; i < len(f); i++ {
-			switch f[i] {
-			case "-module", "-runtime", "-o":
-				i++
-			case "-nodoc", "-typed-only":
-			case "-g":
-				out = append(out, "-g", filepath.Join(root, "parsers", f[i+1]))
-				i++
-			default:
-				out = append(out, f[i])
-			}
-		}
-		return out, nil
 	}
-	return nil, fmt.Errorf("parsers/generate.go has no go:generate line for %s", name)
+	return nil, fmt.Errorf("testdata/grammars/generate.txt has no line for %s", name)
 }
 
-// captureSizes records, for each parser of sizeParsers, the size of the committed Go parser.go,
+// parserGenArgs returns the options with which testdata/grammars/generate.txt generates parser name,
+// adapted to TypeScript: the Go-only options (-module, -runtime import, -nodoc, -typed-only) are dropped.
+func parserGenArgs(root, name string) ([]string, error) {
+	f, err := genOptions(root, name)
+	if err != nil {
+		return nil, err
+	}
+	out := []string{"-g", filepath.Join(root, "testdata", "grammars", name, name+".zp")}
+	for i := 0; i < len(f); i++ {
+		switch f[i] {
+		case "-module", "-runtime", "-o":
+			i++
+		case "-nodoc", "-typed-only":
+		default:
+			out = append(out, f[i])
+		}
+	}
+	return out, nil
+}
+
+// captureSizes records, for each parser of sizeParsers, the size of the generated Go parser.go,
 // of a binary that calls its ParseAST (built with -trimpath and stripped of symbols and DWARF), of
 // the generated TypeScript parser.ts and of that file compressed with gzip -9. The embedded
 // TypeScript runtime is common to all parsers and is recorded once as parser "runtime".
@@ -146,12 +147,16 @@ func captureSizes(root, commit, work string) ([]byte, error) {
 	writeHeader(&b, commit)
 	fmt.Fprintln(&b, "# go binary: a main that calls ParseAST; go build -trimpath -ldflags=\"-s -w\"")
 	for _, name := range sizeParsers {
-		st, err := os.Stat(filepath.Join(root, "parsers", name, "parser.go"))
+		genDir, err := generateGo(root, zpBin, work, name)
+		if err != nil {
+			return nil, err
+		}
+		st, err := os.Stat(filepath.Join(genDir, "parser.go"))
 		if err != nil {
 			return nil, err
 		}
 		fmt.Fprintf(&b, "size %s go-source %d\n", name, st.Size())
-		bin, err := buildBinary(root, work, name)
+		bin, err := buildBinary(root, work, name, genDir)
 		if err != nil {
 			return nil, err
 		}
@@ -197,9 +202,24 @@ func sizeOfFile(path string) (raw, gz int, err error) {
 	return len(data), buf.Len(), nil
 }
 
-// buildBinary builds a program that calls ParseAST of parsers/name in a module of its own in the
-// work directory and returns the size of the binary.
-func buildBinary(root, work, name string) (int, error) {
+// generateGo generates the Go parser of grammar name with the options of testdata/grammars/generate.txt
+// into the work directory and returns the directory.
+func generateGo(root, zpBin, work, name string) (string, error) {
+	f, err := genOptions(root, name)
+	if err != nil {
+		return "", err
+	}
+	dir := filepath.Join(work, "gen-"+name)
+	args := append([]string{"gen", "-g", filepath.Join(root, "testdata", "grammars", name, name+".zp"), "-module", "sizeprobe/gen"}, f...)
+	if _, err := execOut(root, nil, zpBin, append(args, "-o", dir)...); err != nil {
+		return "", err
+	}
+	return dir, nil
+}
+
+// buildBinary builds a program that calls ParseAST of the parser generated into genDir, in a module of
+// its own in the work directory, and returns the size of the binary.
+func buildBinary(root, work, name, genDir string) (int, error) {
 	dir := filepath.Join(work, "bin-"+name)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return 0, err
@@ -208,21 +228,16 @@ func buildBinary(root, work, name string) (int, error) {
 
 go 1.27.1
 
-require (
-	github.com/ornew/zeroparse v0.0.0
-	github.com/ornew/zeroparse/parsers/%[1]s v0.0.0
-)
+require %[1]s v0.0.0
 
-replace github.com/ornew/zeroparse => %[2]s
-
-replace github.com/ornew/zeroparse/parsers/%[1]s => %[2]s/parsers/%[1]s
-`, name, root)
-	src := fmt.Sprintf(`package main
+replace %[1]s => %[2]s
+`, "github.com/ornew/zeroparse", root)
+	src := `package main
 
 import (
 	"os"
 
-	p "github.com/ornew/zeroparse/parsers/%s"
+	p "sizeprobe/gen"
 )
 
 func main() {
@@ -230,7 +245,10 @@ func main() {
 		os.Exit(1)
 	}
 }
-`, name)
+`
+	if err := os.CopyFS(filepath.Join(dir, "gen"), os.DirFS(genDir)); err != nil {
+		return 0, err
+	}
 	for file, content := range map[string]string{"go.mod": mod, "main.go": src} {
 		if err := os.WriteFile(filepath.Join(dir, file), []byte(content), 0o644); err != nil {
 			return 0, err

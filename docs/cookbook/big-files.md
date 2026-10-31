@@ -163,7 +163,7 @@ memory figures vary by a few MiB from run to run.)
   value (`Kind()` is `zp.KindError`) that your function receives, and `ParseStream` returns the recorded errors at the end.
 - **Do not hold on to nodes.** The record is reachable only through your function; if you keep it (in a slice, say),
   memory grows again.
-- **CSV.** [Sum a column of a big CSV file](sum-a-csv-column.md) streams the grammar of [parsers/csv](../../parsers/csv/).
+- **CSV.** [Sum a column of a big CSV file](sum-a-csv-column.md) streams the grammar of [alpha-parsers/csv](https://github.com/zeroparse/alpha-parsers/tree/main/csv/).
 - **A header.** [Read a header and then records](header-and-records.md) makes the header an element.
 
 See [spec/language/pragmas.md](../../spec/language/pragmas.md) for the rules of `#stream`.

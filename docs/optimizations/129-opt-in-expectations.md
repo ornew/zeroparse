@@ -65,7 +65,7 @@ early return for a silent position or one before the farthest failure is therefo
 guard, and the recording sits in `expectOrdinarySlow`, which is not inlined. The method stays in
 the hot-path inlining test.
 
-Measured on the Go parser (`ParseAST` of `parsers/golang`, which is the row that runs these
+Measured on the Go parser (`ParseAST` of `alpha-parsers/golang`, which is the row that runs these
 rule bodies), 12 interleaved runs per variant, at a machine load average that fell from 53 to 24
 during the run, so differences of a few percent are noise:
 

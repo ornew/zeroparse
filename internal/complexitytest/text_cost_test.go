@@ -15,7 +15,7 @@ func TestPythonFieldTextIsLinear(t *testing.T) {
 	if testing.Short() {
 		t.Skip("measures the Python grammar")
 	}
-	src, err := os.ReadFile("../../parsers/python/python.zp")
+	src, err := os.ReadFile("../../testdata/grammars/python/python.zp")
 	if err != nil {
 		t.Fatal(err)
 	}

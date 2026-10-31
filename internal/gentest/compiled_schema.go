@@ -8,10 +8,10 @@ import (
 )
 
 // CorpusWithParsers returns the grammars of the schema agreement tests: the backend corpus and the
-// grammars of the parsers directory, which are the examples of the generated parsers.
+// grammars of testdata/grammars, which are the examples of the generated parsers.
 func CorpusWithParsers(t *testing.T) []Case {
 	cases := GenCorpus(t)
-	paths, err := filepath.Glob(path(t, "../../parsers/*/*.zp"))
+	paths, err := filepath.Glob(path(t, "../../testdata/grammars/*/*.zp"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,7 +23,7 @@ func CorpusWithParsers(t *testing.T) []Case {
 		if testing.Short() && len(src) > 20000 {
 			continue
 		}
-		cases = append(cases, Case{Name: "parsers/" + filepath.Base(filepath.Dir(path)), Src: string(src)})
+		cases = append(cases, Case{Name: "grammars/" + filepath.Base(filepath.Dir(path)), Src: string(src)})
 	}
 	return cases
 }

@@ -13,9 +13,9 @@ before choosing an edit location:
 | Runtime: execution, bytecode VMs, Documents, streams and budget controls | `internal/engine/` (shared state in `core/`, backends in `closure/` and `vm/`, the Document in `document/`) |
 | Code generation entry points | `gen/` (`gen.Go`, `gen.TypeScript`, embedded runtime copy `gen/_runtime`), `internal/gen/` |
 | Output schema and structural queries | `schema/` (the types, their validation and `Compare`), `internal/schema/` (the export), `query/` (the queries) |
-| Generated Go parser source | Generator `internal/gen/gogen/generator.go` and runtime package `runtime/` (imported or copied into generated parsers); generated parsers under `parsers/` and `internal/bench/gen/` are outputs |
+| Generated Go parser source | Generator `internal/gen/gogen/generator.go` and runtime package `runtime/` (imported or copied into generated parsers); generated parsers under `internal/bench/gen/` are outputs |
 | CLI, linter, editor service and sample generation | `cmd/zp/`, `lint/`, `internal/lsp/`, `sample/` |
-| Ready-made parsers, playground and site | `parsers/`, `cmd/playground/`, `site/` |
+| Grammars of ten languages, playground and site | `testdata/grammars/`, `cmd/playground/`, `site/` (ready-made parsers: the separate alpha-parsers repository) |
 
 Use [specification index](../../../../spec/README.md) for supported language and
 parsing contracts. Use [design records](../../../../docs/design/records/000-template.md) for

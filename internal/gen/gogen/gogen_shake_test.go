@@ -174,7 +174,7 @@ func TestTypedUnreachedRulesRunLikeTheFullOutput(t *testing.T) {
 }
 
 func testTypedUnreachedRulesRunLikeTheFullOutput(t *testing.T) {
-	jsonSrc, err := os.ReadFile("../../../parsers/json/json.zp")
+	jsonSrc, err := os.ReadFile("../../../testdata/grammars/json/json.zp")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -117,7 +117,7 @@ func BenchmarkGeneratedSharing(b *testing.B) {
 	opts.DisableLiteralSharing = mode == "literals" || mode == "both"
 	opts.EnableTSLiteralSharing = mode == "combined" || mode == "methods" || mode == "literals" || mode == "both"
 	for _, name := range []string{"json", "typescript", "duckdb"} {
-		src, err := os.ReadFile(filepath.Join("../../parsers", name, name+".zp"))
+		src, err := os.ReadFile(filepath.Join("../../testdata/grammars", name, name+".zp"))
 		if err != nil {
 			b.Fatal(err)
 		}

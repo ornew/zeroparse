@@ -32,10 +32,11 @@ with implementation changes; regenerate generated files.
 - Public APIs: `zp.go` (which joins the runtime to the output schema),
   `gen/` (code generation), `lint/`, `grammar/`, `sample/`, `editfuzz/`; parser/compiler: `internal/syntax/`,
   `internal/compile/`; runtime: `internal/engine/`; generators:
-  `internal/gen/`; generated parsers: `parsers/`.
+  `internal/gen/`; grammars: `testdata/grammars/`; ready-made parsers: the separate
+  `alpha-parsers` repository.
 - Use Go 1.27.1. Run `go test -timeout=30m ./...` for the root module. After
-  engine, generator or runtime changes, run `go generate ./gen ./parsers ./bench`
-  and `parsers/test.sh`. For site changes, run `cd site && go test ./...` and the
+  engine, generator or runtime changes, run `go generate ./gen ./bench`
+  and `hack/test-alpha-parsers.sh`. For site changes, run `cd site && go test ./...` and the
   site build/check commands in `docs/site.md`.
 - Keep generated benchmark reports/results unedited by hand and align
   `spec/bytecode/README.md` with VM changes.

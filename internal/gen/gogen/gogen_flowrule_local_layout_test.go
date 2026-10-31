@@ -52,7 +52,7 @@ func TestGeneratedTypedLocalLayoutControls(t *testing.T) {
 }
 
 func testGeneratedTypedLocalLayoutControls(t *testing.T) {
-	for _, path := range []string{"../../../examples/calculator/calc.zp", "../../../parsers/typescript/typescript.zp"} {
+	for _, path := range []string{"../../../examples/calculator/calc.zp", "../../../testdata/grammars/typescript/typescript.zp"} {
 		src, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatal(err)

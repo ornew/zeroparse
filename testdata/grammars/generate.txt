@@ -1,0 +1,12 @@
+# Options with which the ready-made parsers of the alpha-parsers repository are generated from the grammars in this
+# directory: <name> <zp gen options>. The size report of bench/report generates the parsers with them.
+cel -types -typed-only -nodoc -runtime import
+csv -types -recognize -budget-controls -nodoc -runtime import
+cue -types -typed-only -nodoc -runtime import
+duckdb -types -typed-only -nodoc -runtime import
+golang -expectations -types -typed-only -nodoc -runtime import
+json -types -recognize -budget-controls -nodoc -runtime import
+python -expectations -types -typed-only -nodoc -runtime import
+typescript -expectations -types -typed-only -nodoc -runtime import
+xml -expectations -types -recognize -budget-controls -nodoc -runtime import
+yaml -types -recognize -budget-controls -nodoc -runtime import

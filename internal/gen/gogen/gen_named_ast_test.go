@@ -187,7 +187,7 @@ func testGeneratedNamedASTXMLFragments(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds generated XML workload")
 	}
-	source, err := os.ReadFile("../../../parsers/xml/xml.zp")
+	source, err := os.ReadFile("../../../testdata/grammars/xml/xml.zp")
 	if err != nil {
 		t.Fatal(err)
 	}

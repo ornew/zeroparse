@@ -129,9 +129,9 @@ func corpus(repo, name string) (source, input string, err error) {
 	var path string
 	switch name {
 	case "json":
-		path, input = "parsers/json/json.zp", inputs.JSONInput(256<<10)
+		path, input = "testdata/grammars/json/json.zp", inputs.JSONInput(256<<10)
 	case "xml":
-		path, input = "parsers/xml/xml.zp", inputs.XMLInput(256<<10)
+		path, input = "testdata/grammars/xml/xml.zp", inputs.XMLInput(256<<10)
 	case "arithmetic":
 		path, input = "examples/calculator/calc.zp", inputs.ArithInput(20000)
 	case "minilang":

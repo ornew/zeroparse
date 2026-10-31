@@ -22,7 +22,7 @@ import (
 func exampleParsers(t *testing.T) map[string]*zp.Parser {
 	t.Helper()
 	paths, err := filepath.Glob("../examples/*/*.zp")
-	more, err2 := filepath.Glob("../parsers/*/*.zp")
+	more, err2 := filepath.Glob("../testdata/grammars/*/*.zp")
 	paths = append(paths, more...)
 	if err != nil || err2 != nil || len(paths) == 0 {
 		t.Fatalf("no example grammars: %v", err)
@@ -91,9 +91,9 @@ func TestExamplesParse(t *testing.T) {
 }
 
 // TestExamplesCoverage checks that coverage mode reaches most of each grammar of examples/, and logs
-// the coverage (go test -v ./sample -run Coverage). The grammars of parsers/ are left out: they follow
+// the coverage (go test -v ./sample -run Coverage). The grammars of testdata/grammars/ are left out: they follow
 // real languages, whose predicates and context the generator rarely satisfies by chance (50 inputs
-// cover 12% of the rules of parsers/golang), and their own tests check them.
+// cover 12% of the rules of the Go grammar), and their own tests check them.
 func TestExamplesCoverage(t *testing.T) {
 	for path, p := range exampleParsers(t) {
 		if !strings.Contains(filepath.ToSlash(path), "/examples/") {
@@ -118,10 +118,10 @@ func TestExamplesCoverage(t *testing.T) {
 	}
 }
 
-// TestJSONAgreesWithEncodingJSON is a differential test: the JSON grammar of parsers/json and
+// TestJSONAgreesWithEncodingJSON is a differential test: the JSON grammar of testdata/grammars/json and
 // encoding/json must accept the same inputs.
 func TestJSONAgreesWithEncodingJSON(t *testing.T) {
-	p := exampleParsers(t)[filepath.Join("..", "parsers", "json", "json.zp")]
+	p := exampleParsers(t)[filepath.Join("..", "testdata", "grammars", "json", "json.zp")]
 	g, err := sample.New(p, sample.WithSeed(1), sample.WithCoverage())
 	if err != nil {
 		t.Fatal(err)
@@ -148,7 +148,7 @@ func TestJSONAgreesWithEncodingJSON(t *testing.T) {
 
 func TestDeterminism(t *testing.T) {
 	ps := exampleParsers(t)
-	p := ps[filepath.Join("..", "parsers", "json", "json.zp")]
+	p := ps[filepath.Join("..", "testdata", "grammars", "json", "json.zp")]
 	gen := func(seed uint64) ([]string, []sample.Invalid) {
 		g, err := sample.New(p, sample.WithSeed(seed), sample.WithCoverage())
 		if err != nil {

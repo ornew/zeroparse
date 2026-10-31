@@ -222,6 +222,6 @@ age > 30 and                                     error: 1:13: syntax error: expe
 - **Messages for users.** Replace the expected list with a short message using `@error`, and show a caret under the
   position: [Report an error with its source line and a caret](error-carets.md).
 - **Ready-made.** For the Common Expression Language (CEL), which is a complete expression language for policies and
-  filters, use [parsers/cel](../../parsers/cel/).
+  filters, use [alpha-parsers/cel](https://github.com/zeroparse/alpha-parsers/tree/main/cel/).
 
 See [Expressions](../guide/operators-rule.md) and [Operators Rule](../../spec/language/operators-rule.md).

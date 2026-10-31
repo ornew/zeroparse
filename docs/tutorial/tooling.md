@@ -148,5 +148,5 @@ input and see the tree or the error immediately, and share the state through the
 You have now covered the whole path from a first grammar to a shipped, tested and debugged parser. The guides in
 [Developing Grammars](../guide/README.md#developing-grammars) go deeper on each tool, and the
 [cookbook](../cookbook/README.md) solves concrete tasks. To keep practicing, extend the configuration language with
-`[section]` headers and lists of values, then read the grammar of [parsers/json](../../parsers/json/json.zp) to see how
+`[section]` headers and lists of values, then read the grammar of [alpha-parsers/json](../../testdata/grammars/json/json.zp) to see how
 a larger grammar is organized.

@@ -22,7 +22,7 @@ func testGeneratedSparseMemo(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds generated code")
 	}
-	src, err := os.ReadFile("../../../parsers/typescript/typescript.zp")
+	src, err := os.ReadFile("../../../testdata/grammars/typescript/typescript.zp")
 	if err != nil {
 		t.Fatal(err)
 	}

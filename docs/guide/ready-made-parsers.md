@@ -1,6 +1,6 @@
 # Using the Ready-Made Parsers
 
-[parsers/](../../parsers/README.md) holds complete parsers for ten languages, written in ZeroParse and generated into Go:
+[parsers/](https://github.com/zeroparse/alpha-parsers/blob/main/README.md) holds complete parsers for ten languages, written in ZeroParse and generated into Go:
 CEL, CSV, CUE, DuckDB SQL, Go, JSON, Python, TypeScript, XML and YAML. You import one, call a function and get a tree
 or an error, with nothing to compile or generate at run time. This guide is for the program that uses them: how to
 pick an entry point, how to read the tree, what the positions mean, how errors look, what the limits are, and how to
@@ -19,34 +19,33 @@ it differs from the reference implementation; this guide covers what they have i
 
 ## Install
 
-Each parser is a Go module of its own. It depends only on the standard library and the ZeroParse runtime package (`github.com/ornew/zeroparse/runtime`, which itself needs
+The parsers are packages of the one Go module `zeroparse.dev/alpha-parsers`. They depend only on the standard library and the ZeroParse runtime package (`github.com/ornew/zeroparse/runtime`, which itself needs
 nothing else), not on the ZeroParse engine and not on the language's own implementation (DuckDB's parser does not need DuckDB):
 
-Until ZeroParse publishes a release, the ready-made parser modules depend on the `github.com/ornew/zeroparse` module through a
-local `replace` directive (`replace github.com/ornew/zeroparse => ../..` in each parser's `go.mod`). That directive only
-applies inside the repository, so `go get github.com/ornew/zeroparse/parsers/json` does not work from another module. Use a
-parser from a checkout of the repository, in one of two ways.
+Until ZeroParse publishes a release, the alpha-parsers module is used from a checkout and joined with the
+`github.com/ornew/zeroparse` module by a `go.work` file or `replace` directives, so `go get zeroparse.dev/alpha-parsers/json`
+does not work from another module yet. Use a parser from a checkout of the alpha-parsers repository, in one of two ways.
 
 With a `go.work` file next to your module's `go.mod`:
 
 ```bash
 go work init .
-go work use ~/src/zeroparse ~/src/zeroparse/parsers/json
+go work use ~/src/zeroparse ~/src/alpha-parsers
 ```
 
-or with `replace` directives in your own `go.mod`, which the `go.mod` of the parser cannot supply for you:
+or with `replace` directives in your own `go.mod`, which the `go.mod` of alpha-parsers cannot supply for you:
 
 ```text
-require github.com/ornew/zeroparse/parsers/json v0.0.0
+require zeroparse.dev/alpha-parsers/json v0.0.0
 
-replace github.com/ornew/zeroparse/parsers/json => /path/to/zp/parsers/json
+replace zeroparse.dev/alpha-parsers => /path/to/alpha-parsers
 replace github.com/ornew/zeroparse => /path/to/zp
 ```
 
 (`/path/to/zp` is the full path of your checkout; `go.mod` does not expand `~`.) Run `go mod tidy` afterwards to record the requirement of the `github.com/ornew/zeroparse` module. Then import the parser:
 
 ```go
-import "github.com/ornew/zeroparse/parsers/json"
+import "zeroparse.dev/alpha-parsers/json"
 ```
 
 The parsers are generated code, and large ones are very large: the `parser.go` of the JSON parser is a few hundred
@@ -73,16 +72,16 @@ reference does after parsing, helpers to walk the tree. The entry points you nor
 
 | Language | Package | You normally call |
 |:--|:--|:--|
-| CEL | `parsers/cel` | `ParseExpr` (parse and check, as cel-go does), `Format`, `Inspect`, `Constant`; `Valid` |
-| CSV | `parsers/csv` | `Records`, `Table` (a header and rows), `ParseAST`; `Valid` |
-| CUE | `parsers/cue` | `ParseFile`, `Comments`, `Inspect`; `Valid` |
-| DuckDB SQL | `parsers/duckdb` | `ParseAST`, `Split` (the statements of a script, with their kind), `Walk`, `Keyword`, `QuoteIdent` |
-| Go | `parsers/golang` | `ParseFile` (a `go/ast` tree, as `go/parser` returns it), `ParseAST`, `ToGoAST`; `Valid` |
-| JSON | `parsers/json` | `Decode` (Go values), `ParseAST`; `Valid` |
-| Python | `parsers/python` | `ParseModule` (parse and check, as `ast.parse` does), `Dump`, `Inspect` |
-| TypeScript | `parsers/typescript` | `ParseFile`, `ParseTSX`, `Inspect`, `ForEachChild` |
-| XML | `parsers/xml` | `Decode`, `DecodeBytes` (any of the encodings XML allows), `WellFormed` |
-| YAML | `parsers/yaml` | `Load`, `LoadAll` (Go values), `ParseAST`, `Events`; `Valid` |
+| CEL | `alpha-parsers/cel` | `ParseExpr` (parse and check, as cel-go does), `Format`, `Inspect`, `Constant`; `Valid` |
+| CSV | `alpha-parsers/csv` | `Records`, `Table` (a header and rows), `ParseAST`; `Valid` |
+| CUE | `alpha-parsers/cue` | `ParseFile`, `Comments`, `Inspect`; `Valid` |
+| DuckDB SQL | `alpha-parsers/duckdb` | `ParseAST`, `Split` (the statements of a script, with their kind), `Walk`, `Keyword`, `QuoteIdent` |
+| Go | `alpha-parsers/golang` | `ParseFile` (a `go/ast` tree, as `go/parser` returns it), `ParseAST`, `ToGoAST`; `Valid` |
+| JSON | `alpha-parsers/json` | `Decode` (Go values), `ParseAST`; `Valid` |
+| Python | `alpha-parsers/python` | `ParseModule` (parse and check, as `ast.parse` does), `Dump`, `Inspect` |
+| TypeScript | `alpha-parsers/typescript` | `ParseFile`, `ParseTSX`, `Inspect`, `ForEachChild` |
+| XML | `alpha-parsers/xml` | `Decode`, `DecodeBytes` (any of the encodings XML allows), `WellFormed` |
+| YAML | `alpha-parsers/yaml` | `Load`, `LoadAll` (Go values), `ParseAST`, `Events`; `Valid` |
 
 For example, a table and a document as Go values, and an error of the table:
 
@@ -93,8 +92,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ornew/zeroparse/parsers/csv"
-	"github.com/ornew/zeroparse/parsers/yaml"
+	"zeroparse.dev/alpha-parsers/csv"
+	"zeroparse.dev/alpha-parsers/yaml"
 )
 
 func main() {
@@ -135,7 +134,7 @@ cannot express (the range of a literal, the limits of CEL, the `from __future__`
 differ on inputs that are syntactically right and semantically wrong. The README of each parser lists them.
 
 What each costs, for JSON, on an array of objects of 262 KB (the parser's own benchmarks, Apple M3 Max, Go 1.27.1;
-`go test -bench . -benchmem` in `parsers/json` measures them again):
+`go test -bench . -benchmem` in `alpha-parsers/json` measures them again):
 
 | | Time | Allocated | Allocations |
 |:--|--:|--:|--:|
@@ -168,7 +167,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ornew/zeroparse/parsers/json"
+	"zeroparse.dev/alpha-parsers/json"
 )
 
 // lineCol converts an offset in code points to a 1-based line and column.
@@ -248,7 +247,7 @@ than recursing by hand when the tree is large.
 The Go parser can also give you the tree of the standard library's `go/ast`, which every Go tool understands:
 
 ```go
-// gofuncs lists the exported functions of a Go source with go/ast, parsed by parsers/golang.
+// gofuncs lists the exported functions of a Go source with go/ast, parsed by alpha-parsers/golang.
 package main
 
 import (
@@ -256,7 +255,7 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.com/ornew/zeroparse/parsers/golang"
+	"zeroparse.dev/alpha-parsers/golang"
 )
 
 const src = `package shapes
@@ -327,7 +326,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/ornew/zeroparse/parsers/duckdb"
+	"zeroparse.dev/alpha-parsers/duckdb"
 )
 
 const script = `
@@ -376,7 +375,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ornew/zeroparse/parsers/json"
+	"zeroparse.dev/alpha-parsers/json"
 )
 
 func main() {
@@ -450,7 +449,7 @@ README says how that was checked and where the two differ (leniencies and deviat
 - Python is checked against CPython's `ast.dump` on the standard library and its test suite; TypeScript against the
   compiler's trees on its own test cases; DuckDB against DuckDB on 158,605 texts, for acceptance and statement splitting.
 
-The table of [parsers/README.md](../../parsers/README.md) has the specification and the suite for each. Where your
+The table of [alpha-parsers/README.md](https://github.com/zeroparse/alpha-parsers/blob/main/README.md) has the specification and the suite for each. Where your
 program depends on a subtle behavior, read the README's list of deviations first.
 
 Limits to plan for:
@@ -473,14 +472,14 @@ the tools (`zp trace`, `zp profile`, `zp sample`). The grammar each parser is ge
 in its module, so you can use it with the engine without copying it. Find it in the module cache:
 
 ```bash
-go list -m -f '{{.Dir}}' github.com/ornew/zeroparse/parsers/csv    # the directory of the module, with csv.zp in it
+go list -m -f '{{.Dir}}' zeroparse.dev/alpha-parsers/csv    # the directory of the module, with csv.zp in it
 ```
 
 and give it to `zp parse`, or read it in Go and compile it with `zp.CompileSource`. The CSV grammar marks its
 records with `#stream`, so a file larger than memory can be read one record at a time:
 
 ```bash
-csv=$(go list -m -f '{{.Dir}}' github.com/ornew/zeroparse/parsers/csv)/csv.zp
+csv=$(go list -m -f '{{.Dir}}' zeroparse.dev/alpha-parsers/csv)/csv.zp
 printf 'id,name\n1,alice\n2,"bob, jr"\n' | zp parse -g "$csv" -stream -f sexpr
 ```
 
@@ -494,7 +493,7 @@ The same grammar works with `NewDocument` for incremental parsing of an edited t
 ([incremental parsing](incremental.md)), and `zp sample -g csv.zp` generates inputs for tests
 ([testing grammars](testing-grammars.md)). The engine gives the same trees as the generated parser, because the parser
 is generated from the same grammar and tested against it on every backend
-([parsers/README.md](../../parsers/README.md#development)). The price is the engine's speed against generated code
+([alpha-parsers/README.md](https://github.com/zeroparse/alpha-parsers/blob/main/README.md#development)). The price is the engine's speed against generated code
 ([code generation](code-generation.md#why-generate)) and a dependency on `github.com/ornew/zeroparse`.
 
 ## When to Write Your Own
@@ -502,13 +501,13 @@ is generated from the same grammar and tested against it on every backend
 If a ready-made parser matches what you need, use it: it has been checked against the language's reference on far more
 input than you will write tests for. Write your own grammar when the language is not here, or when you need a variant:
 a subset, a dialect, an extra construct, a tree shaped for your program. The ready-made grammars are also the best
-examples of large ZeroParse grammars: [parsers/json/json.zp](../../parsers/json/json.zp) is 41 lines,
-[parsers/csv/csv.zp](../../parsers/csv/csv.zp) 28, and you can copy one and change it (each module carries its own
+examples of large ZeroParse grammars: [testdata/grammars/json/json.zp](../../testdata/grammars/json/json.zp) is 41 lines,
+[testdata/grammars/csv/csv.zp](../../testdata/grammars/csv/csv.zp) 28, and you can copy one and change it (each module carries its own
 licence file). [Code generation](code-generation.md) turns a grammar of your own into a package like these.
 
 ## See Also
 
-- [parsers/README.md](../../parsers/README.md): the list of parsers with the specification and the checks of each.
+- [alpha-parsers/README.md](https://github.com/zeroparse/alpha-parsers/blob/main/README.md): the list of parsers with the specification and the checks of each.
 - [Code generation](code-generation.md): how these parsers are made and what their API is.
 - [Error messages](error-messages.md), [recovering from errors](recovery.md), [running parsers](running-parsers.md) and
   [testing grammars](testing-grammars.md).

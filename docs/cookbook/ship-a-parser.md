@@ -175,14 +175,14 @@ p, err := zp.LoadParser(compiled) // then p.Parse(...) as with CompileSource
 
 The file serves `Parse` and `ParseStream` on the bytecode backends; compile it with `-mode recognize` for
 `zp.RecognizeOnly()` or `-mode document` for documents and traces. Loading is much faster than compiling: for the
-Python grammar of [parsers/python](../../parsers/python/), on an Apple M3 Max with Go 1.27.1, `zp.CompileSource` took
+Python grammar of [alpha-parsers/python](https://github.com/zeroparse/alpha-parsers/tree/main/python/), on an Apple M3 Max with Go 1.27.1, `zp.CompileSource` took
 about 60 ms and `zp.LoadParser` of the `.zpc` under 1 ms in every mode.
 
 A generated parser needs no preparation at all, and is also the fastest at parsing.
 
 ## Variations and Limits
 
-- **Several grammars**: one `go:generate` line and one package each; [parsers/generate.go](../../parsers/generate.go) does
+- **Several grammars**: one `go:generate` line and one package each; [alpha-parsers/generate.go](https://github.com/zeroparse/alpha-parsers/blob/main/generate.go) does
   this for the ready-made parsers.
 - **A recognizer**: add `-recognize` for `Recognize`, which only checks, as in [Parse log lines fast](log-lines.md).
 - **TypeScript**: `zp gen -lang ts` generates a module with no dependencies; see

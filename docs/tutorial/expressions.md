@@ -143,8 +143,8 @@ Binary{Left: Binary{Left: Number("1"), Op: "+", Right: Binary{Left: Number("2"),
 ```
 
 This produces the same trees as the Operators Rule version, with one rule per level instead of one line per level. Operators Rule
-expressions scale better as the language grows (the [Go](../../parsers/golang/) and
-[Python](../../parsers/python/) parsers use them for their full operator tables), and they support features such as
+expressions scale better as the language grows (the [Go](https://github.com/zeroparse/alpha-parsers/tree/main/golang/) and
+[Python](https://github.com/zeroparse/alpha-parsers/tree/main/python/) parsers use them for their full operator tables), and they support features such as
 level-restricted calls and mixed prefix, infix and postfix operators. The guide to
 [Operators Rule](../guide/operators-rule.md) compares the two approaches and covers every option;
 [examples/calculator](../../examples/calculator/) contains both versions of a complete calculator with an evaluator.

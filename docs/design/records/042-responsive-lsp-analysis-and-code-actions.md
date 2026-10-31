@@ -234,7 +234,7 @@ Verifying a suppression or a fix compiles and lints an edited copy, which costs 
 
 VS Code resolves only the edit of an action, and an edit it applies carries no check against the analyzed version, so the extension does not use the editor's resolve. It turns each listed action into the command `zp.applyLintAction`, which sends `codeAction/resolve` itself and, when the answer arrives, requires the document to be at the analyzed version, the generation to be current, and the answer to be one text edit of that document stamped with that version and of the shape of its check. Then the check and the call of `workspace.applyEdit` are one synchronous step, as for an action listed with its edit. A failed request, a refused answer or a changed document applies nothing.
 
-Focused timings used Go 1.27.1 on an Apple M3 Max (darwin/arm64), under the benchmark lock, with `TestCodeActionResolveProbe` (`ZP_LSP_RESOLVE_PROBE=1`) on `parsers/duckdb/duckdb.zp` (about 2,600 lines; its only own finding is a right-recursion hint). The probe appends one rule that nothing uses, with a class of overlapping ranges, so that a fixable finding exists. Each figure is the median of seven requests; three runs are given as a range.
+Focused timings used Go 1.27.1 on an Apple M3 Max (darwin/arm64), under the benchmark lock, with `TestCodeActionResolveProbe` (`ZP_LSP_RESOLVE_PROBE=1`) on `testdata/grammars/duckdb/duckdb.zp` (about 2,600 lines; its only own finding is a right-recursion hint). The probe appends one rule that nothing uses, with a class of overlapping ranges, so that a fixable finding exists. Each figure is the median of seven requests; three runs are given as a range.
 
 | Request covering one `unreachable-rule` or `char-class` finding | Median |
 | --- | --- |

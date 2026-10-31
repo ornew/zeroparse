@@ -17,7 +17,7 @@ versions.
 ## Scope and State
 
 Default engine Document result reuse in closure and both VMs. Generated
-parsers/TypeScript have no Document move path.
+alpha-parsers/typescript have no Document move path.
 
 ## Reference Control
 

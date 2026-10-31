@@ -2,8 +2,9 @@
 
 Start with the affected package or focused semantic test, then run the required
 broader checks for the changed surface. [Development testing](../../../../docs/development.md#testing)
-explains the test layers. The root Go module, ready-made parsers and site are separate
-modules: root tests cannot stand in for `parsers/test.sh` or site checks. Generator or
+explains the test layers. The root Go module, the ready-made parsers (the alpha-parsers
+repository) and the site are separate modules: root tests cannot stand in for
+`hack/test-alpha-parsers.sh` or site checks. Generator or
 runtime changes require regeneration and checks of affected generated consumers;
 `AGENTS.md` gives the current required commands. `go generate ./spec/language` applies when
 the generated grammar-syntax page changes. Check the diff after generation so output
@@ -11,8 +12,7 @@ and its source stay together.
 
 For behavior changes, compare the observable result across applicable backends and
 position units, including failures and recovery. Include Document edits and streams
-when their shared paths change. For a parser module, inspect its module tests and the
-main-module parser goldens; use [parser documentation](../../../../parsers/README.md)
+when their shared paths change. For a parser module, inspect its module tests in alpha-parsers; use [parser documentation](https://github.com/zeroparse/alpha-parsers/blob/main/README.md)
 for its own generation and conformance conventions. For site work, follow
 [site maintenance](../../../../docs/site.md).
 

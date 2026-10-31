@@ -97,7 +97,7 @@ rule main = ` + strings.Repeat(`x:a x:b? `, n) + `$$`
 }
 
 func BenchmarkCaptureChecking(b *testing.B) {
-	for _, path := range []string{"../../examples/calculator/calc.zp", "../../examples/minilang/minilang.zp", "../../parsers/json/json.zp"} {
+	for _, path := range []string{"../../examples/calculator/calc.zp", "../../examples/minilang/minilang.zp", "../../testdata/grammars/json/json.zp"} {
 		b.Run("control/"+path[strings.LastIndex(path, "/")+1:], func(b *testing.B) {
 			src, err := os.ReadFile(path)
 			if err != nil {

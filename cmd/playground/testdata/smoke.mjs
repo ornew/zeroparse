@@ -135,7 +135,7 @@ for (const ex of manifest) {
 // Deep nesting ends with an error instead of overflowing the JavaScript stack, which would stop the
 // program (every later call would then fail).
 {
-  const grammar = readFileSync(path.join(args.repo, "parsers/json/json.zp"), "utf8");
+  const grammar = readFileSync(path.join(args.repo, "testdata/grammars/json/json.zp"), "utf8");
   for (const n of [400, 5000]) {
     const input = "[".repeat(n) + "]".repeat(n);
     for (const backend of ["", "closure", "bytecode"]) {

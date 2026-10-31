@@ -152,7 +152,7 @@ more times: the closure evaluator in `closure/eval.go`, bytecode expression code
     per character; a golden freezes the budget totals
     (the engine's spend is not an oracle, because the closure and bytecode backends charge it differently),
     and a mutant that drops one `Step` fails.
-  - The generated text of the checked-in parsers is frozen by `parsers/testdata/output_manifest.txt`.
+  - The generated text of the checked-in parsers is frozen by `alpha-parsers/testdata/output_manifest.txt`.
   - Guards: the decisions of the Core passes over the corpus (`Terminal`s, guards, class runs, scans, scopes, and
     the forms of terms) are frozen in `testdata/typed_decisions.golden` and `testdata/recognizer_decisions.golden`,
     and negative controls break each pass and require the comparison to notice. Soundness is a property, checked
@@ -182,7 +182,7 @@ where a declared variable ends up unread. Actions become immediately invoked fun
 runtime-name qualification (`QualifyRuntime`). Removing the charges leaves `func() any { ; return … }()`
 behind, and blank lines, which the specialization deletes by replacing `"\n\n"` in the printed text.
 
-Counts in the checked-in parsers (`parsers/*/parser.go`):
+Counts in the checked-in parsers (`alpha-parsers/*/parser.go`):
 
 | Parser | Bytes | `_ = x` lines | `{ ; return` | `func() any {` | `var (` blocks | Locals typed `any` |
 |:--|--:|--:|--:|--:|--:|--:|
@@ -622,7 +622,7 @@ stage of its first consumer, so its differential tests and negative controls run
    (Operators Rule lines, left-recursion bodies, recovery, cuts); the Core and Flow IR passes that typed
    Go uses. The Node rules that such outputs keep and the recognizer's rules stay on their current
    lowering until stage 2. Gate: identical results on the generated-parser tests,
-   `parsers/test.sh`, the typed conformance tests and the engine differential tests; identical generated
+   `alpha-parsers/test.sh`, the typed conformance tests and the engine differential tests; identical generated
    trace and profile event streams, apart from differences the specification allows; the comparisons in
    [Performance and Results](#performance-and-results). Flow IR prints the typed rules it covers by default;
    the typed output has no `_ = x` lines for variables Flow reads nowhere, since Flow's read accounting omits
@@ -737,7 +737,7 @@ The baseline for each stage is the commit before it, measured on the same machin
 comparison sets the old printer, which always spends budget, against the new form without budget controls. The measured quantities of every stage are:
 
 - **Generation:** wall time, CPU and allocations of `zp gen` for each repository parser with its
-  `parsers/generate.go` options, plus DuckDB and Python with Node and typed output. The `QualifyRuntime`
+  `alpha-parsers/generate.go` options, plus DuckDB and Python with Node and typed output. The `QualifyRuntime`
   fix is measured on its own, so that its gain is not attributed to this design.
 - **Generated code:** `parser.go` bytes, lines and functions; `go build` time and binary size of each
   generated package.

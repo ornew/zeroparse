@@ -11,7 +11,7 @@ import (
 
 // The lines of an Operators Rule in the Node and recognizer tables are printed from Flow IR. The tests
 // below check the routes of the lines and run the parsers of the corpus against the engine; the generated
-// text of the checked-in grammars with an Operators Rule is frozen in parsers/testdata/output_manifest.txt.
+// text of the checked-in grammars with an Operators Rule is frozen in testdata/output_manifest.txt of the alpha-parsers repository.
 
 // TestOperatorsLinesWithRecoveryPrintFromFlow checks that a line with recovery is printed from Flow IR in the
 // Node and recognizer tables (a line Flow IR does not print fails the generation).

@@ -18,7 +18,7 @@ Go modules give a v0 version no compatibility guarantee. ZeroParse states its in
 | The `runtime` package, as generated code uses it with `zp gen -runtime import` | Unstable: matches only a generator of the same ZeroParse version, so regenerate the parsers on every upgrade |
 | Compiled grammars (`.zpc`) and the bytecode: container version 7, instruction-set version 30 ([bytecode specification](../spec/bytecode/README.md)) | Unstable: may change in any release. A loader accepts only its own versions and asks for the grammar to be compiled again |
 | The JSON forms of grammars and nodes | Unstable: may change in any release |
-| Ready-made parsers under `parsers/` | Not part of a release: they are used from a checkout of the repository, and `go get` does not fetch them from another module |
+| Ready-made parsers (`zeroparse.dev/alpha-parsers`) | Not part of a release: a separate repository, used from a checkout next to this one with a `go.work` |
 
 "Stable in intent" means that a change needs a reason and is announced; it is not the compatibility guarantee of a
 v1 module.
@@ -78,7 +78,7 @@ In the commands below, `vX.Y.Z` is the version being released, and the module pa
      `github.com/zeroparse/X` for every repository of the organization;
    - change the module path to `zeroparse.dev/zp` in every `go.mod` of the repository and in every import
      path and document that names it (the root package is already named `zp`, so no qualified use changes);
-   - regenerate the generated files with `go generate ./parsers ./bench`;
+   - regenerate the generated files with `go generate ./bench`;
    - run the full suite, as in step 4;
    - update the site (`repository` in `site/config.json`) and the Workers Builds Git source (the repository that the
      Cloudflare Worker builds from, see [website maintenance](site.md));
@@ -98,8 +98,8 @@ In the commands below, `vX.Y.Z` is the version being released, and the module pa
 
    ```bash
    go test -timeout=30m ./...
-   go generate ./parsers ./bench && git status --short   # generated files are current: prints nothing
-   parsers/test.sh
+   go generate ./bench && git status --short   # generated files are current: prints nothing
+   hack/test-alpha-parsers.sh
    (cd site && go test -count=1 ./...) && site/build.sh
    ```
 

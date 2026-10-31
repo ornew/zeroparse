@@ -541,7 +541,7 @@ Expected sets, recovery lists, environments and frames are transitional operatio
 
 | Criterion | Measure | Bar |
 |:--|:--|:--|
-| Identical results | Differential tests, `parsers/test.sh`, fixture suites, switch on vs off | Byte-identical on every corpus and target |
+| Identical results | Differential tests, `alpha-parsers/test.sh`, fixture suites, switch on vs off | Byte-identical on every corpus and target |
 | Identical costs | `budget.golden` and the budget determinism tests | Unchanged |
 | Conformance | The pilot operations' suites on Go node, Go typed and TypeScript | All pass; every mutation control fails |
 | Detection | Four composition negative controls | Each fails at least one differential test on every target |

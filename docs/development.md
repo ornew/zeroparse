@@ -37,7 +37,7 @@ This document describes the repository layout and architecture, how to run tests
 | `internal/gen/tsgen/tsrt/` | Source of `runtime.ts`, the runtime that generated TypeScript parsers import (joined from `runtime.ts`, `budget.ts`, `trace.ts` and `profile.ts`) |
 | `cmd/zp/` | Command-line tool |
 | `examples/` | Small example grammars that show the features, with golden tests |
-| `parsers/` | Ready-made parsers for common languages, each a Go module of its own (`parsers/<language>/`, with the grammar, the generated parser and conformance tests); `generate.go` and `parsers_test.go` (main module) generate them and check them on every backend ([README](../parsers/README.md)) |
+| `testdata/grammars/` | The grammars of ten languages (`<language>/<language>.zp`, with sample inputs) that the tests and benchmarks of this module read, and `generate.txt` with the `zp gen` options of each; the ready-made parsers generated from them live in the separate [alpha-parsers](https://github.com/zeroparse/alpha-parsers) repository |
 | `cmd/playground/` | WebAssembly API used by the web playground (package `main`; `GOOS=js GOARCH=wasm`) |
 | `site/` | Web site generator (a separate Go module): landing page, docs, reference and playground; see [website maintenance](site.md) |
 | `wrangler.jsonc` | Cloudflare Worker with static assets that serves the site from `site/dist`; see [website maintenance](site.md) |
@@ -190,11 +190,10 @@ with `go vet ./internal/engine/... ./internal/apitest` and
 `go vet -tags zp_budget_controls_reference ./internal/engine/... ./internal/apitest`; test files that use helpers
 defined in untagged files keep both builds compiling.
 
-GitHub Actions runs the root module and `parsers/test.sh` (including `go vet` for every parser module), site tests, and
+GitHub Actions runs the root module, site tests, and
 Node.js/WebAssembly/generated-TypeScript checks as separate jobs. A newer run on the same branch or pull-request
 ref cancels the superseded run. CI uses Go 1.27.1, Node.js 22.18.0, CPython 3.14.0
-and TypeScript 5.9.3. Native tests have a 45-minute root timeout and a 30-minute
-per-parser timeout within a 90-minute job budget, allowing generated-consumer builds on CI hosts.
+and TypeScript 5.9.3. Native tests have a 45-minute root timeout within a 90-minute job budget, allowing generated-consumer builds on CI hosts.
 The TypeScript differential harness uses the upstream
 [`microsoft/TypeScript` v5.9.3 `tests/cases`](https://github.com/microsoft/TypeScript/tree/v5.9.3/tests/cases) corpus.
 Required-tool checks fail before tests if a required runtime or the TypeScript corpus is absent. Go tests run with
@@ -210,30 +209,21 @@ The guides show how to test a grammar in an application. The repository uses the
 | Coverage | Location |
 |:--|:--|
 | Example grammar golden files | [`examples/examples_test.go`](../examples/examples_test.go) |
-| Ready-made parser goldens across engine backends and generated parsers | [`parsers/parsers_test.go`](../parsers/parsers_test.go) |
-| Reference-implementation and conformance tests with fuzz targets | Each parser module's tests, for example [`parsers/json/json_test.go`](../parsers/json/json_test.go) |
+| Ready-made parser goldens across engine backends and generated parsers | `parsers_test.go` in [alpha-parsers](https://github.com/zeroparse/alpha-parsers) |
+| Reference-implementation and conformance tests with fuzz targets | Each parser module's tests, for example [`alpha-parsers/json/json_test.go`](https://github.com/zeroparse/alpha-parsers/blob/main/json/json_test.go) |
 | Generated inputs and backend comparisons | [`sample/example_test.go`](../sample/example_test.go) |
 | Compiled grammars, Documents and backend equivalence | `internal/engine/` tests such as `compiled_test.go` and `document_test.go`, and the tests of `internal/engine/document/` |
 | Generated Go against the engine and regression freezes of what the engine cannot say (observation, Documents, budget, streams, lowering decisions) | `internal/gen/gogen/` tests such as `gogen_flow_*_test.go` with `internal/gen/gogen/testdata/*.golden`, and `internal/engine/` tests `core_*_test.go` with `internal/engine/testdata/*.golden`; a change of what a golden freezes is rewritten with `go test <package> -run <test> -update` and its diff reviewed |
 
-Root `go test ./...` covers the main module. Run [`parsers/test.sh`](../parsers/test.sh) to vet and test all standalone parser modules; `cd site && go test ./...` covers the site module.
+Root `go test ./...` covers the main module. Run `hack/test-alpha-parsers.sh` to vet and test the parsers of a neighboring alpha-parsers checkout against this tree; `cd site && go test ./...` covers the site module.
 
-### Third-Party Test Corpora
+### Ready-Made Parsers and Their Corpora
 
-The conformance suites and reference data of the ready-made parsers use text from other projects (cel-spec, JSONTestSuite,
-yaml-test-suite, CPython, DuckDB and others). It is not in the repository: [`internal/corpora/manifest.json`](../internal/corpora/manifest.json)
-pins each source (archive URL at a fixed revision, license, the files kept, and the SHA-256 digest of those files), and
-`go run ./hack/corpora fetch` downloads what is missing into `$ZP_CORPORA` (default: `zp/corpora` in the user cache
-directory) and checks the digests. Other subcommands: `list`, `verify`, `dir NAME`, and `pin NAME`, which prints the digest
-for a new manifest entry. The digest is over the extracted files (the lines of `sha256sum`, sorted by path), because
-GitHub does not promise identical archive bytes for a commit. `fetch` also checks the files that are already in the
-cache against the digest and fetches an entry again if they differ, so `parsers/test.sh` runs against verified data.
-All sources are archives at a full commit SHA except cel-go, which is the module zip of its release at
-`proxy.golang.org`: a module version is immutable and recorded in the Go checksum database.
-
-`go test` never uses the network: a test that needs a corpus that is not fetched is skipped with the command to run.
-[`parsers/test.sh`](../parsers/test.sh) fetches first and stops if that fails, so a full run skips nothing for a missing corpus.
-Reference data kept in a parser's `testdata` refers to the upstream text by file, position and hash instead of containing it.
+The ready-made parsers are in the separate [alpha-parsers](https://github.com/zeroparse/alpha-parsers) repository
+(module `zeroparse.dev/alpha-parsers`), generated from `testdata/grammars/`. Its conformance suites use text from
+other projects, which it fetches and checks against pinned digests (see its README). To check a change of the generator
+or the engine against it, put a checkout next to this one and run `hack/test-alpha-parsers.sh`; the script joins both
+with a `go.work` file and skips with a message when there is no checkout (`$ZP_ALPHA_PARSERS` names another place).
 
 ## Language Feature Status
 

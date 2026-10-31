@@ -50,7 +50,7 @@ func genErr[N any](_ N, err error) error { return err }
 
 var workloads = []workload{
 	{
-		name: "JSON", grammar: "../parsers/json/json.zp", input: func(k int) string { return inputs.JSONInput(256 << 10 / k) },
+		name: "JSON", grammar: "../testdata/grammars/json/json.zp", input: func(k int) string { return inputs.JSONInput(256 << 10 / k) },
 		gen: func(s string, b bool) error {
 			if b {
 				return genErr(gjson.Parse(s, gjson.WithUnit(gjson.Bytes)))
@@ -65,7 +65,7 @@ var workloads = []workload{
 		},
 	},
 	{
-		name: "CSV", grammar: "../parsers/csv/csv.zp", input: func(k int) string { return inputs.CSVInput(5000 / k) },
+		name: "CSV", grammar: "../testdata/grammars/csv/csv.zp", input: func(k int) string { return inputs.CSVInput(5000 / k) },
 		gen: func(s string, b bool) error {
 			if b {
 				return genErr(gcsv.Parse(s, gcsv.WithUnit(gcsv.Bytes)))
@@ -82,7 +82,7 @@ var workloads = []workload{
 		},
 	},
 	{
-		name: "XML", grammar: "../parsers/xml/xml.zp", input: func(k int) string { return inputs.XMLInput(256 << 10 / k) },
+		name: "XML", grammar: "../testdata/grammars/xml/xml.zp", input: func(k int) string { return inputs.XMLInput(256 << 10 / k) },
 		gen: func(s string, b bool) error {
 			if b {
 				return genErr(gxml.Parse(s, gxml.WithUnit(gxml.Bytes)))
@@ -311,7 +311,7 @@ func TestGeneratedDocumentAndStream(t *testing.T) {
 	})
 	t.Run("Stream", func(t *testing.T) {
 		input := inputs.CSVInput(500)
-		p := load(t, "../parsers/csv/csv.zp")
+		p := load(t, "../testdata/grammars/csv/csv.zp")
 		var want, got []string
 		if err := p.ParseStream(strings.NewReader(input), func(n *zp.Node) error {
 			b, err := json.Marshal(n)
@@ -523,7 +523,7 @@ func BenchmarkIncremental(b *testing.B) {
 // records) followed by a parse with a Document, on every backend and with the generated parser
 // (generated with -document).
 func BenchmarkIncrementalLong(b *testing.B) {
-	p := load(b, "../parsers/csv/csv.zp")
+	p := load(b, "../testdata/grammars/csv/csv.zp")
 	input := inputs.CSVInput(50000)
 	at := utf8.RuneCountInString(input[:strings.Index(input, "\n25000,")+len("\n25000,")])
 	for _, be := range backends {
@@ -562,7 +562,7 @@ func BenchmarkIncrementalLong(b *testing.B) {
 // BenchmarkStream parses CSV as a stream, receiving one record at a time, on every backend, with the
 // generated parser (generated with -stream) and with encoding/csv.
 func BenchmarkStream(b *testing.B) {
-	p := load(b, "../parsers/csv/csv.zp")
+	p := load(b, "../testdata/grammars/csv/csv.zp")
 	input := inputs.CSVInput(50000)
 	for _, be := range backends {
 		b.Run(be.name, func(b *testing.B) {
@@ -612,7 +612,7 @@ func BenchmarkStream(b *testing.B) {
 // BenchmarkPrepare compares compiling a grammar from source with loading a compiled grammar of each mode,
 // including backend setup on the first parse after loading.
 func BenchmarkPrepare(b *testing.B) {
-	for _, path := range []string{"../parsers/json/json.zp", "../examples/minilang/minilang.zp"} {
+	for _, path := range []string{"../testdata/grammars/json/json.zp", "../examples/minilang/minilang.zp"} {
 		name := strings.TrimSuffix(path[strings.LastIndex(path, "/")+1:], ".zp")
 		src, err := os.ReadFile(path)
 		if err != nil {

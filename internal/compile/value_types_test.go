@@ -87,7 +87,7 @@ func TestValueTypes(t *testing.T) {
 // Every rule of the repository grammars has a value type.
 func TestValueTypesOfRepositoryGrammars(t *testing.T) {
 	var paths []string
-	for _, pattern := range []string{"../../examples/*/*.zp", "../../parsers/*/*.zp", "../../spec/*/*.zp"} {
+	for _, pattern := range []string{"../../examples/*/*.zp", "../../testdata/grammars/*/*.zp", "../../spec/*/*.zp"} {
 		m, err := filepath.Glob(pattern)
 		if err != nil {
 			t.Fatal(err)

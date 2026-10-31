@@ -295,7 +295,7 @@ Records [025](025-discarding-separators-in-the-example-grammars.md) and [055](05
   punctuation): `rest:(-ws -"," -ws v:value)*`. The engine cannot drop them automatically, because a captured value
   exposes its full CST.
 - A predicate that reads a capture makes the capture's rules build values even in recognition mode, and with them
-  every rule they call: in `parsers/cue`, one predicate reading a capture that contained an expression made nearly
+  every rule they call: in `alpha-parsers/cue`, one predicate reading a capture that contained an expression made nearly
   the whole grammar build values in `Recognize`. Keep captures that predicates read small (a name, a token).
 - Prefer named node types (`rule name Name = (...) #atomic` with `type Name = node[string]`) or `(...) #atomic` for
   tokens: their bodies are matched without building values.

@@ -102,7 +102,7 @@ func BenchmarkAttributeNormalization(b *testing.B) {
 		b.Fatal(err)
 	}
 	sources["source-grammar"] = string(source)
-	for name, path := range map[string]string{"json": "../../parsers/json/json.zp", "minilang": "../../examples/minilang/minilang.zp"} {
+	for name, path := range map[string]string{"json": "../../testdata/grammars/json/json.zp", "minilang": "../../examples/minilang/minilang.zp"} {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			b.Fatal(err)

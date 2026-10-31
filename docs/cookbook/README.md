@@ -34,7 +34,7 @@ times differ from machine to machine.
 | [Read a configuration file into Go structs](config-to-structs.md) | A grammar for `key = value` lines with typed values, and Go code that fills a struct and reports the line of a wrong value |
 | [Parse log lines fast](log-lines.md) | A generated parser with typed values (`ParseAST`) and `Recognize`; what each costs on 100,000 lines |
 | [Process a file that does not fit in memory](big-files.md) | `#stream` and `ParseStream`: records one at a time, in 17 MiB for 5 million lines |
-| [Sum a column of a big CSV file](sum-a-csv-column.md) | The CSV grammar of `parsers/csv` streamed record by record: a total in about 13 MB, and the offset of the first bad record |
+| [Sum a column of a big CSV file](sum-a-csv-column.md) | The CSV grammar of `alpha-parsers/csv` streamed record by record: a total in about 13 MB, and the offset of the first bad record |
 | [Read a header and then records](header-and-records.md) | A stream whose first element is a header: telling the kinds of element apart in the callback |
 | [Stop a stream when the caller gives up](cancel-a-stream.md) | `WithContext` plus a reader that fails from outside, for a producer that goes quiet |
 | [Parse indentation-based input](indentation.md) | Nested entries as nested Go maps, with a variable for the indentation and an error for inconsistent indentation |
@@ -71,7 +71,7 @@ times differ from machine to machine.
 |:--|:--|
 | [Embed a grammar in a program and share the parser](embed-grammar.md) | `go:embed`, one compiled parser used from many goroutines with `WithStart`, and a `-race` test |
 | [Ship a parser and keep it up to date](ship-a-parser.md) | `zp gen` with `go generate`, a test that fails when the generated file is stale, and `.zpc` for grammars that stay data |
-| [Validate a YAML file and point at the problem](ready-made-parsers.md) | A ready-made parser of [parsers/](../../parsers/README.md): syntax errors with positions, and your own checks with the positions of the typed tree |
+| [Validate a YAML file and point at the problem](ready-made-parsers.md) | A ready-made parser of [parsers/](https://github.com/zeroparse/alpha-parsers/blob/main/README.md): syntax errors with positions, and your own checks with the positions of the typed tree |
 | [Test hand-written code against a grammar](test-with-samples.md) | Inputs and near misses generated from the grammar, a differential test and a fuzz test |
 | [Fuzz the edits of a grammar in your tests](edit-fuzz-grammar.md) | `editfuzz` in `go test`: random edits, undos and redos checked against fresh parses, saved failures as regression tests, and a case written by hand |
 | [Check a file in a TypeScript tool with the same grammar](typescript-parser.md) | `zp gen -lang ts -types`: a dependency-free module, typed values, recovered syntax errors and a check of the tool's own |
@@ -83,4 +83,4 @@ times differ from machine to machine.
 |:--|:--|
 | One feature in depth | [Guides](../guide/README.md) |
 | The exact rules of a construct | [Language specification](../../spec/README.md) |
-| Complete grammars with tests | [examples/](../../examples/README.md) and [parsers/](../../parsers/README.md) |
+| Complete grammars with tests | [examples/](../../examples/README.md) and [parsers/](https://github.com/zeroparse/alpha-parsers/blob/main/README.md) |

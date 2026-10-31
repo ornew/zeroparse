@@ -89,4 +89,4 @@ and 22.4 to 22.7 ms), so the gap is at most 5.5% and below noise except for CSV 
 The generated parsers match the engine over the corpus (330 grammars, 29,252 results, both position
 units) with values, with source information and with budget controls; a sweep of mutated inputs shows no
 difference from the engine. The typed, replay, budget-control, observation and profile tests, the Core and
-Flow IR goldens and `parsers/test.sh` pass.
+Flow IR goldens and `alpha-parsers/test.sh` pass.

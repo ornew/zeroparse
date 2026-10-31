@@ -16,18 +16,18 @@ type TriageGrammar struct {
 	Path string
 }
 
-// TriageGrammars are the grammars of parsers/ and examples/ that the classifier does not prove
+// TriageGrammars are the grammars of testdata/grammars/ and examples/ that the classifier does not prove
 // Linear from their default start rules.
 var TriageGrammars = []TriageGrammar{
-	{"cel", "../../parsers/cel/cel.zp"},
-	{"csv", "../../parsers/csv/csv.zp"},
-	{"cue", "../../parsers/cue/cue.zp"},
-	{"duckdb", "../../parsers/duckdb/duckdb.zp"},
-	{"golang", "../../parsers/golang/golang.zp"},
-	{"python", "../../parsers/python/python.zp"},
-	{"typescript", "../../parsers/typescript/typescript.zp"},
-	{"xml", "../../parsers/xml/xml.zp"},
-	{"yaml", "../../parsers/yaml/yaml.zp"},
+	{"cel", "../../testdata/grammars/cel/cel.zp"},
+	{"csv", "../../testdata/grammars/csv/csv.zp"},
+	{"cue", "../../testdata/grammars/cue/cue.zp"},
+	{"duckdb", "../../testdata/grammars/duckdb/duckdb.zp"},
+	{"golang", "../../testdata/grammars/golang/golang.zp"},
+	{"python", "../../testdata/grammars/python/python.zp"},
+	{"typescript", "../../testdata/grammars/typescript/typescript.zp"},
+	{"xml", "../../testdata/grammars/xml/xml.zp"},
+	{"yaml", "../../testdata/grammars/yaml/yaml.zp"},
 	{"minilang", "../../examples/minilang/minilang.zp"},
 	{"outline", "../../examples/outline/outline.zp"},
 }
@@ -35,7 +35,7 @@ var TriageGrammars = []TriageGrammar{
 // LinearGrammars are the bundled grammars that the classifier proves Linear; the triage tests
 // check that they stay so.
 var LinearGrammars = []TriageGrammar{
-	{"json", "../../parsers/json/json.zp"},
+	{"json", "../../testdata/grammars/json/json.zp"},
 	{"calc", "../../examples/calculator/calc.zp"},
 	{"calc_lr", "../../examples/calculator/calc_lr.zp"},
 }

@@ -36,4 +36,4 @@ parent and the change.
 ## Tests
 
 The Operators Rule named-type cases run through the TypeScript backend, together with the
-typed conformance and replay tests, and `parsers/test.sh`, pass.
+typed conformance and replay tests, and `alpha-parsers/test.sh`, pass.

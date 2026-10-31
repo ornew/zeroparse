@@ -32,8 +32,8 @@ func TestExportGeneratedTraceBenchmarks(t *testing.T) {
 	}
 	write("go.mod", []byte(gentest.GoMod("tracebench")))
 	cases := []struct{ name, path, input string }{
-		{"json", "parsers/json/json.zp", "[" + strings.TrimSuffix(strings.Repeat(`{"name":"éclair","n":123,"ok":true},`, 64), ",") + "]"},
-		{"xml", "parsers/xml/xml.zp", "<root>" + strings.Repeat(`<item name="éclair">123</item>`, 64) + "</root>"},
+		{"json", "testdata/grammars/json/json.zp", "[" + strings.TrimSuffix(strings.Repeat(`{"name":"éclair","n":123,"ok":true},`, 64), ",") + "]"},
+		{"xml", "testdata/grammars/xml/xml.zp", "<root>" + strings.Repeat(`<item name="éclair">123</item>`, 64) + "</root>"},
 		{"calc", "examples/calculator/calc.zp", strings.TrimSuffix(strings.Repeat("1+2*3+", 32), "+")},
 	}
 	sizes := map[string]int{}
@@ -87,7 +87,7 @@ func BenchmarkTrace(b *testing.B){for _,mode:=range []string{"full","root","unkn
 var generatedTraceBenchmarkSource []byte
 
 func BenchmarkGeneratedObservabilityGeneration(b *testing.B) {
-	for _, fixture := range []struct{ name, path string }{{"json", "parsers/json/json.zp"}, {"xml", "parsers/xml/xml.zp"}, {"calc", "examples/calculator/calc.zp"}} {
+	for _, fixture := range []struct{ name, path string }{{"json", "testdata/grammars/json/json.zp"}, {"xml", "testdata/grammars/xml/xml.zp"}, {"calc", "examples/calculator/calc.zp"}} {
 		source, err := os.ReadFile(filepath.Join("../../..", fixture.path))
 		if err != nil {
 			b.Fatal(err)

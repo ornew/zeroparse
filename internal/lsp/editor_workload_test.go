@@ -279,7 +279,7 @@ func runEditorSession(t *testing.T, text string, keystrokes int, interval time.D
 }
 
 // TestEditorWorkloadProbe (ZP_LSP_EDITOR_PROBE=1) runs editor sessions on the repository's
-// large grammars. ZP_LSP_EDITOR_GRAMMAR selects parsers/<name>/<name>.zp, ZP_LSP_EDITOR_INTERVAL_MS
+// large grammars. ZP_LSP_EDITOR_GRAMMAR selects testdata/grammars/<name>/<name>.zp, ZP_LSP_EDITOR_INTERVAL_MS
 // the keystroke interval, ZP_LSP_EDITOR_WORKERS and ZP_LSP_EDITOR_MAX_REQUESTS the capacity.
 func TestEditorWorkloadProbe(t *testing.T) {
 	if os.Getenv("ZP_LSP_EDITOR_PROBE") != "1" {
@@ -295,7 +295,7 @@ func TestEditorWorkloadProbe(t *testing.T) {
 	if name == "" {
 		name = "duckdb"
 	}
-	data, err := os.ReadFile(filepath.Join("../../parsers", name, name+".zp"))
+	data, err := os.ReadFile(filepath.Join("../../testdata/grammars", name, name+".zp"))
 	if err != nil {
 		t.Fatal(err)
 	}

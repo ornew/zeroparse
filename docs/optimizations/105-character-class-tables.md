@@ -56,7 +56,7 @@ change.
 
 The module tests of cel, cue, duckdb, golang and python compare each generated
 parser with the interpreter on error text and spans. The engine tests, the root
-suite and `parsers/test.sh` pass.
+suite and `alpha-parsers/test.sh` pass.
 
 ## Decision and Limits
 

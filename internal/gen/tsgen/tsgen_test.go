@@ -88,7 +88,7 @@ func TestGenerateTSErrors(t *testing.T) {
 		t.Errorf("got %v", err)
 	}
 	// Generating is deterministic.
-	src, _ := os.ReadFile("../../../parsers/json/json.zp")
+	src, _ := os.ReadFile("../../../testdata/grammars/json/json.zp")
 	jg, err := parseTest(string(src))
 	if err != nil {
 		t.Fatal(err)

@@ -3,7 +3,7 @@
 **Problem.** A CSV export is too big to read into memory. You want the total of one column and, if a record is bad, the
 place where it is, without loading the file.
 
-The CSV grammar of [parsers/csv](../../parsers/csv/csv.zp) marks its records with `#stream`, so `ParseStream` delivers
+The CSV grammar of [alpha-parsers/csv](../../testdata/grammars/csv/csv.zp) marks its records with `#stream`, so `ParseStream` delivers
 them one at a time. Copy `csv.zp` next to this program, which sums the third column and reports the first bad record
 with its offset; with `-whole` it uses `Parse` instead, to compare. See [Process a file that does not fit in
 memory](big-files.md) for the same method on a log.

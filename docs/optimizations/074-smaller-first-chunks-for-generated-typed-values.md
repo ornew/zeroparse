@@ -56,9 +56,9 @@
   heap problem. These figures measure cumulative allocation traffic,
   not retained heap.
 - Reproduce JSON with
-  `cd parsers/json && go test -run '^$' -bench 'Benchmark(SmallParseAST|ParseAST)$' -benchtime=300ms -count=1`
+  `cd alpha-parsers/json && go test -run '^$' -bench 'Benchmark(SmallParseAST|ParseAST)$' -benchtime=300ms -count=1`
   and CEL with
-  `cd parsers/cel && go test -run '^$' -bench 'Benchmark(PoliciesParseAST|LargeParseAST)$' -benchtime=300ms -count=1`.
+  `cd alpha-parsers/cel && go test -run '^$' -bench 'Benchmark(PoliciesParseAST|LargeParseAST)$' -benchtime=300ms -count=1`.
   Use the final benchmark sources on both production versions. For the
   ownership workloads, generate both paths with
   `ZP_TYPED_CHUNK_DIR=/tmp/zp-chunks go test ./internal/gen/gogen -run '^TestGeneratedTypedChunkOwnership$' -count=1`,

@@ -10,8 +10,6 @@
     "docs/**/*.md",
     "spec/**/*.md",
     "examples/README.md",
-    "parsers/README.md",
-    "parsers/*/README.md",
     "reference/**/*.md",
     "playground/README.md"
   ],
@@ -463,14 +461,6 @@
           "collapsed": true
         }
       ]
-    },
-    {
-      "title": "Parsers",
-      "match": [
-        "parsers/README.md",
-        "parsers/*/README.md"
-      ],
-      "index": "parsers/README.md"
     },
     {
       "title": "Project",

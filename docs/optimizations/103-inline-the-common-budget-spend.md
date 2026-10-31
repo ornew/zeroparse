@@ -77,8 +77,8 @@ charge, unit for unit.
 ## Reproduction
 
 Baseline f327bdb5; candidate the shared-runtime change with this mechanism, on
-an Apple M3 Max with Go 1.27.1. Test binaries of `./bench`, `parsers/json` and
-`parsers/csv` were built per revision and run alternately from their own trees,
+an Apple M3 Max with Go 1.27.1. Test binaries of `./bench`, `alpha-parsers/json` and
+`alpha-parsers/csv` were built per revision and run alternately from their own trees,
 six rounds at `-benchtime=200ms` with `-benchmem`, for
 `^Benchmark(Parse|Recognize|Incremental|IncrementalLong|Stream|ControlledParse)$/./generated`
 and the parser module benchmarks, then compared with benchstat. The
@@ -105,7 +105,7 @@ from the shared-runtime change.
 
 The ratio of the median time of a parse to that of a parser generated without
 budget controls, over seven paired rounds on the benchmark inputs (JSON, XML,
-YAML and CSV grammars of `parsers/`, Go 1.27.1, Apple M3 Max, `-trimpath`, run
+YAML and CSV grammars of `testdata/grammars/`, Go 1.27.1, Apple M3 Max, `-trimpath`, run
 under the benchmark lock). (b) passes no option; (c) passes
 `Limits{Budget: 2^64-1}`.
 

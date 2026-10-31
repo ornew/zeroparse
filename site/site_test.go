@@ -684,10 +684,10 @@ func TestNavigation(t *testing.T) {
 			intro[site(l[1])] = true
 		}
 	}
-	if got, want := strings.Join(names, ", "), "Tutorial, Guides, Cookbook, Specification, Grammar Language, Parser and Runtime, Core IR, Bytecode, Proofs, Reference, Parsers, Project"; got != want {
+	if got, want := strings.Join(names, ", "), "Tutorial, Guides, Cookbook, Specification, Grammar Language, Parser and Runtime, Core IR, Bytecode, Proofs, Reference, Project"; got != want {
 		t.Errorf("sections = %s, want %s", got, want)
 	}
-	if want := map[string]bool{"docs/tutorial/": true, "docs/guide/": true, "docs/cookbook/": true, "spec/": true, "spec/language/": true, "spec/runtime/": true, "spec/core-ir/": true, "spec/bytecode/": true, "spec/proofs/": true, "parsers/": true}; !maps.Equal(intro, want) {
+	if want := map[string]bool{"docs/tutorial/": true, "docs/guide/": true, "docs/cookbook/": true, "spec/": true, "spec/language/": true, "spec/runtime/": true, "spec/core-ir/": true, "spec/bytecode/": true, "spec/proofs/": true}; !maps.Equal(intro, want) {
 		t.Errorf("pages titled Introduction = %v, want %v", intro, want)
 	}
 	// The tutorial and the specification are numbered series: the navigation numbers their
@@ -929,8 +929,8 @@ func TestNavTitle(t *testing.T) {
 		p    *Page
 		want string
 	}{
-		{&Page{Src: "parsers/README.md", Title: "Ready-made parsers", Index: true}, "Introduction"},
-		{&Page{Src: "parsers/json/README.md", Title: "JSON"}, "JSON"},
+		{&Page{Src: "examples/README.md", Title: "Examples", Index: true}, "Introduction"},
+		{&Page{Src: "examples/minilang/README.md", Title: "Minilang"}, "Minilang"},
 		{&Page{Src: "docs/tutorial/getting-started.md", Title: "Getting started: a tutorial"}, "Getting started"},
 	} {
 		if got := navTitle(tc.p); got != tc.want {

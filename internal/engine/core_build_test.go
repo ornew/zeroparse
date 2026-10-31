@@ -27,7 +27,7 @@ func coreCorpusProgram(t *testing.T, c gentest.Case) (*Program, bool) {
 }
 
 // TestCoreBuildCorpus builds, analyzes and verifies the Core IR of every grammar of the corpus
-// and of the parsers directory, and checks that the scope of every rule is the frame layout the
+// and of testdata/grammars, and checks that the scope of every rule is the frame layout the
 // generated Node rules use, which the typed rules share.
 func TestCoreBuildCorpus(t *testing.T) {
 	t.Parallel()

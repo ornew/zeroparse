@@ -167,7 +167,7 @@ go run . bad.yml
 - **Lists and other forms.** `- item` lines are one more alternative of `entry` at the same indentation.
 - **Cost.** A rule that reads a variable is cached per value of the variable, so keep the number of values small (a
   depth, not a position); see the guide below.
-- **Python and YAML.** Their grammars, [parsers/python](../../parsers/python/) and [parsers/yaml](../../parsers/yaml/),
+- **Python and YAML.** Their grammars, [alpha-parsers/python](https://github.com/zeroparse/alpha-parsers/tree/main/python/) and [alpha-parsers/yaml](https://github.com/zeroparse/alpha-parsers/tree/main/yaml/),
   use the same technique at a larger scale.
 
 See [Context-sensitive parsing](../guide/context-sensitive.md) for predicates, variables and lookahead, and

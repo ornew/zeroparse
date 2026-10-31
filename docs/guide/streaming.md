@@ -264,7 +264,7 @@ The rules that matter when you write a grammar, in short:
 - `#recover` cannot wrap the `#stream` repetition, because rewinding could reach input that is already discarded. Put
   recovery inside each repeated element or its rule.
 - An element that can match nothing is delivered once and then ends the repetition. Without a guard like the `!$$` in
-  [parsers/csv](../../parsers/csv/csv.zp), a record rule whose fields and line end can all match nothing delivers
+  [alpha-parsers/csv](../../testdata/grammars/csv/csv.zp), a record rule whose fields and line end can all match nothing delivers
   one extra empty record at the end of the input.
 - `WithUnit`, `WithBackend` and `WithMaxDepth` work; `RecognizeOnly` is an error. After an element only the one
   character before it is kept, so `^` still works at the start of the next element.
@@ -462,7 +462,7 @@ set, and one huge element, such as a whole document wrapped in a single rule, de
 the last few elements, your callback's own state, and the list of recovered errors.
 
 The effect on a real input, a 27 MiB CSV file with 1,000,000 records (Apple silicon, Go 1.27.1, with the grammar of
-[parsers/csv](../../parsers/csv/csv.zp) and a callback that sums a column): `ParseStream` finished in about 1.4 seconds
+[alpha-parsers/csv](../../testdata/grammars/csv/csv.zp) and a callback that sums a column): `ParseStream` finished in about 1.4 seconds
 with a peak resident size of about 13 MB, and `Parse` finished in about 0.8 seconds with about 1.0 GB. Streaming is not faster: it trades a little
 time for memory, and the memory is bounded by the working set rather than by the size of the input.
 

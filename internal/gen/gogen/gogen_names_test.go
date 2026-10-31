@@ -238,7 +238,7 @@ func TestGeneratedTypesPackageNamesTheRuntimeExplicitly(t *testing.T) {
 	}
 	for _, name := range []string{"json", "csv", "cel", "yaml"} {
 		t.Run(name, func(t *testing.T) {
-			data, err := os.ReadFile(filepath.Join("..", "..", "..", "parsers", name, name+".zp"))
+			data, err := os.ReadFile(filepath.Join("..", "..", "..", "testdata", "grammars", name, name+".zp"))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -539,7 +539,7 @@ func TestEmbeddedModeCompilesRichGrammars(t *testing.T) {
 	}
 	for _, name := range []string{"json", "csv", "cel", "yaml"} {
 		t.Run(name, func(t *testing.T) {
-			data, err := os.ReadFile(filepath.Join("..", "..", "..", "parsers", name, name+".zp"))
+			data, err := os.ReadFile(filepath.Join("..", "..", "..", "testdata", "grammars", name, name+".zp"))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -587,7 +587,7 @@ func TestGeneratedRichGrammarsWithTypesNamedLikeRuntimeExports(t *testing.T) {
 	declares := regexp.MustCompile(`(?m)^\s*type\s+(\w+)`)
 	for _, name := range []string{"json", "csv", "cel", "yaml"} {
 		t.Run(name, func(t *testing.T) {
-			data, err := os.ReadFile(filepath.Join("..", "..", "..", "parsers", name, name+".zp"))
+			data, err := os.ReadFile(filepath.Join("..", "..", "..", "testdata", "grammars", name, name+".zp"))
 			if err != nil {
 				t.Fatal(err)
 			}

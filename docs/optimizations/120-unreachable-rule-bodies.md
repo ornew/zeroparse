@@ -65,8 +65,8 @@ Generated `parser.go` bytes over the 14 grammars of the output manifest, per mod
 After the change, an AST call-graph check of every non-typed output finds no rule body that
 cannot run and no unreferenced function; all outputs define every generated function they call.
 
-Speed was checked on the generated Node parser and recognizer of `parsers/json` and
-`parsers/duckdb` (the json and duckdb benchmark inputs, the latter about 256 KB). Ten rounds
+Speed was checked on the generated Node parser and recognizer of `alpha-parsers/json` and
+`alpha-parsers/duckdb` (the json and duckdb benchmark inputs, the latter about 256 KB). Ten rounds
 interleaved over the build before, the build after and two copies of the build before (the
 noise band), `-benchtime=2s`; medians, as the change against the build before:
 

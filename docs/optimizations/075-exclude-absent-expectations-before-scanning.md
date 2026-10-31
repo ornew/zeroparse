@@ -69,9 +69,9 @@
   Unicode corpus checks public diagnostics through memo, lookahead,
   labels and recovery on Go and unchanged TypeScript paths.
 - Reproduce Python with
-  `cd parsers/python && go test -run '^$' -bench '^(BenchmarkParseAST|BenchmarkParseASTBytes|BenchmarkRecognize)$' -benchtime=300ms -count=1`;
+  `cd alpha-parsers/python && go test -run '^$' -bench '^(BenchmarkParseAST|BenchmarkParseASTBytes|BenchmarkRecognize)$' -benchtime=300ms -count=1`;
   JSON controls with
-  `cd parsers/json && go test -run '^$' -bench '^(BenchmarkSmallParseAST|BenchmarkParseAST)$' -benchtime=300ms -count=1`;
+  `cd alpha-parsers/json && go test -run '^$' -bench '^(BenchmarkSmallParseAST|BenchmarkParseAST)$' -benchtime=300ms -count=1`;
   and engine/recovery controls with
   `cd bench && go test -run '^$' -bench '^BenchmarkParse$/(JSON|Arith_OperatorsRule|Recovery)$' -benchtime=300ms -count=1`.
   Use the final benchmark sources on both versions, regenerate standalone

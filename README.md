@@ -135,35 +135,35 @@ Run `zp` without arguments for every command and flag.
 
 ## Ready-Made Parsers
 
-[parsers/](parsers/) has parsers for common languages, written in ZeroParse, generated into Go and tested against the
+[alpha-parsers](https://github.com/zeroparse/alpha-parsers) (a separate repository) has parsers for common languages, written in ZeroParse, generated into Go and tested against the
 languages' conformance suites and reference implementations. Each is a module of its own that depends only on the
-standard library and ZeroParse's runtime package. Until ZeroParse publishes a release, use them from a checkout of the
-repository; `go get` does not fetch them from another module yet (see [Ready-Made Parsers](docs/guide/ready-made-parsers.md)):
+standard library and ZeroParse's runtime package. Until ZeroParse publishes a release, use them from a checkout of that
+repository; `go get` does not fetch them yet (see [Ready-Made Parsers](docs/guide/ready-made-parsers.md)):
 
 ```go
-import "github.com/ornew/zeroparse/parsers/json"
+import "zeroparse.dev/alpha-parsers/json"
 
 v, err := json.Decode(`{"name": "zp", "tags": ["peg", "operators-rule"]}`)
 ```
 
 | Language | Module | Specification |
 |:--|:--|:--|
-| CEL | [`github.com/ornew/zeroparse/parsers/cel`](parsers/cel/) | The CEL language definition |
-| CSV | [`github.com/ornew/zeroparse/parsers/csv`](parsers/csv/) | RFC 4180 |
-| CUE | [`github.com/ornew/zeroparse/parsers/cue`](parsers/cue/) | The CUE language specification |
-| DuckDB SQL | [`github.com/ornew/zeroparse/parsers/duckdb`](parsers/duckdb/) | DuckDB 1.5.6's SQL dialect |
-| Go | [`github.com/ornew/zeroparse/parsers/golang`](parsers/golang/) | The Go specification (go1.27), as `go/parser` parses it |
-| JSON | [`github.com/ornew/zeroparse/parsers/json`](parsers/json/) | RFC 8259 |
-| Python | [`github.com/ornew/zeroparse/parsers/python`](parsers/python/) | Python 3.14 |
-| TypeScript | [`github.com/ornew/zeroparse/parsers/typescript`](parsers/typescript/) | TypeScript 5.9 and TSX |
-| XML | [`github.com/ornew/zeroparse/parsers/xml`](parsers/xml/) | XML 1.0 (Fifth Edition), non-validating |
-| YAML | [`github.com/ornew/zeroparse/parsers/yaml`](parsers/yaml/) | YAML 1.2.2 |
+| CEL | [`zeroparse.dev/alpha-parsers/cel`](https://github.com/zeroparse/alpha-parsers/tree/main/cel/) | The CEL language definition |
+| CSV | [`zeroparse.dev/alpha-parsers/csv`](https://github.com/zeroparse/alpha-parsers/tree/main/csv/) | RFC 4180 |
+| CUE | [`zeroparse.dev/alpha-parsers/cue`](https://github.com/zeroparse/alpha-parsers/tree/main/cue/) | The CUE language specification |
+| DuckDB SQL | [`zeroparse.dev/alpha-parsers/duckdb`](https://github.com/zeroparse/alpha-parsers/tree/main/duckdb/) | DuckDB 1.5.6's SQL dialect |
+| Go | [`zeroparse.dev/alpha-parsers/golang`](https://github.com/zeroparse/alpha-parsers/tree/main/golang/) | The Go specification (go1.27), as `go/parser` parses it |
+| JSON | [`zeroparse.dev/alpha-parsers/json`](https://github.com/zeroparse/alpha-parsers/tree/main/json/) | RFC 8259 |
+| Python | [`zeroparse.dev/alpha-parsers/python`](https://github.com/zeroparse/alpha-parsers/tree/main/python/) | Python 3.14 |
+| TypeScript | [`zeroparse.dev/alpha-parsers/typescript`](https://github.com/zeroparse/alpha-parsers/tree/main/typescript/) | TypeScript 5.9 and TSX |
+| XML | [`zeroparse.dev/alpha-parsers/xml`](https://github.com/zeroparse/alpha-parsers/tree/main/xml/) | XML 1.0 (Fifth Edition), non-validating |
+| YAML | [`zeroparse.dev/alpha-parsers/yaml`](https://github.com/zeroparse/alpha-parsers/tree/main/yaml/) | YAML 1.2.2 |
 
 ## Examples
 
 Small grammars with tests that show the features live in [examples/](examples/): a calculator (Operators Rule and
 left-recursive), an indentation-based outline format and a small programming language. The complete parsers of
-[parsers/](parsers/), such as the ones for **Go** and **Python 3**, are the larger examples.
+[alpha-parsers](https://github.com/zeroparse/alpha-parsers), such as the ones for **Go** and **Python 3**, are the larger examples.
 
 ## Documentation
 

@@ -51,7 +51,7 @@ func TestGeneratedTSSparseMemoControls(t *testing.T) {
 	if err != nil {
 		t.Skip("node not found")
 	}
-	src, err := os.ReadFile("../../../parsers/typescript/typescript.zp")
+	src, err := os.ReadFile("../../../testdata/grammars/typescript/typescript.zp")
 	if err != nil {
 		t.Fatal(err)
 	}

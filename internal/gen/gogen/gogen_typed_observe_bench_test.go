@@ -36,8 +36,8 @@ func TestExportGeneratedTypedTraceBenchmarks(t *testing.T) {
 		DirectStart bool
 	}{}
 	for _, fixture := range []struct{ name, path, input string }{
-		{"json", "parsers/json/json.zp", "[" + strings.TrimSuffix(strings.Repeat(`{"name":"éclair","n":123,"ok":true},`, 64), ",") + "]"},
-		{"xml", "parsers/xml/xml.zp", "<root>" + strings.Repeat(`<item name="éclair">123</item>`, 64) + "</root>"},
+		{"json", "testdata/grammars/json/json.zp", "[" + strings.TrimSuffix(strings.Repeat(`{"name":"éclair","n":123,"ok":true},`, 64), ",") + "]"},
+		{"xml", "testdata/grammars/xml/xml.zp", "<root>" + strings.Repeat(`<item name="éclair">123</item>`, 64) + "</root>"},
 		{"calc", "examples/calculator/calc.zp", strings.TrimSuffix(strings.Repeat("1+2*3+", 32), "+")},
 	} {
 		data, err := os.ReadFile(filepath.Join("../../..", fixture.path))

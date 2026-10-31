@@ -210,7 +210,7 @@ The change touches the grammar parser and formatter, the checker, every
 backend (Closure, VM bytecode and saved formats, generated Go Node and typed,
 TypeScript), Documents and streams, error recovery and missing tokens, output
 schemas and structural queries, JSON and S-expression output, the LSP, the
-playground, examples, the ready-made parsers in `parsers/`, the specification
+playground, examples, the ready-made parsers in `alpha-parsers/`, the specification
 and every guide. Saved bytecode and schema formats need new versions.
 
 ## Decisions
@@ -257,7 +257,7 @@ and every guide. Saved bytecode and schema formats need new versions.
 - **Migration replaces the old syntax at once.** No compatibility mode is
   kept. A `zp fix` rewrite handles the mechanical parts (struct definitions,
   `--` to `#cut`, positional to named captures, lambda parameters), and the
-  repository grammars and `parsers/` are migrated with it.
+  repository grammars and `alpha-parsers/` are migrated with it.
 - **Terminal types become one-field structs.** A terminal type names the kind
   of a token, and joins of them, such as `Number | String | Bool`, tell the
   kinds apart, which `node[string]` cannot do. `zp fix` rewrites

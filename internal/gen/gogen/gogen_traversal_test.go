@@ -174,7 +174,7 @@ func testGeneratedDuckDBInspectCompatibility(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	helper, err := os.ReadFile(filepath.Join("..", "..", "..", "parsers", "duckdb", "inspect.go"))
+	helper, err := os.ReadFile(filepath.Join("..", "..", "..", "testdata", "grammars", "duckdb", "inspect.go"))
 	if err != nil {
 		t.Fatal(err)
 	}

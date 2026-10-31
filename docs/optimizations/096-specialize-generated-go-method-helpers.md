@@ -113,7 +113,7 @@ broader gains or parity outside the measured profiles and three consumer sizes.
 Local verification used Go 1.27.1, Node.js 24.19.0 and TypeScript 5.9.3.
 `go test -timeout=30m ./...` passed all 18 root-module packages; the engine
 package took 851.406 seconds. The two skipped engine tests are opt-in artifact
-writers, not semantic coverage. `go generate ./parsers ./bench`, every parser module in `parsers/test.sh`, site
+writers, not semantic coverage. `go generate ./parsers ./bench`, every parser module in `alpha-parsers/test.sh`, site
 tests and the actual site build/link check passed (229 pages, 257 files).
 Independent source and evidence review found no unresolved material findings.
 These checks describe local output, not remote CI or deployed behavior.

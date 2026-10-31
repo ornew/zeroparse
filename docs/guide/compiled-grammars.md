@@ -425,7 +425,7 @@ Rules of thumb:
   ([streaming and incremental parsing](streaming.md), [backends](backends.md)) and still skip the compile.
 - **Use `zp gen`** when the parser is on a hot path or you want no dependency on ZeroParse at run time: it has no
   start-up and the fastest parsing. The cost is that the grammar is frozen into the binary, and that the generated
-  source is large: the `parser.go` of `parsers/python` and of `parsers/duckdb` is dozens to hundreds of times the size of
+  source is large: the `parser.go` of `alpha-parsers/python` and of `alpha-parsers/duckdb` is dozens to hundreds of times the size of
   the `.zp` file it comes from.
 
 The three give the same trees and the same errors, so you can start with source, move to a file when start-up shows up

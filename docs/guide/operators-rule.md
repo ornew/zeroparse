@@ -698,7 +698,7 @@ A rule of thumb:
 
 - **Use an Operators Rule** for any language with more than two or three precedence levels, for prefix, postfix,
   ternary or call/index operators, or when you expect to add operators later. It is the default for expression
-  languages, and what the larger grammars (`examples/minilang`, `parsers/golang`, `parsers/python`) use.
+  languages, and what the larger grammars (`examples/minilang`, `alpha-parsers/golang`, `alpha-parsers/python`) use.
 - **Use left-recursive rules** when the recursion is not an operator table: member chains (`a.b.c`), a handful of
   levels in an otherwise ordinary grammar, constructs such as `list = list "," item / item`, or a grammar ported from a
   notation that already uses left recursion. They also work with Operators Rule Declaration Statements in the same grammar.

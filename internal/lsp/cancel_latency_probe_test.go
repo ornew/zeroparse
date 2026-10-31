@@ -65,7 +65,7 @@ func TestCancelLatencyProbe(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	const uri = "file:///probe.zp"
 	for _, name := range names {
-		data, err := os.ReadFile(filepath.Join("../../parsers", name))
+		data, err := os.ReadFile(filepath.Join("../../testdata/grammars", name))
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -66,7 +66,7 @@ character-class tables. A rule with no captures or variables has a nil `Scope` o
 16-bit indexes and `Seen` as 32 bits, so the generator reports an error for a grammar
 that needs more than 65536 distinct lists or more than 2^31-1 deferred memoization
 indexes. The engine tests (including the checks that read the generated rule table,
-its string lists and its rare fields), the root suite and `parsers/test.sh` pass.
+its string lists and its rare fields), the root suite and `alpha-parsers/test.sh` pass.
 
 ## Decision and Limits
 

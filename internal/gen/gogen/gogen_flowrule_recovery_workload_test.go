@@ -62,7 +62,7 @@ func BenchmarkTypedRecoveryGeneration(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	typescript, err := os.ReadFile("../../../parsers/typescript/typescript.zp")
+	typescript, err := os.ReadFile("../../../testdata/grammars/typescript/typescript.zp")
 	if err != nil {
 		b.Fatal(err)
 	}

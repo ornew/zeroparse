@@ -57,7 +57,7 @@ parser generated with budget controls behaves as before.
 Baseline origin/main 1336583b (which contains 5b07c199's generator); candidate
 this branch, Apple M3 Max, Go 1.27.1, `-trimpath`. Sizes are `wc -lc` of
 `parser.go`. Compile times are a cold `GOCACHE`
-`go test -trimpath -c` of `parsers/duckdb`. Benchmarks are test binaries built per
+`go test -trimpath -c` of `alpha-parsers/duckdb`. Benchmarks are test binaries built per
 tree and run alternately, six rounds at `-benchtime=200ms` with `-benchmem`, then
 `benchstat`: `^Benchmark(Parse|Recognize|Incremental|IncrementalLong|Stream|ControlledParse)$/./generated`
 of `./bench` and the parser module benchmarks (`Parse`, `ParseAST`,

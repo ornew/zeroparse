@@ -66,7 +66,7 @@ func stripActions(t *testing.T, g *grammar.Grammar) *grammar.Grammar {
 func TestDefaultValueCorpus(t *testing.T) {
 	chdirModuleRoot(t)
 	grammars, _ := filepath.Glob("examples/*/*.zp")
-	more, _ := filepath.Glob("parsers/*/*.zp")
+	more, _ := filepath.Glob("testdata/grammars/*/*.zp")
 	grammars = append(grammars, more...)
 	if len(grammars) == 0 {
 		t.Fatal("no grammars")

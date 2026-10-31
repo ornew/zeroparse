@@ -185,7 +185,7 @@ settings, everything in one rule
 
 ## A Real Grammar
 
-A real grammar, [parsers/json](../../parsers/json/json.zp), on an array of 5,000 objects (283 KB). Run it from the
+A real grammar, [alpha-parsers/json](../../testdata/grammars/json/json.zp), on an array of 5,000 objects (283 KB). Run it from the
 root of the repository:
 
 <details>
@@ -204,7 +204,7 @@ import (
 	"github.com/ornew/zeroparse"
 )
 
-// Run it from the root of the repository: go run ./jsondoc parsers/json/json.zp
+// Run it from the root of the repository: go run ./jsondoc testdata/grammars/json/json.zp
 func main() {
 	src, err := os.ReadFile(os.Args[1])
 	if err != nil {
@@ -263,7 +263,7 @@ func main() {
 </details>
 
 ```bash
-go run ./jsondoc parsers/json/json.zp
+go run ./jsondoc testdata/grammars/json/json.zp
 ```
 
 ```text

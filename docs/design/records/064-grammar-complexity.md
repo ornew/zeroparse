@@ -366,7 +366,7 @@ Not yet in place:
 
 ## Classification of the Bundled Grammars
 
-The grammars in `parsers/` and `examples/`, except json and the two calculators, are classified `Poly`, `Exp` or
+The grammars in `testdata/grammars/` and `examples/`, except json and the two calculators, are classified `Poly`, `Exp` or
 `Unknown`. The verdicts are upper bounds and the witnesses are paths, not slow inputs, and the corpus inputs are benign,
 so a verdict alone does not tell whether a cause is imprecision of the classifier, a cost that the runtime can remove,
 or a cost inherent in the language. Every cause is therefore sorted by measurement.

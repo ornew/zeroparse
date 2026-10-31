@@ -481,7 +481,6 @@ func TestDirectoryAndSiteLinkKinds(t *testing.T) {
 		{"AGENTS.md", kindProject},
 		{"CONTRIBUTING.md", kindProject},
 		{"go.mod", kindOther},
-		{"parsers/README.md", kindOther},
 	} {
 		if got := docKind(c.rel); got != c.want {
 			t.Errorf("docKind(%q) = %s, want %s", c.rel, got, c.want)
