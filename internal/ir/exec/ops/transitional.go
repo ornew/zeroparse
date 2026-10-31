@@ -160,6 +160,14 @@ stream commit pruned it.`,
 	add(&exec.Op{Name: "memo.detached", Component: Memo, Results: []exec.Type{entry},
 		Contract: `Returns a new entry under no key, which no lookup finds.`})
 
+	add(&exec.Op{Name: "memo.examined", Component: Memo, Params: entryArg, Results: []exec.Type{exec.TInt}, Reads: []string{Memo},
+		Features: []string{Document}, Contract: `Returns how far the call that stored the entry examined the input.`})
+	add(&exec.Op{Name: "memo.reuse", Component: Memo, Params: entryArg, Results: []exec.Type{reuse}, Reads: []string{Memo},
+		Features: []string{Document}, Contract: `Returns how long the entry may be reused.`})
+	add(&exec.Op{Name: "memo.setExamined", Component: Memo, Params: append(entryArg, exec.P("x", exec.TInt)), Writes: []string{Memo},
+		Features: []string{Document}, Contract: `Records with the entry that its call examined the input up to x.`})
+	add(&exec.Op{Name: "memo.setReuse", Component: Memo, Params: append(entryArg, exec.P("u", reuse)), Writes: []string{Memo},
+		Features: []string{Document}, Contract: `Records with the entry that it may be reused as u tells.`})
 	add(&exec.Op{Name: "lr.stale", Component: Growth, Params: []exec.Param{exec.P("r", rule), exec.P("pos", exec.TInt)},
 		Results: []exec.Type{exec.TBool}, Reads: []string{Growth, Rules},
 		Contract: `Reports whether the result of the rule at pos is evaluated again instead of reused: the rule
@@ -230,10 +238,36 @@ the enclosing call, and starts the call's frontier past pos and its reuse at aft
 		Contract: `Ends a rule call in a Document parse: the enclosing call's frontier becomes the farther of high
 and the call's, and its reuse the shorter of reuse and the call's.`,
 		Requires: `high and reuse are the results of the matching doc.enter.`})
-	add(&exec.Op{Name: "call.memo", Component: Call, Params: call, Results: result, Writes: append([]string{Call}, regs...),
-		Features: []string{Document}, NoReturn: true,
-		Contract: `Calls the rule at the binding level min through the memo, with the Document bookkeeping of
-what the call examined and how long its result may be reused.`})
+	doc := []string{Document}
+	inDoc := `The parse reads a Document.`
+	reuseArg := []exec.Param{exec.P("u", reuse)}
+	add(&exec.Op{Name: "doc.active", Component: Call, Results: []exec.Type{exec.TBool}, Reads: []string{Call}, Features: doc,
+		Contract: `Reports whether the parse reads a Document.`})
+	add(&exec.Op{Name: "doc.touch", Component: Call, Params: []exec.Param{exec.P("end", exec.TInt)}, Reads: []string{Call},
+		Writes: []string{Call}, Features: doc,
+		Contract: `Extends the examined frontier of the current call to end, if end is past it.`})
+	add(&exec.Op{Name: "doc.high", Component: Call, Results: []exec.Type{exec.TInt}, Reads: []string{Call}, Features: doc,
+		Contract: `Returns the examined frontier of the current call.`, Requires: inDoc})
+	add(&exec.Op{Name: "doc.reuse", Component: Call, Results: []exec.Type{reuse}, Reads: []string{Call}, Features: doc,
+		Contract: `Returns how long the result of the current call may be reused.`, Requires: inDoc})
+	add(&exec.Op{Name: "doc.setReuse", Component: Call, Params: reuseArg, Writes: []string{Call}, Features: doc,
+		Contract: `Sets how long the result of the current call may be reused to u.`, Requires: inDoc})
+	add(&exec.Op{Name: "doc.limitReuse", Component: Call, Params: reuseArg, Reads: []string{Call}, Writes: []string{Call},
+		Features: doc,
+		Contract: `Limits how long the result of the current call may be reused to u: the reuse becomes the
+shorter of the two.`, Requires: inDoc})
+	add(&exec.Op{Name: "doc.reused", Component: Call, Writes: []string{Call}, Features: doc,
+		Contract: `Counts a reused memo entry in the statistics of the Document.`, Requires: inDoc})
+	add(&exec.Op{Name: "doc.parseOnly", Component: Call, Params: []exec.Param{exec.P("pos", exec.TInt), exec.P("e", entry)},
+		Writes: []string{Call}, Features: doc,
+		Contract: `Records the entry e stored at pos as reused only in this parse, so that the parse removes it
+from the memo when it ends.`, Requires: inDoc})
+	for _, a := range []struct{ name, doc string }{
+		{"reuse.untilEdit", "Returns the reuse until the next edit."},
+		{"reuse.inParse", "Returns the reuse only in this parse."},
+	} {
+		add(&exec.Op{Name: a.name, Component: Call, Results: []exec.Type{reuse}, Features: doc, Contract: a.doc})
+	}
 	add(&exec.Op{Name: "call.body", Component: Call, Params: call, Results: result, Writes: append([]string{Call}, regs...),
 		NoReturn: true,
 		Contract: `Calls the rule at the binding level min without observation: the call, or the plain invocation,

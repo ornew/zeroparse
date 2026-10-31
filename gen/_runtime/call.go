@@ -339,3 +339,80 @@ func (p *Parser) callUnmemoized(r *Rule, min int) (*Node, bool) {
 	}
 	return v, ok
 }
+
+// callMemo is a memoized call: it reuses the result at the position or evaluates and records
+// it. Its logic is that of the memoized path of call.
+func (p *Parser) callMemo(r *Rule, min int) (*Node, bool) {
+	start := p.Pos
+	env := p.memoEnv(r)
+	// See the engine's callBegin: entries with recovered errors are reused only in the same kind of
+	// context (inside or outside a lookahead) they were computed in.
+	if e := p.memoGet(r.Id, start, min, env); e != nil && !p.memberStale(r.Member, start) && (e.growing || (!e.silent || p.Silent > 0) && (len(e.errs) == 0 || e.silent == (p.Silent > 0))) {
+		p.Observation.memoHit()
+		p.readResult(e.growing, e.depth)
+		if p.Document != nil {
+			p.documentTouch(e.examined)
+			p.docReuse = max(p.docReuse, e.reuse)
+			if e.growing {
+				p.docReuse = max(p.docReuse, reuseUntilEdit)
+			}
+			p.Document.stats.Reused++
+		}
+		if !e.growing {
+			p.MergeExpected(e.far, e.expected)
+		}
+		if !e.ok {
+			return nil, false
+		}
+		p.Pos = e.end
+		p.Recovered = p.copyErrors(p.Recovered, e.errs)
+		return e.node, true
+	}
+	rec := len(p.Recovered)
+	depth, read := p.growths, p.enterCall()
+	// The memoized result includes the expectations recorded in this call.
+	m := p.Isolate(start)
+	var v *Node
+	var ok bool
+	var e *memoEntry
+	if r.Leader {
+		v, ok = p.grow(r, min, env)
+		e = p.memoGet(r.Id, start, min, env)
+		if e == nil {
+			// A stream commit pruned the slot of a growing start rule; its
+			// result needs no entry.
+			e = &memoEntry{}
+		}
+	} else {
+		v, ok = p.invoke(r, min)
+		if !ok {
+			p.Recovered = p.Recovered[:rec]
+		}
+		if p.readDepth <= depth {
+			e = &memoEntry{} // see Call: a result that can change is not memoized
+		} else {
+			e = p.memo.alloc()
+			*e = memoEntry{node: v, ok: ok, end: p.Pos, silent: p.Silent > 0,
+				errs: p.copyErrors(nil, p.Recovered[rec:])}
+			p.memoPut(r.Id, start, min, env, e)
+		}
+	}
+	settled := p.readDepth > depth
+	p.leaveCall(read)
+	far, inner := p.Unisolate(m)
+	e.far, e.expected = far, p.Keep(inner)
+	if p.Document != nil {
+		p.documentTouch(p.Pos + 1)
+		e.examined = p.docHigh
+		p.docReuse = p.leaderReuse(r.Leader, settled)
+		e.reuse = p.docReuse
+		if e.reuse == reuseInParse && (r.Leader || settled) {
+			p.docParseOnly = append(p.docParseOnly, memoPlace{start, e})
+		}
+	}
+	p.MergeExpected(far, inner)
+	if !ok {
+		p.Pos = start
+	}
+	return v, ok
+}

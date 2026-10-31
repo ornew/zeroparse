@@ -59,11 +59,22 @@ type machine struct {
 	// whether a Document parse memoizes the rules (rule.docMemo).
 	reuse   int64
 	docMemo bool
+	// docActive tells whether the parse reads a Document (doc.active); examined and reuses hold what
+	// each entry records (memo.setExamined, memo.setReuse); reused counts the reused entries
+	// (doc.reused) and parseOnly lists the entries reused only in this parse (doc.parseOnly).
+	docActive bool
+	examined  map[*ref.Entry]int64
+	reuses    map[*ref.Entry]int64
+	reused    int
+	parseOnly []string
+	// last is the entry stored or grown last (memo.store, memo.grown).
+	last *ref.Entry
 }
 
 func newMachine() *machine {
 	return &machine{Model: ref.New(ref.Config{Rules: 4, MaxDepth: 100}), exps: map[*ref.Entry]record{},
-		readDepth: math.MaxInt64, depth: map[*ref.Entry]int64{}}
+		readDepth: math.MaxInt64, depth: map[*ref.Entry]int64{},
+		examined: map[*ref.Entry]int64{}, reuses: map[*ref.Entry]int64{}}
 }
 
 func (m *machine) UseRegisters(regs map[string]any) { m.regs = regs }
@@ -191,6 +202,7 @@ func (m *machine) Call(o *exec.Op, args []any) []any {
 		if m.pruned || !res[1].(bool) {
 			return []any{nil}
 		}
+		m.last = res[0].(*ref.Entry)
 		return []any{res[0]}
 	case "memo.detached":
 		return []any{&ref.Entry{}}
@@ -221,12 +233,41 @@ func (m *machine) Call(o *exec.Op, args []any) []any {
 		return nil
 	case "rule.docMemo":
 		return []any{m.docMemo}
-	case "call.memo":
-		m.events = append(m.events, o.Name)
-		r := args[0].(*trule)
-		r.runs++
-		v, ok := r.body(m)
-		return []any{v, ok}
+	case "doc.active":
+		return []any{m.docActive}
+	case "doc.touch":
+		m.high = max(m.high, args[0].(int64))
+		return nil
+	case "doc.high":
+		return []any{m.high}
+	case "doc.reuse":
+		return []any{m.reuse}
+	case "doc.setReuse":
+		m.reuse = args[0].(int64)
+		return nil
+	case "doc.limitReuse":
+		m.reuse = max(m.reuse, args[0].(int64))
+		return nil
+	case "doc.reused":
+		m.reused++
+		return nil
+	case "doc.parseOnly":
+		m.parseOnly = append(m.parseOnly, fmt.Sprintf("%d reuse %d", args[0], m.reuses[entryOf(args[1])]))
+		return nil
+	case "reuse.untilEdit":
+		return []any{int64(1)}
+	case "reuse.inParse":
+		return []any{int64(2)}
+	case "memo.examined":
+		return []any{m.examined[entryOf(args[0])]}
+	case "memo.reuse":
+		return []any{m.reuses[entryOf(args[0])]}
+	case "memo.setExamined":
+		m.examined[entryOf(args[0])] = args[1].(int64)
+		return nil
+	case "memo.setReuse":
+		m.reuses[entryOf(args[0])] = args[1].(int64)
+		return nil
 	case "call.body":
 		r := args[0].(*trule)
 		r.runs++
@@ -271,7 +312,11 @@ func (m *machine) Call(o *exec.Op, args []any) []any {
 		}
 		return nil
 	}
-	return m.Model.Call(o, args)
+	res := m.Model.Call(o, args)
+	if o.Name == "memo.store" {
+		m.last = res[0].(*ref.Entry)
+	}
+	return res
 }
 
 // composition returns the composition fn of the module m specialized for on.
@@ -561,20 +606,19 @@ func (f *fakeT) Fatal(args ...any)                 { f.failed = true; panic(f) }
 func checkDocument(t testing.TB, mod *exec.Module, f *exec.Func) {
 	t.Helper()
 	for _, c := range []struct {
-		name          string
-		memo, ok      bool
-		interrupt     bool
-		high, reuse   int64
-		callHigh      int64
-		callReuse     int64
-		wantHigh      int64
-		wantReuse     int64
-		wantCallEvent string
+		name        string
+		memo, ok    bool
+		interrupt   bool
+		high, reuse int64
+		callHigh    int64
+		callReuse   int64
+		wantHigh    int64
+		wantReuse   int64
 	}{
-		{name: "memoized", memo: true, ok: true, high: 2, reuse: 1, callHigh: 9, callReuse: 0, wantHigh: 9, wantReuse: 1, wantCallEvent: "call.memo"},
-		{name: "unmemoized failure", ok: false, high: 12, reuse: 2, callHigh: 9, callReuse: 1, wantHigh: 12, wantReuse: 2, wantCallEvent: ""},
-		{name: "interrupted", memo: true, interrupt: true, high: 2, reuse: 1, callHigh: 9, callReuse: 0, wantHigh: 9, wantReuse: 1, wantCallEvent: "call.memo"},
-		{name: "interrupted unmemoized", interrupt: true, high: 12, reuse: 2, callHigh: 9, callReuse: 1, wantHigh: 12, wantReuse: 2, wantCallEvent: ""},
+		{name: "memoized", memo: true, ok: true, high: 2, reuse: 1, callHigh: 9, callReuse: 0, wantHigh: 9, wantReuse: 1},
+		{name: "unmemoized failure", ok: false, high: 12, reuse: 2, callHigh: 9, callReuse: 1, wantHigh: 12, wantReuse: 2},
+		{name: "interrupted", memo: true, interrupt: true, high: 2, reuse: 1, callHigh: 9, callReuse: 0, wantHigh: 9, wantReuse: 1},
+		{name: "interrupted unmemoized", interrupt: true, high: 12, reuse: 2, callHigh: 9, callReuse: 1, wantHigh: 12, wantReuse: 2},
 	} {
 		func() {
 			defer func() {
@@ -583,9 +627,9 @@ func checkDocument(t testing.TB, mod *exec.Module, f *exec.Func) {
 				}
 			}()
 			m := newMachine()
-			m.high, m.reuse, m.docMemo = c.high, c.reuse, c.memo
+			m.high, m.reuse, m.docMemo, m.docActive = c.high, c.reuse, c.memo, true
 			var atHigh, atReuse int64 = -1, -1
-			r := &trule{id: 2, body: func(m *machine) (any, bool) {
+			r := &trule{id: 2, memo: true, body: func(m *machine) (any, bool) {
 				atHigh, atReuse = m.high, m.reuse
 				m.advance(2)
 				m.high, m.reuse = c.callHigh, c.callReuse
@@ -608,15 +652,130 @@ func checkDocument(t testing.TB, mod *exec.Module, f *exec.Func) {
 			if m.high != c.wantHigh || m.reuse != c.wantReuse {
 				t.Errorf("%s: the call left the frontier %d and reuse %d, want %d and %d", c.name, m.high, m.reuse, c.wantHigh, c.wantReuse)
 			}
-			wantEvents := []string{}
-			if c.wantCallEvent != "" {
-				wantEvents = append(wantEvents, c.wantCallEvent)
-			}
-			if !slices.Equal(m.events, wantEvents) || r.runs != 1 {
-				t.Errorf("%s: calls %q and evaluates the body %d times, want %q and once", c.name, m.events, r.runs, wantEvents)
+			if r.runs != 1 {
+				t.Errorf("%s: evaluates the body %d times, want once", c.name, r.runs)
 			}
 		}()
 	}
+}
+
+// TestMemoizedDocument checks the Document bookkeeping of a memoized call: the call that stores an
+// entry records with it the frontier and the reuse of the call, and the call that reuses it extends
+// its own frontier to the entry's, limits its reuse to the entry's and counts the reuse. Outside a
+// Document parse the call keeps no such record.
+func TestMemoizedDocument(t *testing.T) {
+	mod := Build()
+	f := composition(t, mod, "memoized", ops.Document, ops.Observe, ops.Stream)
+	for _, active := range []bool{true, false} {
+		m := newMachine()
+		m.docActive = active
+		r := &trule{id: 1, memo: true, body: func(m *machine) (any, bool) {
+			m.advance(2)
+			m.high = max(m.high, 4) // the body examined the input up to 4, before the end of the call
+			m.reuse = max(m.reuse, 1)
+			return "v", true
+		}}
+		m.high, m.reuse = 2, 0
+		if v, ok := callAt(t, mod, m, f, r, 3); !ok || v != "v" {
+			t.Fatalf("active=%v: %v %v", active, v, ok)
+		}
+		e := m.lastEntry(t)
+		if active && (m.examined[e] != 6 || m.reuses[e] != 1) {
+			t.Errorf("the entry records the frontier %d and reuse %d, want 6 (past its end) and 1", m.examined[e], m.reuses[e])
+		}
+		if !active && (len(m.examined) != 0 || len(m.reuses) != 0) {
+			t.Errorf("outside a Document the entry records %v and %v", m.examined, m.reuses)
+		}
+		// A later call at the position reuses the entry from a call that examined less.
+		m.high, m.reuse = 3, 0
+		if v, ok := callAt(t, mod, m, f, r, 3); !ok || v != "v" || m.pos() != 5 || r.runs != 1 || m.memoHit != 1 {
+			t.Fatalf("active=%v: reuse gives %v %v at %d after %d evaluations and %d hits", active, v, ok, m.pos(), r.runs, m.memoHit)
+		}
+		want := struct{ high, reuse int64 }{6, 1}
+		wantReused := 1
+		if !active {
+			want.high, want.reuse, wantReused = 3, 0, 0
+		}
+		if m.high != want.high || m.reuse != want.reuse || m.reused != wantReused {
+			t.Errorf("active=%v: the reuse leaves the frontier %d, reuse %d and %d reuses, want %d, %d and %d",
+				active, m.high, m.reuse, m.reused, want.high, want.reuse, wantReused)
+		}
+	}
+}
+
+// TestMemoizedDocumentLeader checks how long a leader's result may be reused: until the next edit
+// when its growth read only results that do not change (it is settled), and otherwise only in this
+// parse, which then removes the entry when it ends. A reused growing entry also limits the reuse of
+// the call that reads it to until the next edit.
+func TestMemoizedDocumentLeader(t *testing.T) {
+	mod := Build()
+	f := composition(t, mod, "memoized", ops.Document, ops.Observe, ops.Stream)
+	for _, settled := range []bool{true, false} {
+		m := newMachine()
+		m.docActive = true
+		n := 0
+		r := &trule{id: 2, memo: true, leader: true, body: func(m *machine) (any, bool) {
+			if n >= 2 {
+				return nil, false
+			}
+			if !settled {
+				m.readDepth = 0 // the growth read an unstable result
+			}
+			m.advance(int64(n + 1))
+			n++
+			return fmt.Sprint("v", n), true
+		}}
+		if v, ok := callAt(t, mod, m, f, r, 2); !ok || v != "v2" {
+			t.Fatalf("settled=%v: %v %v", settled, v, ok)
+		}
+		e := m.lastEntry(t)
+		wantReuse, wantOnly := int64(1), []string(nil)
+		if !settled {
+			wantReuse, wantOnly = 2, []string{"2 reuse 2"}
+		}
+		if m.reuse != wantReuse || m.reuses[e] != wantReuse || !slices.Equal(m.parseOnly, wantOnly) {
+			t.Errorf("settled=%v: reuse %d, the entry's %d, reused only in the parse %q; want %d, %d and %q",
+				settled, m.reuse, m.reuses[e], m.parseOnly, wantReuse, wantReuse, wantOnly)
+		}
+	}
+	// L = L "x" / "a", where "x" matches while L ends before 3: the call of L in its body reuses the
+	// growing seed, which limits its reuse to until the next edit.
+	m := newMachine()
+	m.docActive = true
+	var leader *trule
+	var after []int64
+	leader = &trule{id: 2, memo: true, leader: true, body: func(m *machine) (any, bool) {
+		start := m.pos()
+		saved := m.regs
+		m.reuse = 0
+		_, ok := callAt(t, mod, m, f, leader, start)
+		pos := m.pos()
+		m.regs = saved
+		m.setPos(pos)
+		after = append(after, m.reuse)
+		if ok && m.pos() < 3 {
+			m.advance(1)
+			return "x", true
+		}
+		m.setPos(start)
+		m.advance(1)
+		return "a", true
+	}}
+	if _, ok := callAt(t, mod, m, f, leader, 0); !ok || m.pos() != 3 {
+		t.Fatalf("leader %v at %d, want a match to 3", ok, m.pos())
+	}
+	if len(after) == 0 || m.reused != len(after) || slices.ContainsFunc(after, func(u int64) bool { return u != 1 }) {
+		t.Errorf("the reads of the growing seed counted %d reuses and left the reuses %v, want one each and until the next edit", m.reused, after)
+	}
+}
+
+// lastEntry returns the entry that the last call stored or grew.
+func (m *machine) lastEntry(t *testing.T) *ref.Entry {
+	t.Helper()
+	if m.last == nil {
+		t.Fatal("no entry stored")
+	}
+	return m.last
 }
 
 // TestGrowth checks that a leader's call evaluates its body while the match gets longer, charging

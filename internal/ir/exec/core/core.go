@@ -43,7 +43,10 @@ func Build() *Module {
 	// only in one, and one with recovered errors only in the kind of context it was computed in. A
 	// member of a cycle is evaluated again at the position of the innermost growth. Otherwise it
 	// starts tracking the reads of the call.
-	reuse := func(b *Builder, level Expr) {
+	//
+	// With doc, a call in a Document parse also extends its examined frontier to the entry's and
+	// limits its reuse to the entry's, and to until the next edit for a growing entry.
+	reuse := func(b *Builder, level Expr, doc bool) {
 		b.Let("env", C("env.memoKey", r))
 		b.LetN([]string{"e", "found"}, C("memo.lookup", id, L("start"), level, L("env")))
 		e := L("e")
@@ -53,6 +56,14 @@ func Build() *Module {
 		b.If(reusable, func(b *Builder) {
 			b.If(F(ops.Observe), func(b *Builder) { b.Do("obs.memoHit") })
 			b.Do("lr.read", e)
+			if doc {
+				b.If(C("doc.active"), func(b *Builder) {
+					b.Do("doc.touch", C("memo.examined", e))
+					b.Do("doc.limitReuse", C("memo.reuse", e))
+					b.If(C("memo.growing", e), func(b *Builder) { b.Do("doc.limitReuse", C("reuse.untilEdit")) })
+					b.Do("doc.reused")
+				})
+			}
 			b.If(Not(C("memo.growing", e)), func(b *Builder) {
 				b.Do("exp.mergeKept", C("memo.far", e), C("memo.expected", e))
 			})
@@ -80,10 +91,34 @@ func Build() *Module {
 	}
 	// finish ends tracking the reads of the call, keeps the expectations of the call with its entry
 	// and returns the result.
-	finish := func(b *Builder) {
+	//
+	// With doc, a call in a Document parse also records with its entry how far it examined the
+	// input and how long its result may be reused: a leader's result is not reused after an edit,
+	// and only in this parse when its growth read a result that can still change (it is not
+	// settled), because a later parse evaluates it without that growth. The parse forgets the
+	// entries reused only in it when it ends.
+	finish := func(b *Builder, doc bool) {
+		if doc {
+			b.Let("settled", Not(C("lr.changeable", L("depth"))))
+		}
 		b.Do("lr.leave", L("read"))
 		b.LetN([]string{"far", "inner"}, C("exp.unisolate", L("m")))
 		b.Do("memo.setExpected", L("entry"), L("far"), C("exp.keep", L("inner")))
+		if doc {
+			b.If(C("doc.active"), func(b *Builder) {
+				b.Do("doc.touch", Add(R(ops.Pos), Int(1)))
+				b.Do("memo.setExamined", L("entry"), C("doc.high"))
+				b.If(C("rule.leader", r), func(b *Builder) {
+					b.IfElse(Not(L("settled")), func(b *Builder) {
+						b.Do("doc.setReuse", C("reuse.inParse"))
+					}, func(b *Builder) { b.Do("doc.limitReuse", C("reuse.untilEdit")) })
+				})
+				b.Do("memo.setReuse", L("entry"), C("doc.reuse"))
+				b.If(And(Eq(C("memo.reuse", L("entry")), C("reuse.inParse")), Bin("||", C("rule.leader", r), L("settled"))), func(b *Builder) {
+					b.Do("doc.parseOnly", L("start"), L("entry"))
+				})
+			})
+		}
 		b.Do("exp.merge", L("far"), L("inner"))
 		b.If(Not(L("ok")), func(b *Builder) { b.SetReg(ops.Pos, L("start")) })
 		ret(b)
@@ -104,6 +139,23 @@ func Build() *Module {
 		ret(b)
 	}
 
+	// evaluate evaluates the call through the memo after reuse found no entry to reuse: it grows a
+	// leader's seed, and otherwise invokes the body and stores its result.
+	evaluate := func(b *Builder) {
+		b.IfElse(C("rule.leader", r), func(b *Builder) {
+			b.SetN(pair, C("grow", r, L("min"), L("env")))
+			b.Set("entry", C("memo.grown", id, L("start"), L("min"), L("env")))
+			b.If(F(ops.Stream), func(b *Builder) {
+				// A stream commit pruned the slot of a growing start rule; its result needs no
+				// entry.
+				b.If(Eq(L("entry"), Null(entry)), func(b *Builder) { b.Set("entry", C("memo.detached")) })
+			})
+		}, func(b *Builder) {
+			b.SetN(pair, C("rule.invoke", r, L("min")))
+			store(b, L("min"))
+		})
+	}
+
 	call := m.AddFunc("call", []Param{P("r", rule), P("min", TInt)}, result,
 		[]string{ops.Document, ops.Observe, ops.Stream, ops.Typed}, func(b *Builder) {
 			locals(b)
@@ -111,20 +163,9 @@ func Build() *Module {
 			b.Do("call.spend")
 			b.Let("start", R(ops.Pos))
 			b.If(Bin("||", And(Not(C("rule.memo", r)), Not(C("rule.leader", r))), C("call.first", r)), unmemoized)
-			reuse(b, L("min"))
-			b.IfElse(C("rule.leader", r), func(b *Builder) {
-				b.SetN(pair, C("grow", r, L("min"), L("env")))
-				b.Set("entry", C("memo.grown", id, L("start"), L("min"), L("env")))
-				b.If(F(ops.Stream), func(b *Builder) {
-					// A stream commit pruned the slot of a growing start rule; its result needs no
-					// entry.
-					b.If(Eq(L("entry"), Null(entry)), func(b *Builder) { b.Set("entry", C("memo.detached")) })
-				})
-			}, func(b *Builder) {
-				b.SetN(pair, C("rule.invoke", r, L("min")))
-				store(b, L("min"))
-			})
-			finish(b)
+			reuse(b, L("min"), false)
+			evaluate(b)
+			finish(b, false)
 		})
 	call.Doc = `call calls rule r at binding level min: unmemoized while its memoization is deferred, and
 otherwise through the memo, growing the seed of a left-recursion leader.`
@@ -134,10 +175,10 @@ otherwise through the memo, growing the seed of a left-recursion leader.`
 			locals(b)
 			tracked(b, C("call.trackBody", r, L("inv")))
 			b.Let("start", R(ops.Pos))
-			reuse(b, Int(0))
+			reuse(b, Int(0), false)
 			b.SetN(pair, C("rule.run", L("inv")))
 			store(b, Int(0))
-			finish(b)
+			finish(b, false)
 		})
 	callMemo.Doc = `callMemo is the memoized part of a rule call, for the rule r at binding level 0 invoked by inv:
 the rule is called at the position again, or its memoization is no longer deferred.`
@@ -199,6 +240,18 @@ far it examined the input in a Document parse, around the call without observati
 rule's memoization is deferred: its expectations need no isolation, and a failure restores the
 position and the recovered errors.`
 
+	memoized := m.AddFunc("memoized", []Param{P("r", rule), P("min", TInt)}, result,
+		[]string{ops.Document, ops.Observe, ops.Stream}, func(b *Builder) {
+			locals(b)
+			b.Let("start", R(ops.Pos))
+			reuse(b, L("min"), true)
+			evaluate(b)
+			finish(b, true)
+		})
+	memoized.Doc = `memoized calls rule r at binding level min through the memo, as call does once the rule's
+memoization is no longer deferred, with the observation of a reuse and, in a Document parse, the
+bookkeeping of how far each call examined the input and how long its result may be reused.`
+
 	document := m.AddFunc("document", []Param{P("r", rule), P("min", TInt)}, result,
 		[]string{ops.Document}, func(b *Builder) {
 			b.LetN([]string{"oldHigh", "oldReuse"}, C("doc.enter", R(ops.Pos)))
@@ -207,7 +260,7 @@ position and the recovered errors.`
 					b.LetN([]string{"v", "ok"}, C("unmemoized", r, L("min")))
 					b.Return(L("v"), L("ok"))
 				})
-				b.LetN([]string{"v", "ok"}, C("call.memo", r, L("min")))
+				b.LetN([]string{"v", "ok"}, C("memoized", r, L("min")))
 				b.Return(L("v"), L("ok"))
 			}, func(b *Builder) { b.Do("doc.leave", L("oldHigh"), L("oldReuse")) })
 		})

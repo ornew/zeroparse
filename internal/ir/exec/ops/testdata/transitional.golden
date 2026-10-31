@@ -487,6 +487,38 @@ transitional op memo.detached() Entry
   contract:
     // Returns a new entry under no key, which no lookup finds.
 
+transitional op memo.examined(e Entry) int
+  component memo
+  reads memo
+  features document
+  cost <= 0
+  contract:
+    // Returns how far the call that stored the entry examined the input.
+
+transitional op memo.reuse(e Entry) Reuse
+  component memo
+  reads memo
+  features document
+  cost <= 0
+  contract:
+    // Returns how long the entry may be reused.
+
+transitional op memo.setExamined(e Entry, x int)
+  component memo
+  writes memo
+  features document
+  cost <= 0
+  contract:
+    // Records with the entry that its call examined the input up to x.
+
+transitional op memo.setReuse(e Entry, u Reuse)
+  component memo
+  writes memo
+  features document
+  cost <= 0
+  contract:
+    // Records with the entry that it may be reused as u tells.
+
 transitional op lr.stale(r Rule, pos int) bool
   component growth
   reads growth, rules
@@ -655,15 +687,99 @@ transitional op doc.leave(high int, reuse Reuse)
   requires:
     // high and reuse are the results of the matching doc.enter.
 
-transitional op call.memo(r Rule, min int) (Value, bool)
+transitional op doc.active() bool
   component call
-  writes call, pos, silent
+  reads call
   features document
-  noreturn
   cost <= 0
   contract:
-    // Calls the rule at the binding level min through the memo, with the Document bookkeeping of
-    // what the call examined and how long its result may be reused.
+    // Reports whether the parse reads a Document.
+
+transitional op doc.touch(end int)
+  component call
+  reads call
+  writes call
+  features document
+  cost <= 0
+  contract:
+    // Extends the examined frontier of the current call to end, if end is past it.
+
+transitional op doc.high() int
+  component call
+  reads call
+  features document
+  cost <= 0
+  contract:
+    // Returns the examined frontier of the current call.
+  requires:
+    // The parse reads a Document.
+
+transitional op doc.reuse() Reuse
+  component call
+  reads call
+  features document
+  cost <= 0
+  contract:
+    // Returns how long the result of the current call may be reused.
+  requires:
+    // The parse reads a Document.
+
+transitional op doc.setReuse(u Reuse)
+  component call
+  writes call
+  features document
+  cost <= 0
+  contract:
+    // Sets how long the result of the current call may be reused to u.
+  requires:
+    // The parse reads a Document.
+
+transitional op doc.limitReuse(u Reuse)
+  component call
+  reads call
+  writes call
+  features document
+  cost <= 0
+  contract:
+    // Limits how long the result of the current call may be reused to u: the reuse becomes the
+    // shorter of the two.
+  requires:
+    // The parse reads a Document.
+
+transitional op doc.reused()
+  component call
+  writes call
+  features document
+  cost <= 0
+  contract:
+    // Counts a reused memo entry in the statistics of the Document.
+  requires:
+    // The parse reads a Document.
+
+transitional op doc.parseOnly(pos int, e Entry)
+  component call
+  writes call
+  features document
+  cost <= 0
+  contract:
+    // Records the entry e stored at pos as reused only in this parse, so that the parse removes it
+    // from the memo when it ends.
+  requires:
+    // The parse reads a Document.
+
+transitional op reuse.untilEdit() Reuse
+  component call
+  features document
+  cost <= 0
+  contract:
+    // Returns the reuse until the next edit.
+
+transitional op reuse.inParse() Reuse
+  component call
+  features document
+  cost <= 0
+  contract:
+    // Returns the reuse only in this parse.
 
 transitional op call.body(r Rule, min int) (Value, bool)
   component call

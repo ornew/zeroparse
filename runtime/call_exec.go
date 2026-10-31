@@ -382,3 +382,86 @@ func (p *Parser) callUnmemoized(r *Rule, min int) (*Node, bool) {
 	}
 	return v, ok
 }
+
+// callMemo calls rule r at binding level min through the memo, as call does once the rule's
+// memoization is no longer deferred, with the observation of a reuse and, in a Document parse, the
+// bookkeeping of how far each call examined the input and how long its result may be reused.
+//
+// Printed from Exec IR function memoized of internal/ir/exec/core, specialized for document, observe, stream.
+func (p *Parser) callMemo(r *Rule, min int) (*Node, bool) {
+	var v *Node
+	var ok bool
+	var entry *memoEntry
+	start := p.Pos
+	env := p.memoEnv(r)
+	e := p.memoGet(r.Id, start, min, env)
+	found := e != nil
+	if found && !p.memberStale(r.Member, start) && (e.growing || (!e.silent || p.Silent > 0) && ((len(e.errs) == 0) || e.silent == (p.Silent > 0))) {
+		p.Observation.memoHit()
+		p.readResult(e.growing, e.depth)
+		if p.Document != nil {
+			p.documentTouch(e.examined)
+			p.docReuse = max(p.docReuse, e.reuse)
+			if e.growing {
+				p.docReuse = max(p.docReuse, reuseUntilEdit)
+			}
+			p.Document.stats.Reused++
+		}
+		if !e.growing {
+			p.MergeExpected(e.far, e.expected)
+		}
+		if !e.ok {
+			return nil, false
+		}
+		p.Pos = e.end
+		p.Recovered = p.copyErrors(p.Recovered, e.errs)
+		return e.node, true
+	}
+	rec := len(p.Recovered)
+	depth := p.growths
+	read := p.enterCall()
+	m := p.Isolate(start)
+	if r.Leader {
+		v, ok = p.grow(r, min, env)
+		entry = p.memoGet(r.Id, start, min, env)
+		if entry == nil {
+			entry = &memoEntry{}
+		}
+	} else {
+		v, ok = p.invoke(r, min)
+		if !ok {
+			p.Recovered = p.Recovered[:rec]
+		}
+		if p.readDepth <= depth {
+			entry = &memoEntry{}
+		} else {
+			entry = p.memo.alloc()
+			*entry = memoEntry{node: v, ok: ok, end: p.Pos, silent: p.Silent > 0, errs: p.copyErrors(nil, p.Recovered[rec:])}
+			p.memoPut(r.Id, start, min, env, entry)
+		}
+	}
+	settled := !(p.readDepth <= depth)
+	p.leaveCall(read)
+	far, inner := p.Unisolate(m)
+	entry.far, entry.expected = far, p.Keep(inner)
+	if p.Document != nil {
+		p.documentTouch(p.Pos + 1)
+		entry.examined = p.docHigh
+		if r.Leader {
+			if !settled {
+				p.docReuse = reuseInParse
+			} else {
+				p.docReuse = max(p.docReuse, reuseUntilEdit)
+			}
+		}
+		entry.reuse = p.docReuse
+		if entry.reuse == reuseInParse && (r.Leader || settled) {
+			p.docParseOnly = append(p.docParseOnly, memoPlace{start, entry})
+		}
+	}
+	p.MergeExpected(far, inner)
+	if !ok {
+		p.Pos = start
+	}
+	return v, ok
+}
