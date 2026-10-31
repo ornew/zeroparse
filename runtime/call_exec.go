@@ -360,3 +360,25 @@ func (p *Parser) callDocument(r *Rule, min int) (*Node, bool) {
 	v, ok := p.callMemo(r, min)
 	return v, ok
 }
+
+// callUnmemoized calls rule r at binding level min without memo bookkeeping, as call does while the
+// rule's memoization is deferred: its expectations need no isolation, and a failure restores the
+// position and the recovered errors.
+//
+// Printed from Exec IR function unmemoized of internal/ir/exec/core.
+func (p *Parser) callUnmemoized(r *Rule, min int) (*Node, bool) {
+	var v *Node
+	var ok bool
+	start := p.Pos
+	if len(r.Scope) == 0 {
+		v, ok = p.invokePlainBody(r, min)
+		return v, ok
+	}
+	rec := len(p.Recovered)
+	v, ok = p.invoke(r, min)
+	if !ok {
+		p.Pos = start
+		p.Recovered = p.Recovered[:rec]
+	}
+	return v, ok
+}

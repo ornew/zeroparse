@@ -221,7 +221,7 @@ func (m *machine) Call(o *exec.Op, args []any) []any {
 		return nil
 	case "rule.docMemo":
 		return []any{m.docMemo}
-	case "call.unmemoized", "call.memo":
+	case "call.memo":
 		m.events = append(m.events, o.Name)
 		r := args[0].(*trule)
 		r.runs++
@@ -335,6 +335,37 @@ func TestCallFailureRestoresState(t *testing.T) {
 	}
 	if m.spends != 3 {
 		t.Errorf("%d charges for 3 calls", m.spends)
+	}
+}
+
+// TestUnmemoized checks that the unmemoized call of the tracked path evaluates the body each time,
+// keeps what a successful body recovered, and restores the position and the recovered errors after
+// a failed one.
+func TestUnmemoized(t *testing.T) {
+	mod := Build()
+	f := composition(t, mod, "unmemoized")
+	for _, ok := range []bool{true, false} {
+		m := newMachine()
+		m.rec = []string{"before"}
+		r := &trule{id: 1, memo: true, body: func(m *machine) (any, bool) {
+			m.recover("skipped")
+			m.advance(2)
+			return "v", ok
+		}}
+		for i := range 2 {
+			v, got := callAt(t, mod, m, f, r, 3)
+			want, wantRec := int64(5), []string{"before", "skipped"}
+			if !ok {
+				want, wantRec = 3, []string{"before"}
+			}
+			if got != ok || (ok && v != "v") || m.pos() != want || !slices.Equal(m.rec, wantRec) {
+				t.Errorf("%v call %d: %v %v at %d, recovered %v; want %v at %d and %v", ok, i, v, got, m.pos(), m.rec, ok, want, wantRec)
+			}
+			m.rec = []string{"before"}
+		}
+		if r.runs != 2 || m.spends != 0 {
+			t.Errorf("%v: %d evaluations and %d charges, want 2 and none", ok, r.runs, m.spends)
+		}
 	}
 }
 
@@ -541,9 +572,9 @@ func checkDocument(t testing.TB, mod *exec.Module, f *exec.Func) {
 		wantCallEvent string
 	}{
 		{name: "memoized", memo: true, ok: true, high: 2, reuse: 1, callHigh: 9, callReuse: 0, wantHigh: 9, wantReuse: 1, wantCallEvent: "call.memo"},
-		{name: "unmemoized failure", ok: false, high: 12, reuse: 2, callHigh: 9, callReuse: 1, wantHigh: 12, wantReuse: 2, wantCallEvent: "call.unmemoized"},
+		{name: "unmemoized failure", ok: false, high: 12, reuse: 2, callHigh: 9, callReuse: 1, wantHigh: 12, wantReuse: 2, wantCallEvent: ""},
 		{name: "interrupted", memo: true, interrupt: true, high: 2, reuse: 1, callHigh: 9, callReuse: 0, wantHigh: 9, wantReuse: 1, wantCallEvent: "call.memo"},
-		{name: "interrupted unmemoized", interrupt: true, high: 12, reuse: 2, callHigh: 9, callReuse: 1, wantHigh: 12, wantReuse: 2, wantCallEvent: "call.unmemoized"},
+		{name: "interrupted unmemoized", interrupt: true, high: 12, reuse: 2, callHigh: 9, callReuse: 1, wantHigh: 12, wantReuse: 2, wantCallEvent: ""},
 	} {
 		func() {
 			defer func() {
@@ -577,8 +608,12 @@ func checkDocument(t testing.TB, mod *exec.Module, f *exec.Func) {
 			if m.high != c.wantHigh || m.reuse != c.wantReuse {
 				t.Errorf("%s: the call left the frontier %d and reuse %d, want %d and %d", c.name, m.high, m.reuse, c.wantHigh, c.wantReuse)
 			}
-			if !slices.Equal(m.events, []string{c.wantCallEvent}) {
-				t.Errorf("%s: calls %q, want %s", c.name, m.events, c.wantCallEvent)
+			wantEvents := []string{}
+			if c.wantCallEvent != "" {
+				wantEvents = append(wantEvents, c.wantCallEvent)
+			}
+			if !slices.Equal(m.events, wantEvents) || r.runs != 1 {
+				t.Errorf("%s: calls %q and evaluates the body %d times, want %q and once", c.name, m.events, r.runs, wantEvents)
 			}
 		}()
 	}

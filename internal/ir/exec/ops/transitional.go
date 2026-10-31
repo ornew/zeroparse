@@ -230,10 +230,6 @@ the enclosing call, and starts the call's frontier past pos and its reuse at aft
 		Contract: `Ends a rule call in a Document parse: the enclosing call's frontier becomes the farther of high
 and the call's, and its reuse the shorter of reuse and the call's.`,
 		Requires: `high and reuse are the results of the matching doc.enter.`})
-	add(&exec.Op{Name: "call.unmemoized", Component: Call, Params: call, Results: result, Writes: append([]string{Call}, regs...),
-		Features: []string{Document}, NoReturn: true,
-		Contract: `Calls the rule at the binding level min without memo bookkeeping, restoring the position and
-the recovered errors when it fails.`})
 	add(&exec.Op{Name: "call.memo", Component: Call, Params: call, Results: result, Writes: append([]string{Call}, regs...),
 		Features: []string{Document}, NoReturn: true,
 		Contract: `Calls the rule at the binding level min through the memo, with the Document bookkeeping of

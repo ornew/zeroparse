@@ -89,26 +89,28 @@ func Build() *Module {
 		ret(b)
 	}
 
+	// unmemoized is a call without memo bookkeeping, whose expectations need no isolation, from start.
+	unmemoized := func(b *Builder) {
+		b.If(C("rule.plain", r), func(b *Builder) {
+			b.SetN(pair, C("rule.invokePlain", r, L("min")))
+			ret(b)
+		})
+		b.Let("rec", C("rec.mark"))
+		b.SetN(pair, C("rule.invoke", r, L("min")))
+		b.If(Not(L("ok")), func(b *Builder) {
+			b.SetReg(ops.Pos, L("start"))
+			b.Do("rec.truncate", L("rec"))
+		})
+		ret(b)
+	}
+
 	call := m.AddFunc("call", []Param{P("r", rule), P("min", TInt)}, result,
 		[]string{ops.Document, ops.Observe, ops.Stream, ops.Typed}, func(b *Builder) {
 			locals(b)
 			tracked(b, C("call.track", r, L("min")))
 			b.Do("call.spend")
 			b.Let("start", R(ops.Pos))
-			b.If(Bin("||", And(Not(C("rule.memo", r)), Not(C("rule.leader", r))), C("call.first", r)), func(b *Builder) {
-				// Unmemoized call: no memo bookkeeping, and expectations need no isolation.
-				b.If(C("rule.plain", r), func(b *Builder) {
-					b.SetN(pair, C("rule.invokePlain", r, L("min")))
-					ret(b)
-				})
-				b.Let("rec", C("rec.mark"))
-				b.SetN(pair, C("rule.invoke", r, L("min")))
-				b.If(Not(L("ok")), func(b *Builder) {
-					b.SetReg(ops.Pos, L("start"))
-					b.Do("rec.truncate", L("rec"))
-				})
-				ret(b)
-			})
+			b.If(Bin("||", And(Not(C("rule.memo", r)), Not(C("rule.leader", r))), C("call.first", r)), unmemoized)
 			reuse(b, L("min"))
 			b.IfElse(C("rule.leader", r), func(b *Builder) {
 				b.SetN(pair, C("grow", r, L("min"), L("env")))
@@ -187,12 +189,22 @@ body again while the match gets longer, and keeps the last longer result.`
 		})
 	observed.Doc = `observed is a rule call in an observed parse: it reports the call to the observation, with how
 far it examined the input in a Document parse, around the call without observation.`
+	callUnmemoized := m.AddFunc("unmemoized", []Param{P("r", rule), P("min", TInt)}, result, nil, func(b *Builder) {
+		b.Var("v", value)
+		b.Var("ok", TBool)
+		b.Let("start", R(ops.Pos))
+		unmemoized(b)
+	})
+	callUnmemoized.Doc = `unmemoized calls rule r at binding level min without memo bookkeeping, as call does while the
+rule's memoization is deferred: its expectations need no isolation, and a failure restores the
+position and the recovered errors.`
+
 	document := m.AddFunc("document", []Param{P("r", rule), P("min", TInt)}, result,
 		[]string{ops.Document}, func(b *Builder) {
 			b.LetN([]string{"oldHigh", "oldReuse"}, C("doc.enter", R(ops.Pos)))
 			b.Protect(func(b *Builder) {
 				b.If(Not(C("rule.docMemo", r)), func(b *Builder) {
-					b.LetN([]string{"v", "ok"}, C("call.unmemoized", r, L("min")))
+					b.LetN([]string{"v", "ok"}, C("unmemoized", r, L("min")))
 					b.Return(L("v"), L("ok"))
 				})
 				b.LetN([]string{"v", "ok"}, C("call.memo", r, L("min")))

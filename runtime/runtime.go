@@ -2625,20 +2625,6 @@ func (p *Parser) callBody(r *Rule, min int) (*Node, bool) {
 	return p.callMemo(r, min)
 }
 
-// callUnmemoized is a call without memo bookkeeping, whose expectations need no isolation.
-func (p *Parser) callUnmemoized(r *Rule, min int) (*Node, bool) {
-	if len(r.Scope) == 0 {
-		return p.invokePlainBody(r, min)
-	}
-	start, rec := p.Pos, len(p.Recovered)
-	v, ok := p.invoke(r, min)
-	if !ok {
-		p.Pos = start
-		p.Recovered = p.Recovered[:rec]
-	}
-	return v, ok
-}
-
 // callMemo is a memoized call: it reuses the result at the position or evaluates and records
 // it. Its logic is that of the memoized path of call.
 func (p *Parser) callMemo(r *Rule, min int) (*Node, bool) {

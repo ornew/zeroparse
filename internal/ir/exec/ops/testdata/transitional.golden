@@ -655,16 +655,6 @@ transitional op doc.leave(high int, reuse Reuse)
   requires:
     // high and reuse are the results of the matching doc.enter.
 
-transitional op call.unmemoized(r Rule, min int) (Value, bool)
-  component call
-  writes call, pos, silent
-  features document
-  noreturn
-  cost <= 0
-  contract:
-    // Calls the rule at the binding level min without memo bookkeeping, restoring the position and
-    // the recovered errors when it fails.
-
 transitional op call.memo(r Rule, min int) (Value, bool)
   component call
   writes call, pos, silent
