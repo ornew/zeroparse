@@ -53,6 +53,7 @@ definition and the place where the term is defined.
 | Rule Definition | `rule a = b`: defines the rule `a` by a Rule Expression or an Operators Rule. See [Rule Declaration Statements](language/grammar-files.md#rule-declaration-statements). |
 | Rule Expression | An expression that matches input; the body of an ordinary rule. See [Rule Expressions](language/parser-expressions.md). |
 | scope | The place where captures are visible: a rule body or one iteration of a repetition. See [Capture](language/parser-expressions.md#capture). |
+| skip run | The walks of a skip-run site: an unbounded repetition written in the skip expression of a `#recover`, whose walks the parser records and reuses. See [Skip Runs](runtime/parsing.md#skip-runs). |
 | source information | An opt-in record of the rule that produced each node and of the names of captures. See [Source Information](runtime/nodes.md#source-information). |
 | sequence | `a b`: matches `a` and then `b`. See [Sequence](language/parser-expressions.md#sequence). |
 | start rule | The rule with which parsing begins. It is chosen when the grammar is compiled or parsed, not in the grammar file. See [Start rule](runtime/parsing.md#start-rule). |

@@ -684,10 +684,10 @@ func TestNavigation(t *testing.T) {
 			intro[site(l[1])] = true
 		}
 	}
-	if got, want := strings.Join(names, ", "), "Tutorial, Guides, Cookbook, Specification, Grammar Language, Parser and Runtime, Core IR, Bytecode, Reference, Parsers, Project"; got != want {
+	if got, want := strings.Join(names, ", "), "Tutorial, Guides, Cookbook, Specification, Grammar Language, Parser and Runtime, Core IR, Bytecode, Proofs, Reference, Parsers, Project"; got != want {
 		t.Errorf("sections = %s, want %s", got, want)
 	}
-	if want := map[string]bool{"docs/tutorial/": true, "docs/guide/": true, "docs/cookbook/": true, "spec/": true, "spec/language/": true, "spec/runtime/": true, "spec/core-ir/": true, "spec/bytecode/": true, "parsers/": true}; !maps.Equal(intro, want) {
+	if want := map[string]bool{"docs/tutorial/": true, "docs/guide/": true, "docs/cookbook/": true, "spec/": true, "spec/language/": true, "spec/runtime/": true, "spec/core-ir/": true, "spec/bytecode/": true, "spec/proofs/": true, "parsers/": true}; !maps.Equal(intro, want) {
 		t.Errorf("pages titled Introduction = %v, want %v", intro, want)
 	}
 	// The tutorial and the specification are numbered series: the navigation numbers their

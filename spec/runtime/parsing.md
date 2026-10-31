@@ -392,11 +392,93 @@ they are evaluated again over the same input.
 |:--|:--|:--|
 | A repetition | Its iterations, up to the input it matches | The body that contains it is evaluated again at an earlier position, so the repetition covers the same input again |
 | A lookahead | The cost of its expression | It is evaluated at each of many positions and its expression examines the input after them |
-| `#recover(skip=e)` | The cost of the base expression and of `e` | Its result is abandoned and parsing continues inside the skipped input |
+| `#recover(skip=e)` | The cost of the base expression and of `e` | Its result is abandoned and parsing continues inside the skipped input, except for the walks of [skip runs](#skip-runs), which share their cost |
 | A growing left-recursive rule | One evaluation of its body per growth step | It is called at many positions of one input, because its result at one position is not built from its result at the next |
 | An Operators Rule | One step per operator it applies | As for left recursion |
 | A rule that reads variables | As for any rule, once for each combination of values | Calls at one position bind its variables to many different values |
 | An action or predicate | Proportional to the sizes of the values it reads and builds | A value grows from its own earlier value, as `s + s` does |
+
+### Skip Runs
+
+The skip expression of a `#recover` runs at every position where the base
+expression fails, and a repetition in it walks forward from there. When the
+base fails at many positions one after another, as when a repetition retries
+a failing recovery at each position, each walk covers the input that the walks
+before it covered. The walk of an unbounded repetition from a position ends
+where the walk from any later position it passes ends, so the implementations
+record the rest of each walk and share it.
+
+A **skip-run site** is a repetition written in a skip expression, not inside
+another repetition of that expression that is a site, for which all of the
+following hold:
+
+- it has no upper bound;
+- its expression contains no predicate that reads or binds a variable (a skip
+  expression has no captures);
+- its expression contains no `#cut` that applies to the repetition, that is,
+  one outside every choice, option, repetition and lookahead of the
+  expression;
+- neither its expression nor a rule that the expression calls, directly or
+  indirectly, reads a variable, contains a `#recover`, or is a rule of a
+  left-recursion cycle.
+
+A repetition in a rule that a skip expression calls is not a site, nor is a
+repetition inside a site. Bindings made inside a called rule are undone when
+the rule returns, so only the predicates of the expression itself count.
+
+An evaluation of a site is a **walk** that visits the positions where its
+iterations start. The parser keeps a **slot** for each position, per site and
+separately inside and outside lookaheads; a slot is fresh, visited or recorded.
+A recorded slot holds the **record** of what the rest of a walk from its
+position did: where it ended, its farthest failure and the expectations there,
+and the range of the input it examined.
+
+A walk starts **plain**: it records nothing, and marks the position of each
+iteration as visited when it moves past it, at the next iteration or when it
+starts recording there. A walk that ends at its first iteration marks nothing.
+At its first iteration at a position whose slot is not fresh,
+which an earlier walk of the site visited, it starts **recording**, and stays
+recording to its end. A recording walk that has matched the minimum number of
+iterations looks up the slot of the position before each further iteration.
+When the slot is recorded, the walk ends where the record ends, records its
+expectations again, and extends the range that the enclosing results examined
+by the recorded range, as a memoized result does. When a recording walk ends,
+at an iteration that fails or consumes no input, or at a recorded position, it
+records every position it visited while recording, from the last back to the
+first: the record of a position combines its own iteration with the record of
+the next position. A walk that does not end, because the parse stops, records
+nothing.
+
+Records never change the result of a parse, and a parse in which the base of
+no `#recover` fails evaluates no skip expression, so it keeps no slots;
+neither does a parse whose walks all end at their first iteration, as when the
+base fails at the end of a list and the skip fails at once. The
+slots of a parse last for that parse: an [incremental document](documents.md)
+starts each parse without them, and its results examine what the walks behind
+them examined. A [stream](streaming.md) drops the slots of the positions
+before the input it commits. A parse with missing-token insertion keeps no
+slots.
+
+A walk under [budget limits](#cancellation-and-budget-limits) charges these
+units in addition to those of its iterations; marking a slot is free:
+
+- in a recording walk, 1 for the lookup before each iteration from the
+  minimum on;
+- 1 more when the slot is recorded, and the charges of recording its
+  expectations, as for a memoized result;
+- for each iteration of a recording walk, the charges of keeping its
+  expectations and of recording them in the enclosing result;
+- 1 for each record stored.
+
+Per site and lookahead state, the element of a site is evaluated at each
+position at most once while its slot is fresh and once more before it is
+recorded, plus, per walk, at most the minimum number of iterations, the last
+iteration of a walk that ends plain, and one lookup; the
+[proof](../proofs/skip-runs.md) gives the bound. The slots of a site take a
+bit for each position between the first and the last position its walks
+visit, and a record for each position that recording walks visit. The
+[classification](#classification) does not count records: it reports a grammar
+whose only repeated cost is a skip run as it would without them.
 
 ### Classes of Growth
 
@@ -418,7 +500,8 @@ The following grammars have the class shown on the inputs shown.
 | `main = (E "q" / "x")* $$; E = E "x" / "x"` | `x` n times | Degree 2 | `E` grows to the end of the input at every position, and `"q"` then fails |
 | `main = (E "q" / "x")* $$` with `E` an Operators Rule with the operand `"x"` and the infix operator `""` at one left-associative level | `x` n times | Degree 2 | As above, for the operators that `E` applies |
 | `main = ("a" !Rest)* "a"* $$; Rest = "a"* "c"` | `a` n times | Degree 2 | The lookahead scans to the end of the input at every position |
-| `main = (X / "a")* $$; X = (Y #recover(skip=[a]+)) "c"; Y = "b"` | `a` n times | Degree 2 | The skip consumes the rest of the input, `"c"` then fails, and the recovery is abandoned |
+| `main = (X / "a")* $$; X = (Y #recover(skip=[a]+)) "c"; Y = "b"` | `a` n times | Linear | The skip consumes the rest of the input, `"c"` then fails, and the recovery is abandoned, but `[a]+` is a [skip run](#skip-runs): the walk from each later position takes the rest of the walk from its record |
+| `main = (X / "a")* $$; X = (Y #recover(skip=S)) "c"; Y = "b"; S = [a]+` | `a` n times | Degree 2 | As above, but the repetition is in a rule that the skip calls, so it is not a skip run, and each skip walks to the end of the input again |
 | `main = (A / "a")* $$; A = (B / "a")* "c"; B = "a"* "d"` | `a` n times | Degree 3 | A repetition that can restart inside another one that can restart |
 | `main = C $$; A = C "+" / "n"; C = "(" C ")" "y" / "(" C ")" "z" / A` | `(` n times, `n`, `)z` n times | Linear | `A` and `C` form a left-recursion cycle grown at `A`. The result of `C` at a position outside the growth of `A` there is memoized, so the two calls of `C` at the next position share it |
 | `var v string`; `R = "(" {v := v + "0"} R ")" "y" / "(" {v := v + "1"} R ")" "z" / "n" {len(v) >= 0}` | As above | Exponential | The two calls of `R` at a position see different values of `v`, so neither reuses the other's result |

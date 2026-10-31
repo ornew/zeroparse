@@ -18,6 +18,7 @@ they link to nothing else.
 | [Parser and Runtime](runtime/README.md) | Parsing input with a grammar: positions, results, errors, the node model, Documents, streaming, tracing and profiling, compiled grammars, generated parsers, output schemas and the linter |
 | [Core IR](core-ir/README.md) | The intermediate representation of a checked grammar: its modules, nodes, terms, effects, invariants and text form |
 | [Bytecode](bytecode/README.md) | The portable bytecode that a grammar compiles to, the virtual machine that runs it and the `.zpc` file format |
+| [Proofs](proofs/README.md) | That the results the runtimes reuse are those that evaluating again would give, and the cost bounds of the mechanisms of reuse |
 
 The [Glossary](glossary.md) lists the terms of all the specifications, with the place where each is defined.
 

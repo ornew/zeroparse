@@ -68,6 +68,7 @@ Each linked mechanism page describes its source, eligibility, interactions, cont
 | [R150](mechanisms/R150-cache-snapshot-child-run-descriptors.md) | Cache immutable child-run descriptors in SnapshotNode records | Document snapshot record access; caches immutable child-run descriptors | ✓ | ✓ | ✓ | — | — | — | Default | No cache-off control; reference retains this cache |
 | [R160](mechanisms/R160-relative-snapshot-position-overlays.md) | Store per-version relative positions over shared snapshot records | Private Document snapshot comparison; no matching-path change | Private off | Private off | Private off | — | — | — | Private off | `zp_snapshot_position_overlays` |
 | [R170](mechanisms/R170-left-recursion-member-memo.md) | Memoize left-recursion cycle members except results that read a growing seed | All six; Documents store no seed-dependent result | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | Default | `DisableMemo` disables all memoization |
+| [R180](mechanisms/R180-skip-run-records.md) | Record the rest of each recovery-skip walk and reuse it from the third walk over a position | All six; Documents and streams; not with missing-token insertion | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | Default | None maintained; tests disable records |
 
 ### A — Allocation and Retention
 
@@ -270,6 +271,7 @@ Records [025](025-discarding-separators-in-the-example-grammars.md) and [055](05
 - [129. Expected-token sets are recorded on request](129-opt-in-expectations.md)
 - [130. Memoizing the members of left-recursion cycles](130-memoizing-members-of-left-recursion-cycles.md)
 - [131. Length of a node from its range](131-length-of-a-node-from-its-range.md)
+- [132. Records of the walks of recovery skips](132-records-of-recovery-skip-walks.md)
 
 ## Experiments That Did Not Pay Off
 

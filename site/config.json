@@ -419,6 +419,13 @@
       "index": "spec/bytecode/README.md"
     },
     {
+      "title": "Proofs",
+      "match": [
+        "spec/proofs/*.md"
+      ],
+      "index": "spec/proofs/README.md"
+    },
+    {
       "title": "Reference",
       "match": [
         "reference/**/*.md"
