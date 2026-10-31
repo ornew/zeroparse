@@ -167,6 +167,10 @@ type Parser struct {
 	ActiveSeed *MemoEntry
 	SeedPos    int
 	Resumed    int // elements reused by ResumeRepeat (for tests)
+	// skipTables holds the skip-run records of each site, at 2*site outside lookaheads and
+	// 2*site+1 inside them, and skip is the walk in progress (skip_runs.go).
+	skipTables []*skipSlots
+	skip       skipWalk
 	// Scratch holds the pooled buffers the parser uses (AcquirePooledParser), or nil.
 	Scratch *scratch
 	// NodeChunks counts the node chunks allocated since the last splitChunks.

@@ -480,6 +480,42 @@ func (b *Builder) ScanRepeat(e *grammar.Repeat, desc core.ExpID) core.Matcher {
 	}
 }
 
+// SkipRepeat is Repeat for the skip-run site skip, value-free and without a scope, whose walks
+// record the rest of them from each position and reuse the records (core/skip_runs.go).
+func (b *Builder) SkipRepeat(e *grammar.Repeat, m core.Matcher, skip int) core.Matcher {
+	min := e.Min
+	charge := b.charges()
+	return func(p *core.Parser) (*value.Node, bool) {
+		p.SkipBegin(skip)
+		count := 0
+		for {
+			if charge {
+				p.Spend()
+			}
+			if count >= min && p.SkipHit() {
+				break
+			}
+			p.SkipVisit()
+			m0 := p.Mark()
+			prevCut := p.Cut
+			p.Cut = false
+			_, ok := m(p)
+			p.Cut = prevCut
+			if !ok {
+				p.Reset(m0)
+				break
+			}
+			count++
+			if p.Pos == m0.Pos {
+				// Stop a repetition that consumes no input.
+				break
+			}
+		}
+		p.SkipEnd()
+		return nil, count >= min
+	}
+}
+
 func (b *Builder) Repeat(e *grammar.Repeat, m core.Matcher, elemScope *compile.Scope, ownScope, build, stream bool, site int, shiftable bool, in *compile.Rule) core.Matcher {
 	min, max := e.Min, e.Max
 	elemValue := scopeValueOf(b.prog, e.Expr)

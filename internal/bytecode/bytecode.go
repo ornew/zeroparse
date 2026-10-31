@@ -283,6 +283,12 @@ const (
 	// character folded the same way (A-Z as a-z). B is the expectation (the literal with its
 	// suffix i), and if b is 1, push a string node with the consumed input as its text.
 	OpStrFold
+	// SKIPREPEAT min, s, w: start the value-free, unbounded repetition of the skip-run site s
+	// (from 1) without an element scope, which ITER, NEXT and ENDREPEAT then run as for REPEAT. Its
+	// walks record the rest of them from each position, and once the repetition has matched min
+	// elements, ITER reuses the record of the current position and goes to its l. If w is 1, min
+	// is stored in the EINT instruction A of Exprs.
+	OpSkipRepeat
 )
 
 // Expression instructions
@@ -375,7 +381,7 @@ var opNames = map[Op]string{
 	OpCall: "CALL", OpOperatorsRule: "OPERATORS_RULE", OpPred: "PRED", OpBind: "BIND", OpLabel: "LABEL",
 	OpEndLabel: "ENDLABEL", OpRecover: "RECOVER", OpEndRecover: "ENDRECOVER", OpEndSkip: "ENDSKIP",
 	OpReturn: "RETURN", OpEnd: "END", OpScan: "SCAN", OpGuard: "GUARD",
-	OpRepeatWide: "REPEATW", OpScanWide: "SCANW", OpStrFold: "STRF",
+	OpRepeatWide: "REPEATW", OpScanWide: "SCANW", OpStrFold: "STRF", OpSkipRepeat: "SKIPREPEAT",
 	EInt: "EINT", EStr: "ESTR", EBool: "EBOOL", ENil: "ENIL", ECap: "ECAP", EItem: "EITEM",
 	ELocal: "ELOCAL", EVar: "EVAR", EMember: "EMEMBER", ENew: "ENEW", EBin: "EBIN", EUnary: "EUNARY",
 	EAnd: "EAND", EOr: "EOR", EBoolChk: "EBOOLCHK", EFunc: "EFUNC", ECall: "ECALL", ERet: "ERET",
@@ -394,4 +400,4 @@ func (o Op) String() string {
 // ISAVersion is the instruction set of the value model, the only one supported. Earlier
 // versions built the previous syntax trees, so their files are not loaded and need to be
 // compiled again.
-const ISAVersion = 29
+const ISAVersion = 30

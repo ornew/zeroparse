@@ -147,6 +147,11 @@ func (m *Module) operands(in Instr, str func(int) string, names func([]int) stri
 			sc = names(m.Scopes[c])
 		}
 		return fmt.Sprintf("min=%d max=%d scope=%s", a, bb, sc)
+	case OpSkipRepeat:
+		if c == 1 {
+			a = int(m.Exprs[a].Integer())
+		}
+		return fmt.Sprintf("min=%d site=%d", a, bb)
 	case OpNext:
 		if bb == 3 {
 			return fmt.Sprintf("-> %d mode=field slot=%d", a, c)

@@ -500,6 +500,7 @@ type repState struct {
 	scope           int
 	base            int            // bottom of the element values
 	run             *core.RunState // the run being recorded in a Document parse, or nil
+	skip            bool           // a skip-run site (SKIPREPEAT)
 }
 
 func (mc *Machine) save() vmSave {
@@ -782,12 +783,26 @@ func (mc *Machine) step(vm *Program, b *vmBody, resume, rok bool, rv *value.Node
 					}
 				}
 			}
+		case bytecode.OpSkipRepeat:
+			min := int(in.A)
+			if in.C == 1 {
+				min = int(m.Exprs[in.A].Integer())
+			}
+			mc.reps = append(mc.reps, repState{min: min, max: -1, scope: -1, base: len(mc.vals), skip: true})
+			p.SkipBegin(int(in.B))
 		case bytecode.OpIter:
 			p.Spend()
 			rep := &mc.reps[len(mc.reps)-1]
 			if rep.max >= 0 && rep.count >= rep.max {
 				ip = int(in.A)
 				continue
+			}
+			if rep.skip {
+				if rep.count >= rep.min && p.SkipHit() {
+					ip = int(in.A)
+					continue
+				}
+				p.SkipVisit()
 			}
 			kind := uint8(eIter)
 			if rep.run != nil {
@@ -862,6 +877,9 @@ func (mc *Machine) step(vm *Program, b *vmBody, resume, rok bool, rv *value.Node
 		case bytecode.OpEndRepeat:
 			rep := mc.reps[len(mc.reps)-1]
 			mc.reps = mc.reps[:len(mc.reps)-1]
+			if rep.skip {
+				p.SkipEnd()
+			}
 			if rep.count < rep.min {
 				goto fail
 			}

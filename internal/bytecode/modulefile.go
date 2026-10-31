@@ -454,6 +454,18 @@ func ValidateModule(m *Module, fieldType func(text string) error) error {
 		case OpRepeatWide:
 			wideBounds(x.A, x.B)
 			opt("scope", int(x.C), len(m.Scopes))
+		case OpSkipRepeat:
+			flag(x.C, 1)
+			if x.C == 1 {
+				if min := bound(x.A); min < 0 {
+					fail("invalid minimum %d", min)
+				}
+			} else {
+				nonneg(x.A)
+			}
+			if x.B < 1 || int(x.B) > n {
+				fail("invalid skip-run site %d", x.B)
+			}
 		case OpCall:
 			in("rule", int(x.A), len(m.Rules))
 			nonneg(x.B)

@@ -31,12 +31,13 @@ func (NoExprs) Discard(m struct{}) struct{}                                   { 
 func (NoExprs) Capture(e *grammar.Capture, slot int, m struct{}, projected, build bool) struct{} {
 	return struct{}{}
 }
-func (NoExprs) Cut() struct{}                                     { return struct{}{} }
-func (NoExprs) Empty() struct{}                                   { return struct{}{} }
-func (NoExprs) Fail() struct{}                                    { return struct{}{} }
-func (NoExprs) Anchor(e grammar.Expr, desc ExpID) struct{}        { return struct{}{} }
-func (NoExprs) Predicate(e *grammar.Predicate, s *Scope) struct{} { return struct{}{} }
-func (NoExprs) ScanRepeat(e *grammar.Repeat, desc ExpID) struct{} { return struct{}{} }
+func (NoExprs) Cut() struct{}                                                  { return struct{}{} }
+func (NoExprs) Empty() struct{}                                                { return struct{}{} }
+func (NoExprs) Fail() struct{}                                                 { return struct{}{} }
+func (NoExprs) Anchor(e grammar.Expr, desc ExpID) struct{}                     { return struct{}{} }
+func (NoExprs) Predicate(e *grammar.Predicate, s *Scope) struct{}              { return struct{}{} }
+func (NoExprs) ScanRepeat(e *grammar.Repeat, desc ExpID) struct{}              { return struct{}{} }
+func (NoExprs) SkipRepeat(e *grammar.Repeat, elem struct{}, skip int) struct{} { return struct{}{} }
 func (NoExprs) Repeat(e *grammar.Repeat, elem struct{}, elemScope *Scope, ownScope, build, stream bool, site int, shiftable bool, in *Rule) struct{} {
 	return struct{}{}
 }

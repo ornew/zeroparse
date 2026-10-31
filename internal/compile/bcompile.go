@@ -493,6 +493,20 @@ func (c *bcompiler) capture(e *grammar.Capture, s *Scope, keep bool) {
 }
 
 func (c *bcompiler) repeat(e *grammar.Repeat, s *Scope, build, stream bool) {
+	if site := c.prog.SkipSite(e); site != 0 { // as Walker.repeat: a site is neither a scan nor resumed
+		if int64(e.Min) <= 1<<31-1 {
+			c.emit(bytecode.OpSkipRepeat, int32(e.Min), int32(site), 0)
+		} else {
+			c.emit(bytecode.OpSkipRepeat, c.integer(e.Min), int32(site), 1)
+		}
+		loop := c.here()
+		iter := c.emit(bytecode.OpIter, 0, 0, 0)
+		c.void(e.Expr, s)
+		c.emit(bytecode.OpNext, loop, 0, 0)
+		c.m.Code[iter].A = c.here()
+		c.emit(bytecode.OpEndRepeat, 0, 0, 0)
+		return
+	}
 	if !build && !stream { // value-free repetition of a single character (same as Walker.scanRepeat)
 		switch x := e.Expr.(type) {
 		case *grammar.CharClass:

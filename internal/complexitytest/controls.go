@@ -51,7 +51,9 @@ func double(n int) []int { return []int{n, 2 * n, 4 * n} }
 // Controls returns the controls table. The negative controls record growth that the engine has
 // today: when a planned change makes one linear, its entry moves to the linear set by hand. The
 // negative E2 control is linear in measurement through the becomesLinearLanded switch, with a
-// class that claims no linear cost; E1, E7, E8 and E9 move when repetition runs are
+// class that claims no linear cost; the negative E8 controls (repeated, nested and alternating
+// walks) are linear in measurement through the records of skip runs, with classes that claim no
+// linear cost either; E1, E7 and E9 move when repetition runs are
 // reused in batch parses; E6 and E10 stay quadratic. The rebinding variants of E6 are positive
 // controls: a binding after the left call adds no growth, and the restart in E6 is the negative
 // control. Each source is a grammar from the measured families of the
@@ -86,7 +88,22 @@ func Controls() []Control {
 			Name: "E8 recovery skips", Family: "E8",
 			Source: "rule main = (x / \"a\")* $$\nrule x = (y #recover(skip=[a]+)) \"c\"\nrule y = \"b\"\n",
 			Input:  func(n int) string { return rep("a", n) },
-			Sizes:  double(250), ShortSizes: double(100), Order: Poly(2), Class: ClassPoly,
+			Sizes:  double(250), ShortSizes: double(100), Order: Linear, Class: ClassPoly,
+		},
+		{
+			// Each walk starts one position before the one before it and runs to the end.
+			Name: "E8 nested recovery skips", Family: "E8",
+			Source: "rule main = (s \"!\" / [a(]*) $$\nrule s = (\"(\" s \")\") #recover(skip=[a(]+)\n",
+			Input:  func(n int) string { return rep("(", n) + "a" },
+			Sizes:  double(250), ShortSizes: double(100), Order: Linear, Class: ClassUnknown,
+		},
+		{
+			// The walks alternate between the two runs of "a": one from each position of the first
+			// and one from the start of the second.
+			Name: "E8 recovery skips in alternating regions", Family: "E8",
+			Source: "rule main = (p / \"a\" / \"b\")* $$\nrule p = x \"b\" x \"z\"\nrule x = \"c\" #recover(skip=[a]+)\n",
+			Input:  func(n int) string { return rep("a", n) + "b" + rep("a", n) },
+			Sizes:  double(250), ShortSizes: double(100), Order: Linear, Class: ClassPoly,
 		},
 		{
 			Name: "E6 right recursion, safe", Family: "E6", Positive: true,

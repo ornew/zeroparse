@@ -18,7 +18,8 @@ import (
 // AST and its NEXT flag in the module. Both file formats retain the old shape.
 func legacyStreamRecovery(t *testing.T, streamFirst bool) *Program {
 	t.Helper()
-	p := mustCompile(t, `rule main = "ab" #repeat(2) #recover(skip=.*) $$`)
+	// The skip is bounded, so it is a scan and not a skip-run site, whose NEXT the loop would count.
+	p := mustCompile(t, `rule main = "ab" #repeat(2) #recover(skip=. #repeat(0, 1000)) $$`)
 	m := p.Module()
 	next := 0
 	for i := range m.Code {

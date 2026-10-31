@@ -646,6 +646,7 @@ func (p *Parser) Commit(pos int) {
 			p.Backend.ClearInactive()
 		}
 		p.PruneStreamMemo(pos)
+		p.PruneSkipRecords(pos)
 		p.Pruned = pos
 	}
 	if p.DiagnosticTail.Limit > 0 {

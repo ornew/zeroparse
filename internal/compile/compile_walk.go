@@ -47,6 +47,9 @@ type ExprBuilder[M any] interface {
 	// repetition that a Document can resume, whose elements' values move past an edit when
 	// shiftable.
 	Repeat(e *grammar.Repeat, elem M, elemScope *Scope, ownScope, build, stream bool, site int, shiftable bool, in *Rule) M
+	// SkipRepeat matches the repetition e of elem, the skip-run site skip (Program.SkipSite),
+	// recording its walks and reusing the records (core/skip_runs.go).
+	SkipRepeat(e *grammar.Repeat, elem M, skip int) M
 	// ProjectRepeat gathers the values of the capture slot of the elements of e (project.go),
 	// which share one frame of n slots.
 	ProjectRepeat(e *grammar.Repeat, elem M, slot, n int) M
@@ -272,6 +275,10 @@ func (c *Walker[M]) scanRepeat(e *grammar.Repeat, build bool) (M, bool) {
 // stream.
 func (c *Walker[M]) repeat(e *grammar.Repeat, s *Scope, build, stream bool) M {
 	control := c.Control
+	if skip := c.Prog.SkipSite(e); skip != 0 {
+		// A site has no captures, values or stream; it is neither a scan nor resumed.
+		return c.Builder.SkipRepeat(e, c.Expr(e.Expr, s, false), skip)
+	}
 	if !stream {
 		if m, ok := c.scanRepeat(e, build); ok {
 			return m
