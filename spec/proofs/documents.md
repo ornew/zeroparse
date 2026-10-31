@@ -3,11 +3,11 @@
 This proof shows that a parse of a [Document](../runtime/documents.md) after
 any sequence of edits returns what a parse of the current text from scratch
 returns ([Reuse](../runtime/documents.md#reuse)). A Document reuses two kinds
-of results of earlier parses: memo entries, which it keeps, shifts or drops at
-each edit, and the recorded runs of repetitions, which it resumes. The proof
-reduces both to the [memoization proof](memoization.md): the memo entries are
-sound for the current text, and a resumed run records what evaluating its
-iterations records.
+of results: memo entries, which it keeps, shifts or drops at each edit, and the
+recorded runs of repetitions, which it resumes. The proof extends the induction
+of the [memoization proof](memoization.md) to both: the memo entries are sound
+for the current text, and a resumed run records what evaluating its iterations
+records.
 
 ## Setting
 
@@ -16,8 +16,10 @@ $[a_k, b_k)$ of $t_{k-1}$ with text of length $b_k - a_k + \delta_k$, so a
 position $i \ge b_k$ of $t_{k-1}$ becomes $i + \delta_k$ in $t_k$. A batch is
 one edit in this sense for the text, and it clears all reuse state
 ([Edits](../runtime/documents.md#edits)). Keys, lookahead states, outcomes,
-growths, the reference parse $\mathcal{R}$ and soundness are as in the
-[memoization proof](memoization.md#setting), on the text at hand.
+growths, the parses $\mathcal{R}$ and $\mathcal{M}$, soundness and the
+scope and assumptions are as in the [memoization proof](memoization.md#setting),
+on the text at hand. A Document does not support `#missing`
+([Construction and Ownership](../runtime/documents.md#construction-and-ownership)).
 
 **Slots.** Slot $i$ of a text $t$ of length $n$ is the character at position
 $i$ when $i < n$, and the end of the text when $i = n$. A terminal, a character
@@ -31,40 +33,61 @@ absence of one at $i = 0$, written slot $-1$.
 
 **Examined range.** The examined range of an evaluation is the interval
 $[l, h)$ of the least and one past the greatest slot that it, or a call within
-it, examined. For a call at $p$, $l \le p$. A Document may keep a larger
-interval in place of $[l, h)$, such as the conservative `Examined` frontier of
-[Generated Go Document Tracing and Profiling](../runtime/observability.md#generated-go-document-tracing-and-profiling):
-a larger interval only makes the conditions below drop more entries and resume
-fewer iterations, and the proofs hold for it unchanged. Every failure that the
+it, examined. For an evaluation at $p$, $l \le p$. Every failure that the
 evaluation records is at an examined slot, so its farthest failure $f$
-satisfies $l \le f < h$ whenever it recorded one.
+satisfies $l \le f < h$ whenever it recorded one. A Document may keep a larger
+interval in place of $[l, h)$, such as the conservative `Examined` frontier of
+[Generated Go Document Tracing and Profiling](../runtime/observability.md#generated-go-document-tracing-and-profiling).
+A larger interval only makes the conditions below drop more entries and resume
+fewer iterations, and the proofs hold for it unchanged, since they use the
+recorded range only through the invariant (I2) of the memoization proof, that
+it contains the range in $\mathcal{R}$.
 
-**Position-free outcomes.** An outcome is **position-free** when its value
-holds no position value (the `.Start` and `.End` members and what is computed
-from them in actions) and it has no recovered errors, whose lines and columns
-depend on positions. Positions still occur in a position-free outcome as its
-end, the ranges of its nodes and its farthest failure. **Shifting** an outcome
-by $\delta$ adds $\delta$ to each of these.
+**Position-free evaluations.** An evaluation is **position-free** when no
+action or predicate in it, or in a call within it, reads a position (the
+`.Start` and `.End` members), and its outcome has no recovered errors, whose
+lines and columns depend on positions. Positions still occur in the outcome of
+a position-free evaluation as its end, the ranges of its nodes and its farthest
+failure. **Shifting** an outcome by $\delta$ adds $\delta$ to each of these.
 
 **Reuse state.** The proof assumes that the reuse state of a Document has the
-following properties.
+following properties. The [Incremental Documents](../runtime/documents.md)
+chapter states the guarantee and not this mechanism.
 
-- **(E) Edits.** At each edit $[a, b)$ with $\delta$, a memo entry with
-  examined range $[l, h)$ is kept unchanged if $h \le a$; it is shifted by
-  $\delta$, together with its key position and its range, if $l \ge b$ and
-  its outcome is position-free; otherwise it is dropped. Edits are applied to
-  an entry in order, either at once or when it is next looked up.
-- **(P) Parses.** An entry is stored only under condition (S) of the
-  memoization proof, so it read no growth open when its call started. A parse
-  that is interrupted clears the memo entries and the runs, and publishes no
-  partial table ([Interruption](../runtime/documents.md#interruption)).
-- **(R) Runs.** A run is recorded for a repetition that matched outside a
-  lookahead and a `skip`, in a parse in which it recovered no error and read no
-  growth open when it started. Its element has no predicate, calls no rule
-  that reads variables, and writes no capture to an enclosing scope. The record
-  holds, for each iteration that matched, its start, end, examined range,
-  value, and farthest failure with its expected items. A run whose values can
-  hold position values is resumed only after an edit with $\delta = 0$.
+- **(E) Edits.** At each edit $[a, b)$ with $\delta$, a memo entry with recorded
+  range $[l, h)$ is kept unchanged if $h \le a$; it is shifted by $\delta$,
+  together with its key position and its range, if $l \ge b$ and its call was
+  position-free; otherwise it is dropped. Edits are applied to an entry in
+  order, either at once or when it is next looked up.
+- **(P) Parses.** Entries are stored under the conditions of $\mathcal{M}$. A
+  parse that does not complete, because it is interrupted
+  ([Interruption](../runtime/documents.md#interruption)) or aborted by a
+  run-time error of an action, the nesting limit or another fatal error,
+  clears the memo entries and the runs, and publishes no partial table.
+- **(R) Runs.** A **run record** of a repetition at $p$ holds, for each
+  iteration that matched, its start, end, recorded range, value, and farthest
+  failure with its expected items.
+  - *Recording.* A run is recorded for a repetition that matched outside a
+    lookahead and a `skip`. Its element has no predicate, calls no rule that
+    reads variables, and writes no capture to an enclosing scope. During the
+    run no call recovered an error, and no call read the current result of a
+    growth, or an entry stored by a call that did, even of a growth that
+    started and ended within the run.
+  - *Resuming.* A repetition resumes a record only outside a lookahead and a
+    `skip`, and not at the position of an open growth. It resumes in one of
+    two ways. **Whole**: the record of the same repetition at the same
+    position, stored earlier in the same parse, or by the previous parse when
+    no edit came since; it reuses every recorded iteration. **Across one
+    edit**: the record of the previous parse when exactly one edit $[a, b)$
+    with $\delta$ came since, stored at $p$, or at $p - \delta$ when
+    $p \ge b + \delta$. It reuses the recorded iterations from the first on
+    while their range ends at or before $a$, whatever $\delta$ is. It then
+    evaluates iterations, possibly none. When the current position is
+    $r_j + \delta$ for a recorded iteration $j$ such that every recorded
+    iteration from $j$ on examined only slots at or after $b$, it reuses
+    those iterations shifted by $\delta$, which requires $\delta = 0$ or
+    position-free iterations. After the reused iterations it goes on as a
+    repetition does.
 
 ## Lemma 1 (Locality)
 
@@ -72,45 +95,56 @@ following properties.
 state that reads no growth open at its start, have the outcome $\omega$ and
 the examined range $[l, h)$. Let $t'$ be a text and $\delta$ an offset such
 that slot $i + \delta$ of $t'$ holds what slot $i$ of $t$ holds for every
-$i \in [l, h)$, and let $\delta = 0$ or $\omega$ be position-free. Then the
-evaluation of the same expression at $p + \delta$ on $t'$, in the same
-variables, captures, level and lookahead state, has the outcome $\omega$
-shifted by $\delta$ and the examined range $[l + \delta, h + \delta)$.*
+$i \in [l, h)$, and let either $\delta = 0$ or the evaluation be
+position-free. When $\omega$ has recovered errors, let also $\delta = 0$ and
+$t'$ agree with $t$ on $[0, h)$. Then the evaluation of the same expression at
+$p + \delta$ on $t'$, in the same variables, captures, level and lookahead
+state, has the outcome $\omega$ shifted by $\delta$ and the examined range
+$[l + \delta, h + \delta)$.*
 
 *Proof.* By induction on the steps of the evaluation on $t$, matched one to
 one with those on $t'$. Each step that reads the input examines a slot $i$ in
 $[l, h)$, and reads at $i + \delta$ on $t'$ the same character, the same end
 of the text, or the same absence of a preceding character, so it decides the
 same way and moves the position by the same amount. The other steps depend on
-the input only through earlier steps, and on positions only as follows: as
-the ends and ranges that the outcome holds, which shift with the evaluation;
-as position values, which the outcome holds only when $\delta = 0$; and as
-the lines and columns of recovered errors, which it holds only when
-$\delta = 0$. Calls within the evaluation have the keys shifted by $\delta$
-and, by the induction hypothesis, their outcomes shifted by $\delta$. By
-Lemma 1 of the [memoization proof](memoization.md#lemma-1-context) the
+the input only through earlier steps, and on positions only in these ways:
+
+- as the ends and ranges that the outcome holds, which shift with the
+  evaluation;
+- as positions that actions and predicates read, which a position-free
+  evaluation does not have, and which are equal when $\delta = 0$;
+- as the lines and columns of recovered errors, which depend on the text before
+  the error. An error is at a recorded failure, before $h$, and $t'$ agrees
+  with $t$ on $[0, h)$ when there are such errors.
+
+Calls within the evaluation have their keys shifted by $\delta$ and, by the
+induction hypothesis, their outcomes shifted by $\delta$. By
+[Lemma 1 of the memoization proof](memoization.md#lemma-1-context) the
 calls depend on nothing else. $\square$
+
+The condition on $[0, h)$ is needed. In $t = $ `x\nab`, replacing $[1, 2)$
+with `y` leaves the slots $[2, 4)$ in place, but an error recovered at
+position $3$ moves from line 2, column 2, to line 1, column 4.
 
 ## Lemma 2 (Carried Entries)
 
-*At the start of each parse of a Document, every memo entry that it holds,
-with the edits since it was stored applied by (E), is sound for the current
-text.*
+*Let every entry that a completed parse of $t_{k-1}$ leaves be sound for
+$t_{k-1}$. After edit $k$ applied by (E), every entry that remains is sound for
+$t_k$.*
 
-*Proof.* By induction on parses and edits. An entry stored in a parse of
-$t_j$ is sound for $t_j$ by the [memoization theorem](memoization.md#theorem-memoization-never-changes-the-result),
-since by (P) it satisfies (S); an interrupted parse leaves no entry. Let an
-entry be sound for $t_{k-1}$, with key position $p$, outcome $\omega$ and
-examined range $[l, h)$, and let edit $k$ be $[a, b)$ with $\delta$.
+*Proof.* Let an entry have key position $p$, outcome $\omega$ and recorded
+range $[l', h')$, which by soundness contains the range $[l, h)$ of the call
+in $\mathcal{R}$ on $t_{k-1}$. Let edit $k$ be $[a, b)$ with $\delta$.
 
-- If $h \le a$, every slot in $[l, h)$ is before the replaced positions, so
-  $t_k$ holds what $t_{k-1}$ holds there: for $i < n_{k-1}$ the character is
-  unchanged, and slot $n_{k-1}$ is not in the range, since
-  $h \le a \le n_{k-1}$. By Lemma 1 with $\delta = 0$ the entry is sound for
-  $t_k$.
-- If $l \ge b$ and $\omega$ is position-free, slot $i$ of $t_{k-1}$ is slot
-  $i + \delta$ of $t_k$ for every $i \ge b$, the end of the text included. By
-  Lemma 1 the shifted entry is sound for $t_k$ at $p + \delta$.
+- If $h' \le a$, then $h \le a$, and every position before $a$ holds in $t_k$
+  what it holds in $t_{k-1}$: the characters before $a$ are unchanged, and
+  slot $n_{k-1}$ is not in $[0, h)$, since $h \le a \le n_{k-1}$. By Lemma 1
+  with $\delta = 0$, which allows recovered errors here, the entry is sound
+  for $t_k$.
+- If $l' \ge b$ and the call was position-free, then $l \ge b$, and slot $i$
+  of $t_{k-1}$ is slot $i + \delta$ of $t_k$ for every $i \ge b$, the end of
+  the text included. By Lemma 1 the shifted entry is sound for $t_k$ at
+  $p + \delta$, and its shifted range contains the shifted range of the call.
 - Otherwise (E) drops the entry.
 
 Applying the edits when an entry is looked up applies the same rule in the
@@ -118,60 +152,92 @@ same order, so it gives the same entry. $\square$
 
 ## Lemma 3 (Resumed Runs)
 
-*In a parse of $t_k$, let a repetition at $p$ resume the run that (R) recorded
-in the parse of $t_{k-1}$ at $p$, or at $p - \delta_k$ when $p \ge b_k + \delta_k$.
-Then it ends where evaluating its iterations ends, with the same value, and
-records the same outcome and examined range into the enclosing evaluation.*
+*In a parse of $t_k$, let a repetition at $p$ resume a record, and let every
+evaluation that completed before it in this parse satisfy the invariant
+(I1) to (I3) of the
+[memoization theorem](memoization.md#theorem-memoization-never-changes-the-result).
+Let the record have been stored in this parse, or in the previous parse, whose
+completed evaluations satisfied the invariant on its text. Then the repetition
+ends where it ends in $\mathcal{R}$, with the same value, and records into the
+enclosing evaluation the outcome that the iterations record in $\mathcal{R}$
+and a range that contains theirs.*
 
-*Proof.* Let the recorded iterations start at $r_0 < r_1 < \dots < r_m$, each
-ending where the next starts. By (R), an iteration is an evaluation of the
-element at its start that reads no variables, writes no capture outside
-itself and reads no open growth, so by Lemma 1 of the memoization proof its
-outcome is a function of its start and the text. The resumed run is made of
-four parts.
+*Proof.* First, no iteration that the run reuses reads an open growth in
+$\mathcal{R}$. An iteration at $r$ that read a growth of $L$ open at $p_L$
+would, as in
+[Lemma 2 of the memoization proof](memoization.md#lemma-2-reading-an-open-growth),
+start within the evaluation of $L$, so $r \ge p_L$, and call $L$ at $p_L$, so
+$r \le p_L$. Every iteration but the first starts at the end of an iteration
+that consumed input, after $p \ge p_L$, and the first starts at $p$, where (R)
+allows no growth to be open. So each reused iteration is an evaluation of the
+element at its start in a state that reads no open growth. The element reads
+no variable and no capture from outside, its cut decides only between its own
+alternatives and whether the repetition fails, and its level does not change
+within the repetition, so by Lemma 1 of the memoization proof its outcome
+$G(r)$ in $\mathcal{R}$ is a function of its start $r$ and the text.
 
-1. *Iterations before the edit.* The run reuses recorded iterations
-   $0, 1, \dots$ while their examined range ends at or before $a_k$. By
-   Lemma 1 with $\delta = 0$, each has on $t_k$ the outcome it had, and it
-   starts where the one before ended, as in the evaluation.
-2. *New iterations.* From the first iteration it cannot reuse on, the run
-   evaluates iterations, which have their outcomes in $\mathcal{R}$ by the
-   memoization theorem.
-3. *Iterations after the edit.* When an evaluated iteration ends at
-   $r_j + \delta_k$ for a recorded iteration $j$ such that every recorded
-   iteration from $j$ on examined only slots at or after $b_k$, the run reuses
-   iterations $j, j+1, \dots$ shifted by $\delta_k$. By Lemma 1 each is the
-   outcome of evaluating the element at its shifted start, and each starts
-   where the one before ended. A run that the edit moved as a whole is the
-   case $j = 0$.
-4. *The end.* After the reused iterations the run goes on as a repetition
-   does. It stops after an iteration that consumed nothing or at its upper
-   bound, counting the iterations of all four parts, or evaluates the next
-   iteration, as the evaluation would at that position.
+When the record was stored, its iterations were evaluations of $\mathcal{M}$
+that completed, read no current result and recovered no error, by (R). By (I1)
+and (I2) of the parse that stored it, each recorded outcome is $G(r_i)$ on that
+text, and each recorded range contains the range in $\mathcal{R}$. Let the
+recorded iterations start at $r_0 < r_1 < \dots < r_m$, each ending where the
+next starts.
 
-In each part the run visits the iterations that the evaluation visits, in the
-same order and with the same outcomes. A reused iteration records its farthest
-failure and expected items, and its examined range, into the enclosing
-evaluation, as evaluating it does, and the operation $\cdot$ and the hull of
+- *Whole.* The text is the one the record was stored on, so the recorded
+  outcomes are $G(r_i)$ on $t_k$. The run reuses all of them in order, each
+  starting where the one before ended, as $\mathcal{R}$ evaluates them.
+- *Across one edit.* The run is made of four parts.
+  1. *Iterations before the edit.* The recorded iterations from the first on
+     whose range ends at or before $a$. By Lemma 1 with $\delta = 0$, each has
+     on $t_k$ its recorded outcome, and it starts where the one before ended.
+     $\delta$ does not enter: these iterations are not moved.
+  2. *New iterations.* Evaluations of $\mathcal{M}$, which satisfy (I1) and
+     (I2) because they complete before the repetition does. There may be none,
+     as after a deletion that ends where an iteration began.
+  3. *Iterations after the edit.* When the current position is
+     $r_j + \delta$ and every recorded iteration from $j$ on examined only
+     slots at or after $b$, the run reuses iterations $j, j + 1, \dots$
+     shifted by $\delta$. By Lemma 1, with $\delta = 0$ or position-free
+     iterations, each is $G$ at its shifted start on $t_k$, and each starts
+     where the one before ended. A record that the edit moved as a whole is
+     the case $j = 0$ with no iterations in the first part.
+  4. *The end.* After the reused iterations the run goes on as a repetition
+     does. It stops after an iteration that consumed nothing or at its upper
+     bound, counting the iterations of all parts, or evaluates the next
+     iteration, as $\mathcal{R}$ does at that position.
+
+In each case the run visits the iterations that $\mathcal{R}$ visits, in the
+same order and with the same outcomes. An iteration that fails is not
+recorded, so the iteration that ends the repetition in $\mathcal{R}$ is
+evaluated in either case. A reused iteration records its farthest failure,
+expected items and range into the enclosing evaluation as evaluating it does,
+and the operation $\cdot$ and the hull of
 [Skip Runs](skip-runs.md#setting) are associative, so the run leaves the
-enclosing evaluation with the same record. An iteration that failed was not
-recorded, so it is evaluated in either case. $\square$
+enclosing evaluation with the same record. $\square$
 
 ## Theorem (Document Parses Equal Fresh Parses)
 
-*A parse of a Document after any sequence of edits, batches, parses and
-interrupted parses returns the value, the recovered errors and the syntax
-error that a parse of its current text from scratch returns.*
+*A parse of a Document after any sequence of edits, batches, parses,
+interrupted parses and aborted parses returns the value, the recovered errors
+and the syntax error that a parse of its current text from scratch returns,
+when no limit stops it.*
 
-*Proof.* By Lemma 2 the parse starts with a table of sound entries. A resumed
-run is, by Lemma 3, a step whose outcome is the one that evaluating it has,
-so it can be added to the cases of the
-[memoization theorem](memoization.md#theorem-memoization-never-changes-the-result)
-as a combinator. With those, the theorem applies to the Document parse and
-gives the outcomes of the reference parse of the current text. A parse from
-scratch is also a memoized parse, from an empty table, so it gives the same
-outcomes. A batch and an interruption clear the reuse state, which leaves the
-table empty and the conclusion unchanged. $\square$
+*Proof.* By induction on the parses of the Document. Every entry and record
+that a parse can use was stored by the previous completed parse, or earlier in
+the same parse: a batch, an interrupted parse and an aborted parse clear them
+by (P). By the induction hypothesis, the previous completed parse satisfied the
+invariant of the
+[memoization theorem](memoization.md#theorem-memoization-never-changes-the-result),
+so its entries were sound for its text, and by Lemma 2, applied to each edit
+in turn, the entries are sound for the current text when the parse starts.
+
+The parse then follows the induction of the memoization theorem, with one more
+kind of evaluation: a repetition that resumes a record, and so skips the
+evaluation of the iterations that it reuses. By Lemma 3, whose assumptions are
+the induction hypothesis, it satisfies (I1) and (I2), and it stores no entry.
+So the invariant holds for every evaluation of the parse, and the parse
+returns what $\mathcal{R}$ returns on the current text. A parse from scratch is
+a memoized parse from an empty table, so it returns the same. $\square$
 
 The statistics of a parse, the identity of nodes and whether nodes returned
 earlier are moved in place are not part of the outcome
