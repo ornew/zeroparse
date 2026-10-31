@@ -100,8 +100,9 @@ var scalarOps = map[string]bool{"==": true, "!=": true, "<": true, "<=": true, "
 
 // copyFuncs are the built-in functions that build a value in proportion to its size. list builds
 // one element for each argument, which is bounded by the grammar. len examines a string value per
-// character; the length of a node or a list is constant time.
-var copyFuncs = map[string]bool{"text": true, "concat": true, "map": true, "filter": true, "len": true}
+// character; the length of a node or a list is constant time. text is not one: the text of a node
+// is a range of the input, which costs a constant, though its size counts where it is copied.
+var copyFuncs = map[string]bool{"concat": true, "map": true, "filter": true, "len": true}
 
 func (k *classifier) walkTerm(t grammar.Term, tc termCtx) {
 	if t == nil {

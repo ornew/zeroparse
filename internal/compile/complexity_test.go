@@ -115,6 +115,10 @@ func TestClassifyComplexity(t *testing.T) {
 		// two values of the recursion it is not.
 		{"comparison with a literal", "rule main = l $$\nrule l string = (\"(\" x:l \")\" {$x != \"\"} => $x) / a\nrule a string = \"a\" => \"a\"\n", ClassLinear, 0},
 		{"comparison of recursive values", "rule main = l $$\nrule l string = (\"(\" x:l y:l \")\" {$x == $y} => $x) / a\nrule a string = \"a\" => \"a\"\n", ClassPoly, 2},
+		// The text of a capture is a range of the input and costs a constant, but joining it
+		// copies it.
+		{"text of a recursive capture", "rule main = a $$\nrule a = s:(\"(\" a \")\" / \"x\") => text($s)\n", ClassLinear, 0},
+		{"join of the text of a recursive capture", "rule main = a $$\nrule a = s:(\"(\" a \")\" / \"x\") => text($s) + \"!\"\n", ClassPoly, 2},
 		// An element of a list holds anything the list can, so indexing keeps the size.
 		{"element of a recursive list", "rule main = r $$\nrule r []string = (\"a\" x:r => list($x[0] + \"a\")) / (\"\" => list(\"\"))\n", ClassPoly, 2},
 		{"list of literal elements", "rule main = r $$\nrule r []string = (\"a\" x:r => list(\"a\")) / (\"\" => list(\"\"))\n", ClassLinear, 0},

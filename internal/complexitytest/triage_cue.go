@@ -23,10 +23,11 @@ func triageCue() []TriageGroup {
 				{Name: "aliases after long comments", Build: list("", "f%d"+rep(" ", 20)+"~ // "+rep("c", 30)+"\n x: 1", "\n", "\n"), Sizes: doubling(200, 3), Order: Linear},
 			}},
 		{Grammar: "cue", ID: "definitions", Witness: true, Rules: []string{"hashrest"}, Pattern: `examined`,
-			Shape:  "the name of a definition #name read by the !(sp ident) lookahead of a let keyword and again by the label or embedding that follows",
+			Shape:  "the name of a definition #name read by the !(sp ident) lookahead of a let keyword or by a selector part that fails, and again by the label, embedding or selector part that follows",
 			Assign: "F97", Order: Linear, Families: []TriageFamily{
 				{Name: "long definition names", Build: list("", "let L%d"+rep("x", 40)+" = #"+rep("D", 40), "\n", "\n#"+rep("D", 40)+": 1\n"), Sizes: doubling(200, 3), Order: Linear},
 				{Name: "one long definition", Build: func(n int) string { return "#" + rep("D", n) + ": 1\nlet\n" }, Sizes: doubling(2000, 3), Order: Linear},
+				{Name: "selectors of long definition names", Build: cueField(func(n int) string { return "b" + rep(".#"+rep("D", 20), n) + ".#" + rep("E", n) }), Sizes: doubling(200, 3), Order: Linear},
 			}},
 		{Grammar: "cue", ID: "numbers", Witness: true, Rules: []string{"based", "d10", "dec_ip"}, Pattern: `examined`,
 			Shape:  "the integer, decimal, based and multiplier alternatives of a number literal, and the number tokens of an attribute, rescan the same digits",
@@ -40,9 +41,9 @@ func triageCue() []TriageGroup {
 				}, Sizes: doubling(2000, 3), Order: Linear},
 				{Name: "many attribute numbers", Build: func(n int) string { return "a: 1 @x(" + list("", "123_456Mi", ", ", "")(n) + ")\n" }, Sizes: doubling(500, 3), Order: Linear},
 			}},
-		{Grammar: "cue", ID: "string-text", Witness: true, Rules: []string{"sel_string", "dq_plain", "sq_plain", "import_name"}, Pattern: `copying operation text`,
-			Shape:  "the text of a string, a string selector or an import name copied by an atomic token rule, which a later alternative reads again",
-			Assign: "F103", Order: Linear, Families: []TriageFamily{
+		{Grammar: "cue", ID: "string-bodies", Witness: true, Rules: []string{"dqbody", "sqbody"}, Pattern: `examined`,
+			Shape:  "the body of a single-line string, read by an alternative of str_any, attr_str or import_path that fails at its end and again by the next alternative",
+			Assign: "F97", Order: Linear, Families: []TriageFamily{
 				{Name: "long string selectors", Build: cueField(func(n int) string { return "b.\"" + rep("s", n) + "\"" }), Sizes: doubling(2000, 3), Order: Linear},
 				{Name: "chains of string selectors", Build: cueField(func(n int) string { return "b" + rep(".\""+rep("s", 20)+"\"", n) }), Sizes: doubling(200, 3), Order: Linear},
 				{Name: "long strings", Build: cueField(func(n int) string { return "\"" + rep("s", n) + "\" + '" + rep("t", n) + "'" }), Sizes: doubling(2000, 3), Order: Linear},
@@ -52,7 +53,7 @@ func triageCue() []TriageGroup {
 				}, Sizes: doubling(200, 3), Order: Linear},
 			}},
 		{Grammar: "cue", ID: "file-clauses", Rules: []string{"file"}, Pattern: `^an iteration of the repetition at 8[56]:[0-9]+ in rule file contains`,
-			Shape:  "an iteration of the package clause or the import list holds a copy of a name or a string that the next part of the file evaluates again at the same position through memoized rules",
+			Shape:  "an iteration of the package clause or the import list holds a space scan or an import list that the next part of the file evaluates again at the same position through memoized rules",
 			Assign: "F100", Order: Linear, Families: []TriageFamily{
 				{Name: "long package name", Build: func(n int) string { return "package " + rep("p", n) + "\n\na: 1\n" }, Sizes: doubling(2000, 3), Order: Linear},
 				{Name: "many import declarations", Build: func(n int) string {
@@ -78,8 +79,8 @@ func triageCue() []TriageGroup {
 				{Name: "multi-line raw string with n hashes", Build: cueField(func(n int) string { h := rep("#", n); return h + "'''\n\ta\n\t'''" + h }), Sizes: doubling(1000, 3), Order: Linear},
 			}},
 		{Grammar: "cue", ID: "multi-line-indentation", Rules: []string{"gml_plain"}, Pattern: `copies, for each element`,
-			Shape:  "the fold of gml_plain compares the text of the closing indentation with the indentation of each line, a comparison that stops at the shorter string",
-			Assign: "F103", Order: Linear, Families: []TriageFamily{
+			Shape:  "the fold of gml_plain joins the closing indentation with U+10FFFF for each line; every line it reaches starts with the closing indentation, so the joins copy no more than the input",
+			Assign: "M29", Order: Linear, Families: []TriageFamily{
 				{Name: "lines indented like a long closing indentation", Build: cueField(func(n int) string {
 					ind := rep(" ", 40)
 					return "\"\"\"\n" + rep(ind+"x\n", n) + ind + "\"\"\""

@@ -405,9 +405,11 @@ The groups are addressed by these mechanisms:
   bounded amount.
 - **Recovery-skip refinement of the classifier.** A `#recover` skip is not a scanning source once repetition-run reuse
   records the ends of skips per position.
-- **Constant-cost text in the cost model.** Every backend takes the text of a capture as a slice of the input, and a
-  string comparison stops at the shorter operand, but the cost model counts both in proportion to size. The cost
-  model is to make both a guarantee that every backend meets; the classifier then counts them accordingly.
+- **Constant-cost text in the cost model.** The cost model guarantees that the text of a node costs a constant in a
+  whole-input parse and a Document, and that a string comparison costs at most its shorter operand, so the classifier
+  does not count a text as a copy. The text of a recursive capture, as in Python's f-string replacement fields, is
+  then linear, and a scan under a text (the body of a CUE string, a CUE name, a comment in the XML prolog, a DuckDB
+  dollar-quote tag) is reported as the scan itself, which belongs to the token-scan or memo-bound groups.
 - **Repetition-run reuse.** duckdb's operator lookahead reads the run of `+` and `-` after an operator character, and a
   prefix operator at each character of the run reads the rest again: `SELECT ` + `+`^n + `1` costs 282k, 1.04M and
   4.01M steps for 210, 410 and 810 bytes. The later stages of run reuse make this linear.
@@ -420,13 +422,17 @@ The groups are addressed by these mechanisms:
   17k bytes). Replacing the action of the CUE recursion with its tail alone measures 205k, 410k and 824k steps for the
   multi-line family, so a repetition with one flat concatenation is linear. The classifier reports this copy of a
   recursion's own value only through the unknown reason of the nested recursion, which the memo-bound refinement
-  removes. After that refinement, the classifier must still report the copy.
+  removes. After that refinement, the classifier must still report the copy. CUE's plain multi-line strings test the
+  indentation of each line in a fold that joins the closing indentation with U+10FFFF for every line. Every line that
+  the fold reaches starts with the closing indentation, so the joins copy no more than the input and the families
+  measure linear, but the classifier sees a copy of a value from outside the lambda for each element. Testing the
+  indentation in the check that already tests strings with interpolations removes the fold.
 
 | Grammar | Group | Causes | Addressed by | Families | Worst exponent | Order |
 |:--|:--|--:|:--|--:|--:|:--|
 | csv | quoted-field | 1 | token-scan refinement | 2 | 1.00 | n |
 | xml | nested | 4 | memo-bound refinement | 3 | 1.02 | n |
-| xml | pi-copy | 1 | memo-bound refinement | 2 | 1.00 | n |
+| xml | prolog-misc | 1 | memo-bound refinement | 4 | 1.00 | n |
 | xml | mixed | 1 | token-scan refinement | 1 | 1.00 | n |
 | xml | name-scan | 4 | token-scan refinement | 3 | 1.00 | n |
 | xml | ws-option | 4 | token-scan refinement | 2 | 1.00 | n |
@@ -446,7 +452,6 @@ The groups are addressed by these mechanisms:
 | duckdb | operator-tails | 15 | repetition-run reuse | 5 | 2.00 | n² |
 | duckdb | strings | 4 | token-scan refinement | 5 | 1.00 | n |
 | python | bounded-variables | 42 | bounded-binding refinement | 5 | 1.01 | n |
-| python | field-text | 2 | constant-cost text in the cost model | 2 | 1.00 | n |
 | python | except-star-handlers | 3 | grammar rewrite | 2 | 1.91 | n² |
 | python | fold-copies | 16 | in-place fold accumulators | 4 | 2.00 | n² |
 | python | nested | 183 | memo-bound refinement | 10 | 1.03 | n |
@@ -459,15 +464,15 @@ The groups are addressed by these mechanisms:
 | typescript | identifiers | 239 | token-scan refinement | 5 | 1.00 | n |
 | typescript | whitespace-and-templates | 3 | token-scan refinement | 3 | 1.00 | n |
 | cue | hash-count | 1 | bounded-binding refinement | 2 | 1.00 | n |
-| cue | multi-line-indentation | 3 | constant-cost text in the cost model | 2 | 1.00 | n |
-| cue | string-text | 9 | constant-cost text in the cost model | 5 | 1.00 | n |
+| cue | multi-line-indentation | 1 | grammar rewrite | 2 | 1.00 | n |
+| cue | string-bodies | 6 | token-scan refinement | 5 | 1.00 | n |
 | cue | interpolation-lists | 4 | grammar rewrite | 3 | 1.88 | n² |
 | cue | file-clauses | 2 | memo-bound refinement | 2 | 0.99 | n |
 | cue | nested | 52 | memo-bound refinement | 8 | 1.01 | n |
-| cue | definitions | 3 | token-scan refinement | 2 | 1.00 | n |
+| cue | definitions | 5 | token-scan refinement | 3 | 1.00 | n |
 | cue | numbers | 7 | token-scan refinement | 6 | 1.00 | n |
 | cue | raw-strings | 10 | token-scan refinement | 5 | 1.00 | n |
-| cue | whitespace | 12 | token-scan refinement | 5 | 1.00 | n |
+| cue | whitespace | 13 | token-scan refinement | 5 | 1.00 | n |
 | yaml | indentation-bindings | 2 | bounded-binding refinement | 3 | 0.99 | n |
 | yaml | nested | 38 | memo-bound refinement | 5 | 1.00 | n |
 | yaml | block-scalars | 3 | token-scan refinement | 3 | 1.00 | n |

@@ -315,6 +315,22 @@ The **cost** of a parse is the sum of the following:
   applies;
 - the size of the values that actions and predicates build.
 
+A **text value**, the result of `text` of a node, denotes a range of the
+input. In a parse of a whole input, in bytes or in code points and whether or
+not the input is valid UTF-8, and in a parse of a [Document](documents.md),
+`text` costs a constant, whatever the length of the range: it is not a value
+that the action builds in proportion to its size. Materializing a text value
+as a string of the host language is not part of the cost of the parse, so a
+backend can return a view of the input or a string that it builds when the
+caller reads it. To make texts constant, a backend can do work in a parse
+that adds up to at most a constant times the length of the input, such as
+decoding an input that is not valid UTF-8 when the first text is taken, or
+copying the texts that cross the pieces of an edited Document until it joins
+the pieces; a parse that takes no such text does not do that work. A [stream](streaming.md) discards input, so in a
+stream `text` costs the length of its result. Comparing two strings examines
+no more than the shorter one, so it costs at most the length of the shorter
+operand, plus a constant.
+
 Time is proportional to cost. The memory that a parse allocates is at most
 proportional to its cost plus the input, because each memo entry, node and
 value is built by cost that is counted. The cost of a parse is measured in
@@ -520,8 +536,7 @@ The conditions below use these terms.
 
 - A **copying operation** is an operation of an action, predicate or binding
   whose cost the classifier counts in proportion to the size of the values it
-  builds or examines: joining strings, taking the text of a capture,
-  converting a value to a string, building a list with `list`, `concat`, `map`
+  builds or examines: joining strings, converting a value to a string, building a list with `list`, `concat`, `map`
   or `filter`, taking the length of a string value with `len`, and comparing
   two strings. The size of a string is its number of characters,
   and the size of a list its number of elements; the elements themselves are
@@ -535,7 +550,9 @@ The conditions below use these terms.
   from a node by the types of the checker, and counts an operand whose type it
   does not know as a string value; and a comparison examines no more than the shorter string,
   so it is counted as copying only one of its operands, and comparing with a
-  literal costs a constant.
+  literal costs a constant. Taking the text of a node is not a copying
+  operation, since it costs a constant (see [Cost](#cost)); its result has
+  the size of the range, which counts where another operation copies it.
 - A **left call** is a call of a rule of a left-recursion cycle, in the body
   of a rule of the same cycle, that can run before that body consumes input.
   The rules that grow are the **leaders**, fixed by the grammar: until every
@@ -741,7 +758,8 @@ necessary.
    value includes the value of such a call when it is the value of the call,
    passes it on, as `$x` does, is an element of it, as `$x[0]` is, or is built
    from it by `+`, `text`, `concat`, `map` or `filter`. So the text of a capture of the recursion includes the
-   text of the calls nested in it, while a list of nodes of the recursion, as
+   text of the calls nested in it, which counts where the text is joined or
+   compared, while a list of nodes of the recursion, as
    built by `list($x)`, has one element per node whatever the node contains;
    `concat(list($x), $t)` with `t` the list of the rule's own recursion
    includes it. A value of a rule on a cycle of such values, and the value of
@@ -778,6 +796,10 @@ classification and no `super-linear` finding.
 | Unknown | None; the classifier cannot bound the cost |
 | Polynomial of degree k | None; an estimate |
 | Exponential | None; an estimate |
+
+In a [stream](streaming.md), where `text` costs the length of its result (see
+[Cost](#cost)), the promises of the first two classes add the total length of
+the results of `text`.
 
 The constant c depends only on the grammar and on the backend. K is the largest
 number of distinct combinations of the values of the variables that memoized
@@ -843,7 +865,7 @@ whatever its class. `Budget` is one counter for all of it: it counts the input
 that terminals, repetitions of character classes and lookaheads examine,
 including input examined again, rule calls, repetition iterations, growth
 steps, and the strings and lists that actions and predicates build, in
-proportion to their size. Each unit adds one to the counter, so a loop that
+proportion to their size, except texts, which cost what [Cost](#cost) states. Each unit adds one to the counter, so a loop that
 only scans input, a deep recursion and a value that grows without reading the
 input are all bounded by it.
 

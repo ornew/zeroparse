@@ -92,7 +92,9 @@ part. The position unit option changes all of them to bytes.
 The parser keeps no text for the caller. String nodes (literals, classes,
 `(...) #atomic`) carry their text in `Node.Text`; tuple and list nodes do not. `text(...)` in an action of the start rule, which runs after elements have
 been discarded, returns only the part of the node's input that is still held,
-possibly the empty string.
+possibly the empty string. A text in a stream costs its length, so the cost
+classes of a grammar promise for a stream their bound plus the total length of
+the texts (see [Classification](parsing.md#classification)).
 
 After an element is delivered, the input before it is discarded except for the one
 character before it, so `^` (beginning of line) still holds at the start of the next

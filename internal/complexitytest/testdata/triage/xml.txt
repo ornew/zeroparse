@@ -6,8 +6,8 @@
 84:48 xml_decl: the option at 84:48 in rule xml_decl contains the repetition [ \t\r\n]+ at 253:10 in rule s and is not committing against what follows the option sd_decl?
 115:26 doctype: the option at 115:26 in rule doctype contains the repetition [ \t\r\n]+ at 253:10 in rule s and is not committing against what follows the option (s x:external_id)?
 
-## pi-copy (1) -> F100
-79:21 misc_list: an iteration of the repetition at 79:21 in rule misc_list contains the copying operation text($t) at 107:18 in rule pi and is not committing against what follows the repetition (-ws m:misc)*
+## prolog-misc (1) -> F100
+79:21 misc_list: an iteration of the repetition at 79:21 in rule misc_list contains the repetition ([.-\u{d7ff} -,\n\t\r\u{e000}-�𐀀... at 100:30 in rule comment_text and is not committing against what follows the repetition (-ws m:misc)*
 
 ## nested (4) -> F100
 142:61 content_spec: the alternative at 142:61 in rule content_spec is not committing against the later alternative sequence at 142:70 in rule content_spec, and units that are not committing are nested in it without bound through a recursion of rule calls

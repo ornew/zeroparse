@@ -62,12 +62,6 @@ func triagePython() []TriageGroup {
 				{Name: "alternating keyword and starred arguments", Build: func(n int) string { return "f(" + list("", "a%d=1, *b", ", ", "")(n) + ")\n" }, Sizes: doubling(500, 3), Order: Poly(2)},
 				{Name: "implicitly joined f-strings", Build: func(n int) string { return "x = " + list("", "f'a{b}' 'c'", " ", "")(n) + "\n" }, Sizes: doubling(500, 3), Order: Poly(2)},
 			}},
-		{Grammar: "python", ID: "field-text", Witness: true, Rules: []string{"ffield", "tfield"}, Pattern: `copies \$s, which holds a call on a recursion`,
-			Shape:  "the text of a replacement field, which holds the nested f-strings of the field, taken at every level; the runtime takes the text of a capture without copying it",
-			Assign: "F103", Order: Linear, Families: []TriageFamily{
-				{Name: "nested f-strings", Build: func(n int) string { return "x = " + nest("f'{", "1", "}'")(n) + "\n" }, Sizes: []int{24, 48, 96}, Order: Linear},
-				{Name: "many fields", Build: func(n int) string { return "x = f'" + rep("{a!r:>10}", n) + "'\n" }, Sizes: doubling(500, 3), Order: Linear},
-			}},
 		{Grammar: "python", ID: "except-star-handlers", Rules: []string{"try_stmt"}, Pattern: `copies, for each element`,
 			Shape:  "the action of try_stmt maps the except* handlers inside a fold over the same handlers",
 			Assign: "M27", Order: Poly(2), Families: []TriageFamily{

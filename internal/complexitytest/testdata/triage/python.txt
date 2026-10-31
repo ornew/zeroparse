@@ -1,4 +1,4 @@
-# python: exponential (degree 0), 150 witnesses, 198 reasons
+# python: exponential (degree 0), 148 witnesses, 198 reasons
 
 ## whitespace (70) -> F97
 254:7 indentation: the cost can grow as n^2: after an iteration of the repetition at 254:6 in rule indentation fails, what follows the repetition ([ \t]* "\u{c}")* can start again inside the input that the repetition [ \t]* at 254:7 in rule indentation examined; this repeats in the recursion of rule indented_block
@@ -73,8 +73,6 @@
 265:11 ws: the cost can grow as n^3: after the option at 342:45 in rule paren_import_names fails, what follows the option (-ws -",")? can start again inside the input that the repetition ([ \t\u{c}]+ / "\\" ("\r\n" / [\n\r])... at 265:11 in rule ws examined; it is evaluated again inside the alternative at 275:76 in rule simple_stmt; this repeats in the repetition (-ws -";" -ws s:simple_stmt / -stmt_s... at 222:14 in rule stmts
 
 ## tokens (20) -> F97
-634:39 lparam: the cost can grow as n^2: after an iteration of the repetition at 621:10 in rule lambda_params fails, what follows the repetition lparam_nd* can start again inside the input that the copying operation text($n) at 634:39 in rule lparam examined; this repeats in the recursion of rule lambda_params
-634:39 lparam: the cost can grow as n^2: after an iteration of the repetition at 621:64 in rule lambda_params fails, what follows the repetition lparam_nd* can start again inside the input that the copying operation text($n) at 634:39 in rule lparam examined; this repeats in the recursion of rule lambda_params
 889:12 str_body: the cost can grow as n^4: after an iteration of the repetition at 889:11 in rule str_body fails, what follows the repetition ([^'\\\u{0}]+ / !"'''" "'" / str_esc)* can start again inside the input that the repetition [^'\\\u{0}]+ at 889:12 in rule str_body examined; it is evaluated again inside an iteration of the repetition at 874:40 in rule plain_strings; it is evaluated again inside the alternative at 872:49 in rule strings; this repeats in the recursion of rule strings
 890:17 str_body: the cost can grow as n^4: after an iteration of the repetition at 890:16 in rule str_body fails, what follows the repetition ([^"\\\u{0}]+ / !"\"\"\"" "\"" / str_... can start again inside the input that the repetition [^"\\\u{0}]+ at 890:17 in rule str_body examined; it is evaluated again inside an iteration of the repetition at 874:40 in rule plain_strings; it is evaluated again inside the alternative at 872:49 in rule strings; this repeats in the recursion of rule strings
 912:11 raw_bytes_body: the cost can grow as n^4: after the alternative at 887:18 in rule bytes_lit fails, the later alternative [bB] bytes_body at 887:59 in rule bytes_lit can start again inside the input that the repetition ([^'\\\u{0}\u{80}-\u{10ffff}]+ / !"''... at 912:11 in rule raw_bytes_body examined; it is evaluated again inside an iteration of the repetition at 875:42 in rule bytes_strings; it is evaluated again inside the alternative at 872:65 in rule strings; this repeats in the recursion of rule strings
@@ -85,6 +83,8 @@
 985:24 digitpart: the cost can grow as n^3: after the alternative at 981:19 in rule dec_number fails, the later alternative digitpart exponent [jJ]? at 981:48 in rule dec_number can start again inside the input that the repetition ("_"? [0-9])* at 985:24 in rule digitpart examined; it is evaluated again inside the alternative at 751:35 in rule atom; this repeats in the recursion of rule atom
 985:24 digitpart: the cost can grow as n^3: after the alternative at 981:48 in rule dec_number fails, the later alternative nonzero_int at 981:92 in rule dec_number can start again inside the input that the repetition ("_"? [0-9])* at 985:24 in rule digitpart examined; it is evaluated again inside the alternative at 751:35 in rule atom; this repeats in the recursion of rule atom
 985:24 digitpart: the cost can grow as n^3: after the alternative at 981:75 in rule dec_number fails, the later alternative nonzero_int at 981:92 in rule dec_number can start again inside the input that the repetition ("_"? [0-9])* at 985:24 in rule digitpart examined; it is evaluated again inside the alternative at 751:35 in rule atom; this repeats in the recursion of rule atom
+997:32 ident: the cost can grow as n^2: after an iteration of the repetition at 621:10 in rule lambda_params fails, what follows the repetition lparam_nd* can start again inside the input that the repetition idcont* at 997:32 in rule ident examined; this repeats in the recursion of rule lambda_params
+997:32 ident: the cost can grow as n^2: after an iteration of the repetition at 621:64 in rule lambda_params fails, what follows the repetition lparam_nd* can start again inside the input that the repetition idcont* at 997:32 in rule ident examined; this repeats in the recursion of rule lambda_params
 997:32 ident: the cost can grow as n^2: after the operator part at 699:17 in rule primary_chain fails, the operator part g:genexp at 700:17 in rule primary_chain can start again inside the input that the repetition idcont* at 997:32 in rule ident examined; this repeats in the recursion of rule primary_chain
 997:32 ident: the cost can grow as n^3: after an iteration of the repetition at 311:34 in rule global_stmt fails, what follows the repetition (-ws -"," -ws n:identifier)* can start again inside the input that the repetition idcont* at 997:32 in rule ident examined; it is evaluated again inside the alternative at 275:7 in rule simple_stmt; this repeats in the repetition (-ws -";" -ws s:simple_stmt / -stmt_s... at 222:14 in rule stmts
 997:32 ident: the cost can grow as n^3: after an iteration of the repetition at 314:36 in rule nonlocal_stmt fails, what follows the repetition (-ws -"," -ws n:identifier)* can start again inside the input that the repetition idcont* at 997:32 in rule ident examined; it is evaluated again inside the alternative at 275:21 in rule simple_stmt; this repeats in the repetition (-ws -";" -ws s:simple_stmt / -stmt_s... at 222:14 in rule stmts
@@ -155,10 +155,6 @@
 846:216 t_primary: the cost can grow as n^2: concat(acc, x.$ks) at 846:216 in rule t_primary copies the fold accumulator acc
 878:50 fjoined: the cost can grow as n^2: concat(acc, x.$p) at 878:50 in rule fjoined copies the fold accumulator acc
 884:52 tstrings: the cost can grow as n^2: concat(acc, x.$p) at 884:52 in rule tstrings copies the fold accumulator acc
-
-## field-text (2) -> F103
-954:37 ffield: the cost can grow as n^2: text($s) at 954:37 in rule ffield copies $s, which holds a call on a recursion with rule ffield
-959:36 tfield: the cost can grow as n^2: text($s) at 959:36 in rule tfield copies $s, which holds a call on a recursion with rule tfield
 
 ## except-star-handlers (3) -> M27
 403:148 try_stmt: map($xs, (x) => x.$h) at 403:148 in rule try_stmt copies, for each element, a value from outside its lambda that is not bounded by a constant

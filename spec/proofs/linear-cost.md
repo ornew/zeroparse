@@ -181,6 +181,13 @@ value of a variable costs at most $L$. Condition 1 keeps the value of a
 variable from growing from its own earlier value, so the number of
 combinations at a position is $K$, a constant when every binding is a literal.
 
+Taking the text of a node is not a copy: by the
+[Constant-Cost Text proof](constant-cost-text.md#lemma-1-text-is-a-constant-step)
+it is a step of constant cost, apart from work of at most a constant times
+$\hat{n}$ in the whole parse, which the constant of the theorem absorbs. A
+stream pays the length of each text besides, as
+[Lemma 4 of that proof](constant-cost-text.md#lemma-4-streams) states.
+
 ## Theorem (Linear Cost)
 
 *When every rule that the start rule reaches satisfies conditions 1 to 5, every

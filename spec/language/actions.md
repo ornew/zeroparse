@@ -403,6 +403,8 @@ strings are UTF-16. In bytes in Go, it takes constant time.
 string argument unchanged, returns `""` for `nil`, returns a string node's
 matched text, and returns the input text covered by the range of a tuple or list
 node. A list value and a struct have no range and are rejected as arguments.
+The text of a node denotes a range of the input and costs a constant, except in
+a stream, where it costs its length (see [Cost](../runtime/parsing.md#cost)).
 
 #### `foldl`
 

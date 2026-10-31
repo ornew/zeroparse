@@ -17,7 +17,7 @@ func triageDuckdb() []TriageGroup {
 				{Name: "one long generic operator", Build: sel(func(n int) string { return "1 *" + rep("+*", n) + " 2" }), Sizes: doubling(500, 3), Order: Linear},
 				{Name: "many comparisons", Build: sel(list("", "a <= b", " AND ", "")), Sizes: doubling(500, 3), Order: Linear},
 			}},
-		{Grammar: "duckdb", ID: "strings", Witness: true, Rules: []string{"sq_string", "e_body", "dq_close", "bit_string"}, Pattern: `examined`,
+		{Grammar: "duckdb", ID: "strings", Witness: true, Rules: []string{"sq_string", "e_body", "dq_tag", "bit_string"}, Pattern: `examined`,
 			Shape:  "a string continuation (strings separated by a newline) or a dollar-quote end that fails after the body was scanned, and the alternative or repetition that reads it again",
 			Assign: "F97", Order: Linear, Families: []TriageFamily{
 				{Name: "continued standard strings", Build: sel(list("", "'"+rep("a", 20)+"'", "\n", "")), Sizes: doubling(500, 3), Order: Linear},
