@@ -77,6 +77,10 @@ handle ExpSet of expected
 handle ExpKept of expected
   // Expectations kept beyond the record, as a memo entry keeps them.
 
+handle Reuse of call
+  // How long the results of a Document call may be reused: after edits, until
+  // the next edit, or only in this parse.
+
 op memo.lookup(rule int, pos int, level int, key Values) (Entry, bool)
   component memo
   reads memo
@@ -326,6 +330,12 @@ transitional op rule.plain(r Rule) bool
   cost <= 0
   contract:
     // Reports whether the rule has no captures, so that its plain body serves its invocation.
+
+transitional op rule.docMemo(r Rule) bool
+  component rules
+  cost <= 0
+  contract:
+    // Reports whether a Document parse memoizes the rule.
 
 transitional op rule.id(r Rule) int
   component rules
@@ -622,6 +632,48 @@ transitional op doc.examinedEnd(enclosing int) (int, bool)
     // result is raised to the position without changing the frontier the Document keeps.
   requires:
     // enclosing is the result of the matching doc.examinedBegin.
+
+transitional op doc.enter(pos int) (int, Reuse)
+  component call
+  reads call
+  writes call
+  features document
+  cost <= 0
+  contract:
+    // Begins a rule call at pos in a Document parse: returns the examined frontier and the reuse of
+    // the enclosing call, and starts the call's frontier past pos and its reuse at after edits.
+
+transitional op doc.leave(high int, reuse Reuse)
+  component call
+  reads call
+  writes call
+  features document
+  cost <= 0
+  contract:
+    // Ends a rule call in a Document parse: the enclosing call's frontier becomes the farther of high
+    // and the call's, and its reuse the shorter of reuse and the call's.
+  requires:
+    // high and reuse are the results of the matching doc.enter.
+
+transitional op call.unmemoized(r Rule, min int) (Value, bool)
+  component call
+  writes call, pos, silent
+  features document
+  noreturn
+  cost <= 0
+  contract:
+    // Calls the rule at the binding level min without memo bookkeeping, restoring the position and
+    // the recovered errors when it fails.
+
+transitional op call.memo(r Rule, min int) (Value, bool)
+  component call
+  writes call, pos, silent
+  features document
+  noreturn
+  cost <= 0
+  contract:
+    // Calls the rule at the binding level min through the memo, with the Document bookkeeping of
+    // what the call examined and how long its result may be reused.
 
 transitional op call.body(r Rule, min int) (Value, bool)
   component call

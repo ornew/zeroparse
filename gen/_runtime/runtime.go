@@ -2625,21 +2625,6 @@ func (p *Parser) callBody(r *Rule, min int) (*Node, bool) {
 	return p.callMemo(r, min)
 }
 
-// callDocument is callBody in a Document parse, which memoizes the rules that
-// the Document reuses and records how far each call examined the input.
-func (p *Parser) callDocument(r *Rule, min int) (*Node, bool) {
-	oldHigh, oldReuse := p.docHigh, p.docReuse
-	p.docHigh, p.docReuse = p.Pos+1, reuseAfterEdits
-	defer func() {
-		p.docHigh = max(oldHigh, p.docHigh)
-		p.docReuse = max(oldReuse, p.docReuse)
-	}()
-	if !r.DocMemo {
-		return p.callUnmemoized(r, min)
-	}
-	return p.callMemo(r, min)
-}
-
 // callUnmemoized is a call without memo bookkeeping, whose expectations need no isolation.
 func (p *Parser) callUnmemoized(r *Rule, min int) (*Node, bool) {
 	if len(r.Scope) == 0 {

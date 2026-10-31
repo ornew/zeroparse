@@ -3,8 +3,8 @@
 // internal/ir/exec/ops, and their specializations for each runtime.
 //
 // The compositions are the call protocol of a rule (deferred memoization, memo lookup with its
-// reuse conditions, store and restore on failure), left-recursion growth and the observation of a
-// call. The Go backend prints
+// reuse conditions, store and restore on failure), left-recursion growth, the observation of a
+// call and the bookkeeping of a call in a Document parse. The Go backend prints
 // them into the generated Go runtime (GoRuntime) and the TypeScript backend into the TypeScript
 // runtime (TSMethods).
 package core
@@ -187,6 +187,22 @@ body again while the match gets longer, and keeps the last longer result.`
 		})
 	observed.Doc = `observed is a rule call in an observed parse: it reports the call to the observation, with how
 far it examined the input in a Document parse, around the call without observation.`
+	document := m.AddFunc("document", []Param{P("r", rule), P("min", TInt)}, result,
+		[]string{ops.Document}, func(b *Builder) {
+			b.LetN([]string{"oldHigh", "oldReuse"}, C("doc.enter", R(ops.Pos)))
+			b.Protect(func(b *Builder) {
+				b.If(Not(C("rule.docMemo", r)), func(b *Builder) {
+					b.LetN([]string{"v", "ok"}, C("call.unmemoized", r, L("min")))
+					b.Return(L("v"), L("ok"))
+				})
+				b.LetN([]string{"v", "ok"}, C("call.memo", r, L("min")))
+				b.Return(L("v"), L("ok"))
+			}, func(b *Builder) { b.Do("doc.leave", L("oldHigh"), L("oldReuse")) })
+		})
+	document.Doc = `document is a rule call in a Document parse, which memoizes the rules that the Document reuses
+and records how far each call examined the input and how long its result may be reused. The
+enclosing call's frontier and reuse are restored however the call ends, an interruption included,
+so that a parse after it starts from the state it would start from otherwise.`
 	if err := Verify(m); err != nil {
 		panic(err)
 	}

@@ -308,3 +308,20 @@ func (p *TParser) invokePlainObserved(r *TRule, min int) (any, bool) {
 	p.Observation.Exit(ok, p.Pos, x, known)
 	return v, ok
 }
+
+// callDocument is callBody in a Document parse, which memoizes the rules that
+// the Document reuses and records how far each call examined the input. The
+// enclosing call's frontier and reuse are restored however the call ends, an
+// interruption included.
+func (p *Parser) callDocument(r *Rule, min int) (*Node, bool) {
+	oldHigh, oldReuse := p.docHigh, p.docReuse
+	p.docHigh, p.docReuse = p.Pos+1, reuseAfterEdits
+	defer func() {
+		p.docHigh = max(oldHigh, p.docHigh)
+		p.docReuse = max(oldReuse, p.docReuse)
+	}()
+	if !r.DocMemo {
+		return p.callUnmemoized(r, min)
+	}
+	return p.callMemo(r, min)
+}

@@ -19,11 +19,12 @@ const (
 
 // Names of the handle types of the transitional operations.
 const (
-	Rule = "Rule"
-	Body = "Body"
-	Mark = "ExpMark"
-	Set  = "ExpSet"
-	Kept = "ExpKept"
+	Rule  = "Rule"
+	Body  = "Body"
+	Mark  = "ExpMark"
+	Set   = "ExpSet"
+	Kept  = "ExpKept"
+	Reuse = "Reuse"
 )
 
 // Registers of the parser VM.
@@ -53,6 +54,8 @@ the least depth of the growing or unstable results that the current call has rea
 	mark := m.AddHandle(Mark, Exp, "The record that an isolation set aside.")
 	set := m.AddHandle(Set, Exp, "The expectations an isolation recorded, valid until the next record.")
 	kept := m.AddHandle(Kept, Exp, "Expectations kept beyond the record, as a memo entry keeps them.")
+	reuse := m.AddHandle(Reuse, Call, `How long the results of a Document call may be reused: after edits, until
+the next edit, or only in this parse.`)
 	value, errs, entry, values := exec.THandle(Value), exec.THandle(Errs), exec.THandle(Entry), exec.THandle(Values)
 	result := []exec.Type{value, exec.TBool}
 	regs := []string{Pos, Silent}
@@ -91,6 +94,7 @@ stream, or for a rule without a seen index).`})
 		{"rule.memo", "Reports whether the rule is memoized."},
 		{"rule.leader", "Reports whether the rule leads a left-recursive cycle."},
 		{"rule.plain", "Reports whether the rule has no captures, so that its plain body serves its invocation."},
+		{"rule.docMemo", "Reports whether a Document parse memoizes the rule."},
 	} {
 		add(&exec.Op{Name: a.name, Component: Rules, Params: ruleArg, Results: []exec.Type{exec.TBool}, Contract: a.doc})
 	}
@@ -217,6 +221,23 @@ an unobserved parse, so that observation does not change reuse.`})
 the call's frontier and true in a Document parse, and false otherwise. In a provisional context, the
 result is raised to the position without changing the frontier the Document keeps.`,
 		Requires: `enclosing is the result of the matching doc.examinedBegin.`})
+	add(&exec.Op{Name: "doc.enter", Component: Call, Params: []exec.Param{exec.P("pos", exec.TInt)},
+		Results: []exec.Type{exec.TInt, reuse}, Reads: []string{Call}, Writes: []string{Call}, Features: []string{Document},
+		Contract: `Begins a rule call at pos in a Document parse: returns the examined frontier and the reuse of
+the enclosing call, and starts the call's frontier past pos and its reuse at after edits.`})
+	add(&exec.Op{Name: "doc.leave", Component: Call, Params: []exec.Param{exec.P("high", exec.TInt), exec.P("reuse", reuse)},
+		Reads: []string{Call}, Writes: []string{Call}, Features: []string{Document},
+		Contract: `Ends a rule call in a Document parse: the enclosing call's frontier becomes the farther of high
+and the call's, and its reuse the shorter of reuse and the call's.`,
+		Requires: `high and reuse are the results of the matching doc.enter.`})
+	add(&exec.Op{Name: "call.unmemoized", Component: Call, Params: call, Results: result, Writes: append([]string{Call}, regs...),
+		Features: []string{Document}, NoReturn: true,
+		Contract: `Calls the rule at the binding level min without memo bookkeeping, restoring the position and
+the recovered errors when it fails.`})
+	add(&exec.Op{Name: "call.memo", Component: Call, Params: call, Results: result, Writes: append([]string{Call}, regs...),
+		Features: []string{Document}, NoReturn: true,
+		Contract: `Calls the rule at the binding level min through the memo, with the Document bookkeeping of
+what the call examined and how long its result may be reused.`})
 	add(&exec.Op{Name: "call.body", Component: Call, Params: call, Results: result, Writes: append([]string{Call}, regs...),
 		NoReturn: true,
 		Contract: `Calls the rule at the binding level min without observation: the call, or the plain invocation,
