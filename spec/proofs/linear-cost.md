@@ -1,0 +1,220 @@
+# Linear Cost
+
+This proof shows that the [Conditions for Linear Cost](../runtime/parsing.md#conditions-for-linear-cost)
+bound the [cost](../runtime/parsing.md#cost) of every parse, so that the
+classes Linear and Linear Given an Environment Bound of
+[Classification](../runtime/parsing.md#classification) hold their promise. It
+splits the cost into the parts that the specification counts and bounds each
+part by one lemma, so that a new condition is added as a lemma, or as a case of
+one, without changing the others.
+
+The theorem and Lemmas 1 and 2 are proved. Lemmas 3 to 6 are given as outlines:
+each states its claim, the conditions it uses, and the steps that its proof
+must still make precise, listed under [Open Steps](#open-steps).
+
+## Setting
+
+Fix a grammar and a start rule such that every rule that the start rule
+reaches satisfies conditions 1 to 5, and an input of length $n$. Let $K$ and
+$L$ be as in [Classification](../runtime/parsing.md#classification), and
+$\hat{n} = n + 1$. The parse is the memoized parse of the
+[memoization proof](memoization.md#setting) with the memoization of
+[Evaluations of Rules](../runtime/parsing.md#evaluations-of-rules).
+"A constant" below means a number that depends only on the grammar and the
+backend.
+
+**Cost.** By [Cost](../runtime/parsing.md#cost), the cost of a parse is
+$C = C_{\mathrm{body}} + C_{\mathrm{in}} + C_{\mathrm{it}} + C_{\mathrm{val}}$:
+the rule bodies evaluated with each growth step counted, the input that
+terminals, repetitions of character classes and lookaheads examine, the
+iterations of repetitions and the operators applied, and the size of the
+values that actions and predicates build.
+
+**Local and scanned cost.** An evaluation of a rule body has a **local cost**,
+the cost of the steps that it makes outside the calls it makes and outside its
+scanning sources, and a **scanned cost**, the cost of the steps of its
+scanning sources outside the calls they make. Each call is counted once as a
+body evaluation of the callee, or as a growth step, or as the reuse of an
+entry, in the evaluation that makes it. Every unit of $C$ belongs to exactly
+one of these: the local or scanned cost of one body evaluation, or one call.
+
+## Lemma 1 (Local Cost)
+
+*The local cost of one body evaluation is at most a constant $c_0$ times
+$L + 1$.*
+
+*Proof.* Outside its scanning sources, a body contains no repetition without
+an upper bound, no `#recover` skip, no operators of an Operators Rule, and no
+copying operation whose operand is unbounded in size other than the value of a
+variable ([Conditions for Linear Cost](../runtime/parsing.md#conditions-for-linear-cost),
+the definition of a scanning source). The body is a finite expression, and
+each of its parts is evaluated at most as many times as the product of the
+upper bounds of the repetitions that enclose it, a constant. Each such
+evaluation outside a call costs a constant, except a copy of the value of a
+variable, which costs at most $L$ by the definition of $L$. $\square$
+
+## Lemma 2 (Calls)
+
+*The number of calls is at most a constant times the number of body
+evaluations plus the number of iterations and applied operators.*
+
+*Proof.* A call is made by a step of a body evaluation, outside a scanning
+source, or within an iteration of a scanning source or an applied operator.
+By Lemma 1 the first kind is a constant per body evaluation. An iteration or
+an applied operator evaluates a part of the body once, which makes at most a
+constant number of calls outside nested scanning sources, as in Lemma 1.
+$\square$
+
+## Lemma 3 (Body Evaluations)
+
+*Outline.* The number of body evaluations, growth steps excluded, is at most a
+constant times $K \hat{n}$ plus the number of calls of rules that are not
+memoized.
+
+The memo evaluates the body of a memoized rule at most twice for each
+position, level and combination of the values of the variables it reads
+([Evaluations of Rules](../runtime/parsing.md#evaluations-of-rules)), which is
+$2 \cdot |\text{rules}| \cdot |\text{levels}| \cdot K \hat{n}$. Each exception
+of that section is accounted for elsewhere:
+
+- a rule that is not memoized is evaluated once for each of its calls, which
+  Lemma 2 counts;
+- a member of a cycle evaluated again in each step of a growth, and the other
+  calls of the cycle at the position of a growth, are a constant number per
+  growth step, which Lemma 5 counts;
+- a result that is not stored because it read an open growth is evaluated
+  again with the steps of that growth, which Lemma 5 counts;
+- a leader that grows again at its position is excluded by condition 5.
+
+## Lemma 4 (Scanned Cost)
+
+*Outline.* Under condition 2, the scanned cost of all body evaluations, together
+with the iterations and applied operators of their scanning sources, is at most
+a constant times $K(L + 1)\hat{n}$.
+
+The proof charges each step of a scanning source to a slot of the input that
+it examines, or to the iteration or operator that makes it, and shows that
+each slot is charged a constant number of times for each combination of the
+values of variables. A slot is charged again only when a scanning source that
+examined it is evaluated again over it, which happens when a unit that
+contains the source fails after the source examined the slot, and the parser
+continues at the start of the unit. Condition 2 requires that such a unit be
+committing, which gives the following cases, one lemma each.
+
+1. *Disjoint first characters.* The continuation does not consume the
+   character at which it and the unit part, so nothing evaluated after the
+   failure starts again inside the input that the unit examined beyond its
+   shared calls.
+2. *Shared calls.* A call that the unit and a continuation both evaluate first
+   has the same result in both, by the [memoization theorem](memoization.md#theorem-memoization-never-changes-the-result)
+   when the rule is memoized, or by repeating only its own scan when it calls
+   no rule, so the continuation pays for it at most what the unit paid.
+3. *No source after the shared calls.* The input that the unit examines beyond
+   its shared calls is bounded by Lemma 1.
+4. *Words that exclude.* The continuation fails, or stops examining, before the
+   end of the word with which the unit began, which the unit examined at most
+   once more, with the character after it.
+
+A unit that fails only before its sources examined input gives back no more
+input than its parts before the sources examined, which Lemma 1 bounds. A unit
+that succeeds is not restarted by its own continuations, and a failure after
+it is a failure of an enclosing unit, to which the same cases apply. The
+expression of a lookahead is abandoned whether it matches or not, so it is
+checked as a unit in every case.
+
+## Lemma 5 (Growth)
+
+*Outline.* Under conditions 2 and 3, the growth steps of all growths, with the
+local and scanned cost of the bodies evaluated in them, cost at most a
+constant times $K(L + 1)\hat{n}$ more than Lemma 4 counts.
+
+A growth at $p$ takes at most two more steps than the length it consumes
+([Evaluations of Rules](../runtime/parsing.md#evaluations-of-rules)). By
+condition 3 no step evaluates a scanning source at $p$ outside the left call
+that grows and outside memoized calls of rules off the cycle, so each step
+costs a constant at $p$, and its growing units examine the input from the end
+of the seed. The input from the end of one seed to the end of the next is
+examined by one step, and what a step examines beyond the end of its own
+result is the failure of a growing unit after a scanning source, which
+condition 2 checks. A growth is itself a scanning source at each call of a
+rule of its cycle other than a left call, so its repetition at another
+position is counted by Lemma 4.
+
+## Lemma 6 (Values and Copies)
+
+*Outline.* Under conditions 1 and 4, the size of the values that actions and
+predicates build is at most a constant times $K(L + 1)\hat{n}$.
+
+A copy of a value that does not include the value of a call on its own
+recursion, nor a fold accumulator, does not add up over the levels of a
+recursion; when it is unbounded it is a scanning source, which Lemma 4 counts.
+A copy in the lambda of `map`, `filter`, `foldl` or `foldr` runs once per
+element and copies at most a constant from outside the lambda. A copy of the
+value of a variable costs at most $L$. Condition 1 keeps the value of a
+variable from growing from its own earlier value, so the number of
+combinations at a position is $K$, a constant when every binding is a literal.
+
+## Theorem (Linear Cost)
+
+*When every rule that the start rule reaches satisfies conditions 1 to 5, every
+parse from the start rule has a cost of at most $c \cdot K \cdot (L + 1) \cdot (n + 1)$
+for a constant $c$. When no variable holds a string and every binding binds a
+literal, $K$ is a constant and $L = 0$, so the cost is at most $c' \cdot (n + 1)$.*
+
+*Proof, given Lemmas 3 to 6.* Each unit of $C$ is the local cost of a body
+evaluation, the scanned cost of one, or a call. By Lemma 1 the local costs add
+up to $c_0 (L + 1)$ times the number of body evaluations, which Lemmas 3 and 5
+bound by a constant times $K \hat{n}$ plus the calls of rules that are not
+memoized. By Lemma 2 the calls are at most a constant times the body
+evaluations plus the iterations and applied operators, which Lemmas 4 and 5
+bound. The scanned cost is bounded by Lemmas 4 and 5 and the values by Lemma 6.
+A rule that is not memoized is called from one place, so its calls do not form
+a recursion of their own, and the substitution of Lemma 2 into Lemma 3 ends
+after at most as many rounds as there are rules. Each bound is a constant
+times $K (L + 1) \hat{n}$. $\square$
+
+The classifier reports the two classes only when the conditions hold, and it
+over-approximates where it cannot decide them
+([Classification](../runtime/parsing.md#classification)). That it does so is a
+property of its implementation, checked by its tests; this proof covers the
+step from the conditions to the bound.
+
+## Adding a Condition
+
+A new condition enters the proof in one of two ways.
+
+- A new way for a unit to be committing is a new case of Lemma 4. Its lemma
+  shows that after the unit is abandoned, what the parser evaluates next
+  examines again at most a constant amount of the input that the unit examined
+  beyond its shared calls.
+- A new bound on a part of the cost, or on a cost that the specification
+  starts to count, is a new lemma with the part that it bounds, and the
+  theorem adds its bound.
+
+## Open Steps
+
+The outlines leave these steps to be made precise.
+
+1. **Charging in Lemma 4.** The scheme that assigns each scanned step to a
+   slot, and the proof that a slot is charged a constant number of times,
+   across nested units, rule calls and the two evaluations that the memo
+   allows at a position. The specification argues each case for one unit; the
+   proof must combine them over the units that enclose one another.
+2. **"A unit that succeeds is not restarted."** A body that contains the unit
+   can itself be evaluated again: by the memo, at most twice at a position;
+   when its rule is not memoized, at each of its calls. The proof must show
+   that these evaluations are counted by Lemma 3 and do not multiply the
+   scanned cost beyond a constant.
+3. **Continuations of growing units.** The case where the first step of a
+   growth matches a part before the left call, as through `F` in
+   `E = F "+" X / Y; F = E / M`, and the unit is also checked as an
+   alternative that is not growing.
+4. **Operators Rules.** The units of an Operators Rule, its `skip`, and right
+   operands that apply operators themselves, in Lemmas 4 and 5.
+5. **Lemma 3 and left recursion.** Once the rules for storing the results of
+   growths are final in [Evaluations of Rules](../runtime/parsing.md#evaluations-of-rules),
+   the cost of evaluating again the results that read an open growth must be
+   bounded in Lemma 5, and the role of condition 5 restated.
+6. **Variables in Lemma 6.** The bound $L = O(n)$ that
+   [Classification](../runtime/parsing.md#classification) states, and the
+   comparisons of memo keys that hold strings, which cost up to $L$ per lookup.
