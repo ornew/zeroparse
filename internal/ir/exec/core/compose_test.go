@@ -62,11 +62,11 @@ type machine struct {
 	// docActive tells whether the parse reads a Document (doc.active); examined and reuses hold what
 	// each entry records (memo.setExamined, memo.setReuse); reused counts the reused entries
 	// (doc.reused) and parseOnly lists the entries reused only in this parse (doc.parseOnly).
-	docActive bool
-	examined  map[*ref.Entry]int64
-	reuses    map[*ref.Entry]int64
-	reused    int
-	parseOnly []string
+	docActive, obsActive bool
+	examined             map[*ref.Entry]int64
+	reuses               map[*ref.Entry]int64
+	reused               int
+	parseOnly            []string
 	// last is the entry stored or grown last (memo.store, memo.grown).
 	last *ref.Entry
 }
@@ -233,6 +233,8 @@ func (m *machine) Call(o *exec.Op, args []any) []any {
 		return nil
 	case "rule.docMemo":
 		return []any{m.docMemo}
+	case "obs.active":
+		return []any{m.obsActive}
 	case "doc.active":
 		return []any{m.docActive}
 	case "doc.touch":
@@ -656,6 +658,49 @@ func checkDocument(t testing.TB, mod *exec.Module, f *exec.Func) {
 				t.Errorf("%s: evaluates the body %d times, want once", c.name, r.runs)
 			}
 		}()
+	}
+}
+
+// TestTrackedPath checks the routing of a call on the tracked path: an observed parse reports the
+// call to the observation, a Document parse takes the Document call, and otherwise the call is
+// unmemoized while the rule's memoization is deferred and memoized after; each call is charged once.
+func TestTrackedPath(t *testing.T) {
+	mod := Build()
+	f := composition(t, mod, "tracked", ops.Document, ops.Observe)
+	for _, c := range []struct {
+		observed, document bool
+	}{{false, false}, {true, false}, {false, true}, {true, true}} {
+		m := newMachine()
+		m.obsActive, m.docActive, m.docMemo = c.observed, c.document, true
+		r := &trule{id: 1, memo: true, defer_: true, body: func(m *machine) (any, bool) {
+			m.advance(1)
+			return "v", true
+		}}
+		var stored []bool
+		for range 3 {
+			m.last = nil
+			if v, ok := callAt(t, mod, m, f, r, 2); !ok || v != "v" || m.pos() != 3 {
+				t.Fatalf("%+v: %v %v at %d", c, v, ok, m.pos())
+			}
+			stored = append(stored, m.last != nil)
+		}
+		wantEvents := 0
+		if c.observed {
+			wantEvents = 6 // the enter and exit of each call
+		}
+		// The observed call evaluates the body itself (call.body); otherwise a deferred rule is
+		// stored on its second call and reused on its third, and a Document memoizes on the first.
+		wantStored, wantRuns, wantSpends := []bool{false, true, false}, 2, 3
+		switch {
+		case c.observed:
+			wantStored, wantRuns, wantSpends = []bool{false, false, false}, 3, 0
+		case c.document:
+			wantStored, wantRuns = []bool{true, false, false}, 1
+		}
+		if len(m.events) != wantEvents || !slices.Equal(stored, wantStored) || r.runs != wantRuns || m.spends != wantSpends {
+			t.Errorf("%+v: %d events, stored %v, %d evaluations and %d charges; want %d, %v, %d and %d",
+				c, len(m.events), stored, r.runs, m.spends, wantEvents, wantStored, wantRuns, wantSpends)
+		}
 	}
 }
 

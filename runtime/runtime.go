@@ -2569,14 +2569,6 @@ func (p *Parser) MakeError(pos int, expected []ExpID) *SyntaxError {
 
 // --- Rule calls ---
 
-// callTracked is call in an observed or Document parse.
-func (p *Parser) callTracked(r *Rule, min int) (*Node, bool) {
-	if p.Observation != nil {
-		return p.callObserved(r, min)
-	}
-	return p.callBody(r, min)
-}
-
 // ExaminedBegin starts measuring an observed call's examined frontier in a
 // Document parse, returning the enclosing frontier for ExaminedEnd. The call
 // itself, and any memo entry it reads or records, extends the frontier as in an
@@ -2610,19 +2602,6 @@ func (p *Parser) ExaminedEnd(enclosing int) (int, bool) {
 func (p *Parser) releaseObservation() {
 	p.Observation.release()
 	p.Observation = nil
-}
-
-// callBody is call with the Document bookkeeping and without observation. A
-// Document parse takes callDocument.
-func (p *Parser) callBody(r *Rule, min int) (*Node, bool) {
-	p.Spend()
-	if p.Document != nil {
-		return p.callDocument(r, min)
-	}
-	if (!r.Memo && !r.Leader) || p.FirstCall(r) {
-		return p.callUnmemoized(r, min)
-	}
-	return p.callMemo(r, min)
 }
 
 // leaderReuse returns the reuse that the result of the current Document call allows, given the

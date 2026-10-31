@@ -268,6 +268,28 @@ bookkeeping of how far each call examined the input and how long its result may 
 and records how far each call examined the input and how long its result may be reused. The
 enclosing call's frontier and reuse are restored however the call ends, an interruption included,
 so that a parse after it starts from the state it would start from otherwise.`
+	// ret2 returns the result of the call c of a function.
+	ret2 := func(b *Builder, c *Call) {
+		b.LetN([]string{"v", "ok"}, c)
+		b.Return(L("v"), L("ok"))
+	}
+	body := m.AddFunc("body", []Param{P("r", rule), P("min", TInt)}, result, []string{ops.Document}, func(b *Builder) {
+		b.Do("call.spend")
+		b.If(And(F(ops.Document), C("doc.active")), func(b *Builder) { ret2(b, C("document", r, L("min"))) })
+		b.If(Bin("||", And(Not(C("rule.memo", r)), Not(C("rule.leader", r))), C("call.first", r)), func(b *Builder) {
+			ret2(b, C("unmemoized", r, L("min")))
+		})
+		ret2(b, C("memoized", r, L("min")))
+	})
+	body.Doc = `body is a rule call on the tracked path without observation: the Document call in a Document
+parse, and otherwise the unmemoized call while the rule's memoization is deferred and the memoized
+call after.`
+	trackedCall := m.AddFunc("tracked", []Param{P("r", rule), P("min", TInt)}, result, []string{ops.Document, ops.Observe}, func(b *Builder) {
+		b.If(And(F(ops.Observe), C("obs.active")), func(b *Builder) { ret2(b, C("observed", r, L("min"))) })
+		ret2(b, C("body", r, L("min")))
+	})
+	trackedCall.Doc = `tracked is a rule call in an observed or Document parse: the observed call in an observed parse,
+and otherwise the call without observation.`
 	if err := Verify(m); err != nil {
 		panic(err)
 	}

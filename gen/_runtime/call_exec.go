@@ -465,3 +465,35 @@ func (p *Parser) callMemo(r *Rule, min int) (*Node, bool) {
 	}
 	return v, ok
 }
+
+// callBody is a rule call on the tracked path without observation: the Document call in a Document
+// parse, and otherwise the unmemoized call while the rule's memoization is deferred and the memoized
+// call after.
+//
+// Printed from Exec IR function body of internal/ir/exec/core, specialized for document.
+func (p *Parser) callBody(r *Rule, min int) (*Node, bool) {
+	p.Spend()
+	if p.Document != nil {
+		v, ok := p.callDocument(r, min)
+		return v, ok
+	}
+	if !r.Memo && !r.Leader || p.FirstCall(r) {
+		v, ok := p.callUnmemoized(r, min)
+		return v, ok
+	}
+	v, ok := p.callMemo(r, min)
+	return v, ok
+}
+
+// callTracked is a rule call in an observed or Document parse: the observed call in an observed parse,
+// and otherwise the call without observation.
+//
+// Printed from Exec IR function tracked of internal/ir/exec/core, specialized for document, observe.
+func (p *Parser) callTracked(r *Rule, min int) (*Node, bool) {
+	if p.Observation != nil {
+		v, ok := p.callObserved(r, min)
+		return v, ok
+	}
+	v, ok := p.callBody(r, min)
+	return v, ok
+}

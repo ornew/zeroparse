@@ -616,6 +616,14 @@ transitional op obs.memoHit()
   contract:
     // Counts a reuse of a memo entry in the observation, if the parse is observed.
 
+transitional op obs.active() bool
+  component observe
+  reads observe
+  features observe
+  cost <= 0
+  contract:
+    // Reports whether the parse is observed.
+
 transitional op obs.enter(r Rule, pos int, min int)
   component observe
   writes observe

@@ -416,3 +416,24 @@ func (p *Parser) callMemo(r *Rule, min int) (*Node, bool) {
 	}
 	return v, ok
 }
+
+// callTracked is call in an observed or Document parse.
+func (p *Parser) callTracked(r *Rule, min int) (*Node, bool) {
+	if p.Observation != nil {
+		return p.callObserved(r, min)
+	}
+	return p.callBody(r, min)
+}
+
+// callBody is call with the Document bookkeeping and without observation. A
+// Document parse takes callDocument.
+func (p *Parser) callBody(r *Rule, min int) (*Node, bool) {
+	p.Spend()
+	if p.Document != nil {
+		return p.callDocument(r, min)
+	}
+	if (!r.Memo && !r.Leader) || p.FirstCall(r) {
+		return p.callUnmemoized(r, min)
+	}
+	return p.callMemo(r, min)
+}
