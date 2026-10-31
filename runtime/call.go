@@ -439,3 +439,107 @@ func (p *Parser) callBody(r *Rule, min int) (*Node, bool) {
 	}
 	return p.callMemo(r, min)
 }
+
+// DocumentCall memoizes typed rule entries (rule.DocMemo), including generated
+// direct wrappers. Examined and provisional metadata stays outside batch memo
+// entries.
+func (p *TParser) DocumentCall(r *TRule, min int, inv func(*TParser) (any, bool)) (any, bool) {
+	p.Spend()
+	start := p.Pos
+	oldHigh, oldReuse := p.docHigh, p.docReuse
+	p.docHigh, p.docReuse = start+1, reuseAfterEdits
+	defer func() { p.docHigh = max(oldHigh, p.docHigh); p.docReuse = max(oldReuse, p.docReuse) }()
+	if !r.DocMemo {
+		rec := len(p.Recovered)
+		var v any
+		var ok bool
+		if inv != nil {
+			p.Document.stats.Evaluated++
+			v, ok = inv(p)
+		} else {
+			v, ok = p.invoke(r, min)
+		}
+		if !ok {
+			p.Pos = start
+			p.Recovered = p.Recovered[:rec]
+		}
+		return v, ok
+	}
+	env := p.memoEnv(r.Rule)
+	old := p.memoGet(r.Id, start, min, env)
+	if old != nil && !p.memberStale(r.Member, start) && (old.growing || (!old.silent || p.Silent > 0) && (len(old.errs) == 0 || old.silent == (p.Silent > 0))) {
+		p.Observation.memoHit()
+		p.readResult(old.growing, old.depth)
+		m := p.TypedDocument.meta[old]
+		p.documentTouch(m.examined)
+		p.docReuse = max(p.docReuse, m.reuse)
+		if old.growing {
+			p.docReuse = max(p.docReuse, reuseUntilEdit)
+		}
+		p.Document.stats.Reused++
+		if !old.growing {
+			p.MergeExpected(old.far, old.expected)
+		}
+		if !old.ok {
+			return nil, false
+		}
+		p.Pos = old.end
+		p.Recovered = p.copyErrors(p.Recovered, old.errs)
+		return old.val, true
+	}
+	rec := len(p.Recovered)
+	depth, read := p.growths, p.enterCall()
+	m := p.Isolate(start)
+	var v any
+	var ok bool
+	var e *tmemoEntry
+	if r.Leader {
+		// An entry that is not reused is replaced. Do not keep it alive through stale metadata
+		// once its memo chain no longer refers to it.
+		if old != nil {
+			delete(p.TypedDocument.meta, old)
+		}
+		v, ok = p.grow(r, min, env)
+		e = p.memoGet(r.Id, start, min, env)
+	} else {
+		if inv != nil {
+			p.Document.stats.Evaluated++
+			v, ok = inv(p)
+		} else {
+			v, ok = p.invoke(r, min)
+		}
+		if !ok {
+			p.Recovered = p.Recovered[:rec]
+		}
+		if p.readDepth <= depth {
+			// A result that can change (readResult) is not memoized; an entry that is not reused
+			// stays with its metadata.
+			e = &tmemoEntry{}
+		} else {
+			if old != nil {
+				delete(p.TypedDocument.meta, old)
+			}
+			e = p.memoSlab.one()
+			*e = tmemoEntry{val: v, ok: ok, end: p.Pos, silent: p.Silent > 0, errs: p.copyErrors(nil, p.Recovered[rec:])}
+			p.memoPut(r.Id, start, min, env, e)
+		}
+	}
+	fresh := p.readDepth > depth
+	p.leaveCall(read)
+	far, inner := p.Unisolate(m)
+	e.far, e.expected = far, p.Keep(inner)
+	p.documentTouch(p.Pos + 1)
+	// A result that can change was not memoized, so it has no metadata.
+	p.docReuse = p.leaderReuse(r.Leader, fresh)
+	if r.Leader || fresh {
+		p.TypedDocument.meta[e] = typedDocumentMeta{examined: p.docHigh, reuse: p.docReuse}
+		if p.docReuse == reuseInParse {
+			p.TypedDocument.parseOnly = append(p.TypedDocument.parseOnly, tmemoPlace{start, e})
+		}
+	}
+	p.MergeExpected(far, inner)
+	if !ok {
+		p.Pos = start
+	}
+	return v, ok
+}

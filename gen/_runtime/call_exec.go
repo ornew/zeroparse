@@ -498,3 +498,114 @@ func (p *Parser) callTracked(r *Rule, min int) (*Node, bool) {
 	v, ok := p.callBody(r, min)
 	return v, ok
 }
+
+// DocumentCall is a typed rule call in a Document parse, for the rule r at binding level min,
+// invoked by inv when a generated call passes it: unmemoized for a rule that the Document does not
+// memoize, and otherwise through the memo, with the Document record of each entry kept beside it. As
+// in document, the enclosing call's frontier and reuse are restored however the call ends.
+//
+// Printed from Exec IR function typedDocument of internal/ir/exec/core, specialized for document, observe, typed.
+func (p *TParser) DocumentCall(r *TRule, min int, inv func(*TParser) (any, bool)) (any, bool) {
+	var v any
+	var ok bool
+	var entry *tmemoEntry
+	p.Spend()
+	start := p.Pos
+	oldHigh, oldReuse := p.docHigh, p.docReuse
+	p.docHigh, p.docReuse = start+1, reuseAfterEdits
+	defer func() {
+		p.docHigh = max(oldHigh, p.docHigh)
+		p.docReuse = max(oldReuse, p.docReuse)
+	}()
+	if !r.DocMemo {
+		rec := len(p.Recovered)
+		if inv != nil {
+			p.Document.stats.Evaluated++
+			v, ok = inv(p)
+		} else {
+			v, ok = p.invoke(r, min)
+		}
+		if !ok {
+			p.Pos = start
+			p.Recovered = p.Recovered[:rec]
+		}
+		return v, ok
+	}
+	env := p.memoEnv(r.Rule)
+	e := p.memoGet(r.Id, start, min, env)
+	found := e != nil
+	if found && !p.memberStale(r.Member, start) && (e.growing || (!e.silent || p.Silent > 0) && ((len(e.errs) == 0) || e.silent == (p.Silent > 0))) {
+		p.Observation.memoHit()
+		p.readResult(e.growing, e.depth)
+		meta := p.TypedDocument.meta[e]
+		p.documentTouch(meta.examined)
+		p.docReuse = max(p.docReuse, meta.reuse)
+		if e.growing {
+			p.docReuse = max(p.docReuse, reuseUntilEdit)
+		}
+		p.Document.stats.Reused++
+		if !e.growing {
+			p.MergeExpected(e.far, e.expected)
+		}
+		if !e.ok {
+			return nil, false
+		}
+		p.Pos = e.end
+		p.Recovered = p.copyErrors(p.Recovered, e.errs)
+		return e.val, true
+	}
+	rec := len(p.Recovered)
+	depth := p.growths
+	read := p.enterCall()
+	m := p.Isolate(start)
+	if r.Leader {
+		if found {
+			delete(p.TypedDocument.meta, e)
+		}
+		v, ok = p.grow(r, min, env)
+		entry = p.memoGet(r.Id, start, min, env)
+	} else {
+		if inv != nil {
+			p.Document.stats.Evaluated++
+			v, ok = inv(p)
+		} else {
+			v, ok = p.invoke(r, min)
+		}
+		if !ok {
+			p.Recovered = p.Recovered[:rec]
+		}
+		if p.readDepth <= depth {
+			entry = &tmemoEntry{}
+		} else {
+			if found {
+				delete(p.TypedDocument.meta, e)
+			}
+			entry = p.memoSlab.one()
+			*entry = tmemoEntry{val: v, ok: ok, end: p.Pos, silent: p.Silent > 0, errs: p.copyErrors(nil, p.Recovered[rec:])}
+			p.memoPut(r.Id, start, min, env, entry)
+		}
+	}
+	settled := !(p.readDepth <= depth)
+	p.leaveCall(read)
+	far, inner := p.Unisolate(m)
+	entry.far, entry.expected = far, p.Keep(inner)
+	p.documentTouch(p.Pos + 1)
+	if r.Leader {
+		if !settled {
+			p.docReuse = reuseInParse
+		} else {
+			p.docReuse = max(p.docReuse, reuseUntilEdit)
+		}
+	}
+	if r.Leader || settled {
+		p.TypedDocument.meta[entry] = typedDocumentMeta{examined: p.docHigh, reuse: p.docReuse}
+		if p.docReuse == reuseInParse {
+			p.TypedDocument.parseOnly = append(p.TypedDocument.parseOnly, tmemoPlace{start, entry})
+		}
+	}
+	p.MergeExpected(far, inner)
+	if !ok {
+		p.Pos = start
+	}
+	return v, ok
+}

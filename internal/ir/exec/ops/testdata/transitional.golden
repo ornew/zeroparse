@@ -497,6 +497,15 @@ transitional op memo.recordDoc(e Entry)
     // Records with the entry the examined frontier of the current call and how
     // long its result may be reused, for the reuse of the entry (doc.readEntry).
 
+transitional op memo.forgetDoc(e Entry)
+  component memo
+  writes memo
+  features document
+  cost <= 0
+  contract:
+    // Forgets the Document record of the entry e, which the call replaces, where the target keeps
+    // the records beside the entries.
+
 transitional op lr.stale(r Rule, pos int) bool
   component growth
   reads growth, rules
@@ -741,6 +750,16 @@ transitional op doc.reused()
   cost <= 0
   contract:
     // Counts a reused memo entry in the statistics of the Document.
+  requires:
+    // The parse reads a Document.
+
+transitional op doc.evaluated()
+  component call
+  writes call
+  features document
+  cost <= 0
+  contract:
+    // Counts an evaluated rule body in the statistics of the Document.
   requires:
     // The parse reads a Document.
 

@@ -163,6 +163,9 @@ stream commit pruned it.`,
 	add(&exec.Op{Name: "memo.recordDoc", Component: Memo, Params: entryArg, Reads: []string{Call}, Writes: []string{Memo},
 		Features: []string{Document}, Contract: `Records with the entry the examined frontier of the current call and how
 long its result may be reused, for the reuse of the entry (doc.readEntry).`})
+	add(&exec.Op{Name: "memo.forgetDoc", Component: Memo, Params: entryArg, Writes: []string{Memo}, Features: []string{Document},
+		Contract: `Forgets the Document record of the entry e, which the call replaces, where the target keeps
+the records beside the entries.`})
 	add(&exec.Op{Name: "lr.stale", Component: Growth, Params: []exec.Param{exec.P("r", rule), exec.P("pos", exec.TInt)},
 		Results: []exec.Type{exec.TBool}, Reads: []string{Growth, Rules},
 		Contract: `Reports whether the result of the rule at pos is evaluated again instead of reused: the rule
@@ -257,6 +260,8 @@ with e and limits its reuse to the one recorded with e.`, Requires: `The parse r
 shorter of the two.`, Requires: inDoc})
 	add(&exec.Op{Name: "doc.reused", Component: Call, Writes: []string{Call}, Features: doc,
 		Contract: `Counts a reused memo entry in the statistics of the Document.`, Requires: inDoc})
+	add(&exec.Op{Name: "doc.evaluated", Component: Call, Writes: []string{Call}, Features: doc,
+		Contract: `Counts an evaluated rule body in the statistics of the Document.`, Requires: inDoc})
 	add(&exec.Op{Name: "doc.parseOnly", Component: Call, Params: []exec.Param{exec.P("pos", exec.TInt), exec.P("e", entry)},
 		Writes: []string{Call}, Features: doc,
 		Contract: `Records the entry e stored at pos as reused only in this parse, so that the parse removes it

@@ -69,6 +69,10 @@ type machine struct {
 	parseOnly            []string
 	// last is the entry stored or grown last (memo.store, memo.grown).
 	last *ref.Entry
+	// evaluated counts the bodies evaluated through an invocation (doc.evaluated); forgot lists the
+	// frontiers of the records forgotten (memo.forgetDoc).
+	evaluated int
+	forgot    []int64
 }
 
 func newMachine() *machine {
@@ -263,6 +267,17 @@ func (m *machine) Call(o *exec.Op, args []any) []any {
 		return []any{int64(1)}
 	case "reuse.inParse":
 		return []any{int64(2)}
+	case "doc.evaluated":
+		m.evaluated++
+		return nil
+	case "memo.forgetDoc":
+		e := entryOf(args[0])
+		m.forgot = append(m.forgot, m.examined[e])
+		delete(m.examined, e)
+		delete(m.reuses, e)
+		return nil
+	case "rule.run":
+		return args[0].(*trule).Call(m)
 	case "memo.recordDoc":
 		e := entryOf(args[0])
 		m.examined[e], m.reuses[e] = m.high, m.reuse
@@ -560,6 +575,9 @@ func TestDocument(t *testing.T) {
 	mod := Build()
 	f := composition(t, mod, "document", ops.Document)
 	checkDocument(t, mod, f)
+	t.Run("typed", func(t *testing.T) {
+		checkDocument(t, mod, composition(t, mod, "typedDocument", ops.Document, ops.Observe, ops.Typed), nil)
+	})
 }
 
 // TestDocumentCleanupMutant checks that TestDocument's checks fail for a document call whose
@@ -602,7 +620,7 @@ func (f *fakeT) Helper()                           {}
 func (f *fakeT) Errorf(format string, args ...any) { f.failed = true }
 func (f *fakeT) Fatal(args ...any)                 { f.failed = true; panic(f) }
 
-func checkDocument(t testing.TB, mod *exec.Module, f *exec.Func) {
+func checkDocument(t testing.TB, mod *exec.Module, f *exec.Func, extra ...any) {
 	t.Helper()
 	for _, c := range []struct {
 		name        string
@@ -637,7 +655,7 @@ func checkDocument(t testing.TB, mod *exec.Module, f *exec.Func) {
 				}
 				return "v", c.ok
 			}}
-			res, err := exec.Run(mod, f, &start{machine: m, pos: 3}, r, int64(0))
+			res, err := exec.Run(mod, f, &start{machine: m, pos: 3}, append([]any{r, int64(0)}, extra...)...)
 			if c.interrupt {
 				if _, ok := err.(exec.Interrupt); !ok {
 					t.Errorf("%s: %v, %v, want an interruption", c.name, res, err)
@@ -698,6 +716,92 @@ func TestTrackedPath(t *testing.T) {
 			t.Errorf("%+v: %d events, stored %v, %d evaluations and %d charges; want %d, %v, %d and %d",
 				c, len(m.events), stored, r.runs, m.spends, wantEvents, wantStored, wantRuns, wantSpends)
 		}
+	}
+}
+
+// Call evaluates the rule's body, as an invocation that a generated call passes (rule.run).
+func (r *trule) Call(m *machine) []any {
+	r.runs++
+	v, ok := r.body(m)
+	return []any{v, ok}
+}
+
+// TestTypedDocument checks what the typed Document call adds: a body evaluated through the
+// invocation that a generated call passes is counted, the record of an entry is kept beside it and
+// read on a reuse, and a call that replaces an entry forgets the entry's record.
+func TestTypedDocument(t *testing.T) {
+	mod := Build()
+	f := composition(t, mod, "typedDocument", ops.Document, ops.Observe, ops.Typed)
+	run := func(m *machine, r *trule, inv any, pos, silent int64) (any, bool) {
+		t.Helper()
+		res, err := exec.Run(mod, f, &start{machine: m, pos: pos, silent: silent}, r, int64(0), inv)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res[0], res[1].(bool)
+	}
+	// A rule that the Document does not memoize, invoked by the generated call or not.
+	for _, viaInv := range []bool{true, false} {
+		m := newMachine()
+		r := &trule{id: 1, body: func(m *machine) (any, bool) {
+			m.recover("x")
+			m.advance(2)
+			return nil, false
+		}}
+		var inv any
+		if viaInv {
+			inv = r
+		}
+		if _, ok := run(m, r, inv, 3, 0); ok || m.pos() != 3 || len(m.rec) != 0 || r.runs != 1 {
+			t.Errorf("inv=%v: failure %v at %d, recovered %v after %d evaluations; want a failure at 3", viaInv, ok, m.pos(), m.rec, r.runs)
+		}
+		if want := map[bool]int{true: 1, false: 0}[viaInv]; m.evaluated != want {
+			t.Errorf("inv=%v: %d counted evaluations, want %d", viaInv, m.evaluated, want)
+		}
+	}
+	// A memoized rule: computed in a lookahead, its entry is not reused outside one, so the call
+	// outside replaces it and forgets its record; a later call reuses the new entry and its record.
+	m := newMachine()
+	m.docMemo = true
+	r := &trule{id: 1, memo: true, body: func(m *machine) (any, bool) {
+		m.advance(2)
+		m.high = max(m.high, 4+m.pos())
+		return "v", true
+	}}
+	run(m, r, r, 3, 1)
+	first := m.lastEntry(t)
+	if m.examined[first] != 9 || m.evaluated != 1 {
+		t.Fatalf("the entry records %d after %d counted evaluations, want 9 and 1", m.examined[first], m.evaluated)
+	}
+	m.high = 0
+	run(m, r, nil, 3, 0)
+	second := m.lastEntry(t)
+	if second == first || !slices.Equal(m.forgot, []int64{9}) || m.examined[second] != 9 || r.runs != 2 {
+		t.Errorf("replacing the entry forgot %v and records %d after %d evaluations; want [9], 9 and 2", m.forgot, m.examined[second], r.runs)
+	}
+	m.high, m.reuse = 0, 0
+	if v, ok := run(m, r, r, 3, 0); !ok || v != "v" || m.pos() != 5 || r.runs != 2 || m.reused != 1 || m.high != 9 {
+		t.Errorf("the reuse gives %v %v at %d after %d evaluations, %d reuses and the frontier %d; want v true at 5, 2, 1 and 9",
+			v, ok, m.pos(), r.runs, m.reused, m.high)
+	}
+	// A leader's grown entry is replaced in the same way.
+	m = newMachine()
+	m.docMemo = true
+	n := 0
+	leader := &trule{id: 2, memo: true, leader: true, body: func(m *machine) (any, bool) {
+		if n%3 == 2 {
+			n++
+			return nil, false
+		}
+		m.advance(int64(n%3 + 1))
+		n++
+		return "v", true
+	}}
+	run(m, leader, nil, 3, 1)
+	grown := m.lastEntry(t)
+	run(m, leader, nil, 3, 0)
+	if m.lastEntry(t) == grown || len(m.forgot) != 1 {
+		t.Errorf("replacing the grown entry forgot %v, want its record", m.forgot)
 	}
 }
 
