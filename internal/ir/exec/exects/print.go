@@ -396,6 +396,11 @@ func exitsTo(ss []exec.Stmt, label string) bool {
 			if exitsTo(s.Then.Stmts, label) || s.Else != nil && exitsTo(s.Else.Stmts, label) {
 				return true
 			}
+		case *exec.Protect:
+			// The verifier keeps exits out of a cleanup.
+			if exitsTo(s.Body.Stmts, label) {
+				return true
+			}
 		}
 		if jumps(st) {
 			return false

@@ -186,3 +186,16 @@ func TestOpStatements(t *testing.T) {
 		}
 	}
 }
+
+// TestExitsToThroughProtect checks that an exit inside the body of a protected region counts for
+// the label it names.
+func TestExitsToThroughProtect(t *testing.T) {
+	ss := []ir.Stmt{&ir.Protect{
+		Body:    &ir.Block{Stmts: []ir.Stmt{&ir.If{Cond: ir.BoolC(true), Then: &ir.Block{Stmts: []ir.Stmt{&ir.Exit{Label: "out"}}}}}},
+		Finally: &ir.Block{},
+	}}
+	if !exitsTo(ss, "out") || exitsTo(ss, "other") {
+		t.Errorf("exitsTo through a protected region = %v for its label and %v for another, want true and false",
+			exitsTo(ss, "out"), exitsTo(ss, "other"))
+	}
+}
