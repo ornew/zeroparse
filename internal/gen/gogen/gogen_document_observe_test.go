@@ -227,7 +227,7 @@ func observedRuntime(t *testing.T) string {
 			if name == "call_exec.go" {
 				stored = "entry"
 			}
-			old := stored + ".examined = p.docHigh\n"
+			old := stored + ".examined, " + stored + ".reuse = p.docHigh, p.docReuse\n"
 			src = replace(src, old, "FrontierHook(r.Name, start, min, p.docHigh, false); "+old, 1)
 			return replace(src, "p.documentTouch(e.examined)\n", "p.documentTouch(e.examined)\n\t\t\tFrontierHook(r.Name, start, min, e.examined, true)\n", 1)
 		case "typed.go":
