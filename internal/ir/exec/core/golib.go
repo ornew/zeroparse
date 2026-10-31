@@ -47,6 +47,8 @@ var goSpecs = []goSpec{
 	{fn: "observed", on: []string{ops.Document, ops.Observe}, name: "invokePlainObserved", body: "invokePlainBody"},
 	{fn: "observed", typed: true, on: []string{ops.Document, ops.Observe}, name: "callObserved", body: "callBody"},
 	{fn: "observed", typed: true, on: []string{ops.Document, ops.Observe}, name: "invokePlainObserved", body: "invokePlainBody"},
+	// The rule call of a Document parse in the node runtime.
+	{fn: "document", on: []string{ops.Document}, name: "callDocument"},
 }
 
 // GoRuntime returns the Go file of the printed compositions for package runtime, built with
@@ -76,7 +78,7 @@ func goTarget(s goSpec) *execgo.Target {
 	t := &execgo.Target{Recv: "p *Parser", Source: "internal/ir/exec/core"}
 	handles := map[string]string{
 		ops.Rule: "*Rule", ops.Value: "*Node", ops.Entry: "*memoEntry", ops.Values: "[]any", ops.Errs: "[]*SyntaxError",
-		ops.Mark: "ExpMark", ops.Set: "[]ExpID", ops.Kept: "[]ExpID",
+		ops.Mark: "ExpMark", ops.Set: "[]ExpID", ops.Kept: "[]ExpID", ops.Reuse: "docReuse",
 	}
 	names := map[string]string{"call": "Call", "grow": "grow"}
 	entryType, valueField, alloc := "memoEntry", "node", "p.memo.alloc()"
@@ -119,6 +121,8 @@ func goTarget(s goSpec) *execgo.Target {
 			return a[0] + ".Leader"
 		case "rule.plain":
 			return "len(" + a[0] + ".Scope) == 0"
+		case "rule.docMemo":
+			return a[0] + ".DocMemo"
 		case "rule.id":
 			return a[0] + ".Id"
 		case "rule.invoke":
@@ -169,6 +173,12 @@ func goTarget(s goSpec) *execgo.Target {
 			return "p.ExaminedBegin()"
 		case "doc.examinedEnd":
 			return "p.ExaminedEnd(" + a[0] + ")"
+		case "doc.leave":
+			return fmt.Sprintf("p.docHigh = max(%s, p.docHigh)\np.docReuse = max(%s, p.docReuse)", a[0], a[1])
+		case "call.unmemoized":
+			return fmt.Sprintf("p.callUnmemoized(%s, %s)", a[0], a[1])
+		case "call.memo":
+			return fmt.Sprintf("p.callMemo(%s, %s)", a[0], a[1])
 		case "call.body":
 			return fmt.Sprintf("p.%s(%s, %s)", s.body, a[0], a[1])
 		case "lr.stale":
@@ -207,6 +217,8 @@ func goTarget(s goSpec) *execgo.Target {
 			return s, true
 		case "lr.begin":
 			return fmt.Sprintf("%s%sp.seedPos\np.growths++\np.seedPos = %s", dst[0], op, a[0]), true
+		case "doc.enter":
+			return fmt.Sprintf("%s, %s%sp.docHigh, p.docReuse\np.docHigh, p.docReuse = %s+1, reuseAfterEdits", dst[0], dst[1], op, a[0]), true
 		case "memo.store", "memo.seed", "memo.reseed":
 			e := dst[0]
 			var fields string

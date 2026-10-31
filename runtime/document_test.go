@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -261,4 +262,63 @@ func testDocumentState(root *Rule, text string, unit PositionUnit) *documentStat
 	g.Descs = []string{"any", "begin input", "end input", "begin line", "end line"}
 	root.g = g
 	return newDocumentState(root, text, unit)
+}
+
+// TestDocumentLimitInsideCallThenParseEqualsFresh interrupts a Document parse by its work budget at
+// every point of an edited parse, inside the rule calls included, and checks that the next parse of
+// the Document gives what a parse of a fresh Document gives.
+func TestDocumentLimitInsideCallThenParseEqualsFresh(t *testing.T) {
+	text := "aaaaaaaa"
+	edited := text[:4] + "a" + text[4:]
+	o := parseOptions{maxDepth: defaultMaxDepth}
+	fresh := func() *Node {
+		main, _ := documentTestRules()
+		n, err := testDocumentState(main, edited, CodePoints).parse(o)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	want := documentNodeString(fresh())
+	interrupted := 0
+	for budget := uint64(1); ; budget++ {
+		main, _ := documentTestRules()
+		d := testDocumentState(main, text, CodePoints)
+		if _, err := d.parse(o); err != nil {
+			t.Fatal(err)
+		}
+		if err := d.edit(4, 4, "a"); err != nil {
+			t.Fatal(err)
+		}
+		limited := o
+		limited.limits = Limits{Budget: budget}
+		if _, err := d.parse(limited); err == nil {
+			break
+		} else if !errors.Is(err, ErrLimit) {
+			t.Fatalf("budget %d: %v", budget, err)
+		}
+		interrupted++
+		got, err := d.parse(o)
+		if err != nil {
+			t.Fatalf("budget %d: the parse after the interruption: %v", budget, err)
+		}
+		if s := documentNodeString(got); s != want {
+			t.Fatalf("budget %d: the parse after the interruption gives\n%s\na fresh Document\n%s", budget, s, want)
+		}
+	}
+	if interrupted < len(edited) {
+		t.Fatalf("%d budgets interrupted the parse, want at least one per rule call", interrupted)
+	}
+}
+
+// documentNodeString lists the kinds and spans of a tree.
+func documentNodeString(n *Node) string {
+	if n == nil {
+		return "nil"
+	}
+	s := fmt.Sprintf("(%v %d-%d", n.Kind(), n.RawStart, n.RawEnd)
+	for _, c := range n.RawChildren {
+		s += " " + documentNodeString(c)
+	}
+	return s + ")"
 }

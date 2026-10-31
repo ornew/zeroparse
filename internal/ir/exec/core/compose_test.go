@@ -55,6 +55,10 @@ type machine struct {
 	// of the active call (doc.examinedBegin, doc.examinedEnd).
 	events []string
 	high   int64
+	// reuse is the reuse of the active Document call (doc.enter, doc.leave), and docMemo tells
+	// whether a Document parse memoizes the rules (rule.docMemo).
+	reuse   int64
+	docMemo bool
 }
 
 func newMachine() *machine {
@@ -207,6 +211,22 @@ func (m *machine) Call(o *exec.Op, args []any) []any {
 		x := m.high
 		m.high = max(args[0].(int64), x)
 		return []any{x, true}
+	case "doc.enter":
+		h, u := m.high, m.reuse
+		m.high, m.reuse = args[0].(int64)+1, 0
+		return []any{h, u}
+	case "doc.leave":
+		m.high = max(args[0].(int64), m.high)
+		m.reuse = max(args[1].(int64), m.reuse)
+		return nil
+	case "rule.docMemo":
+		return []any{m.docMemo}
+	case "call.unmemoized", "call.memo":
+		m.events = append(m.events, o.Name)
+		r := args[0].(*trule)
+		r.runs++
+		v, ok := r.body(m)
+		return []any{v, ok}
 	case "call.body":
 		r := args[0].(*trule)
 		r.runs++
@@ -455,6 +475,112 @@ func TestObserved(t *testing.T) {
 				t.Errorf("the body began with the frontier %d and the call left %d, want 3 and 12", at, m.high)
 			}
 		})
+	}
+}
+
+// TestDocument checks that a Document call starts the frontier of the call past its position and
+// its reuse at after edits, and leaves the enclosing call the farther frontier and the shorter
+// reuse, when the call returns and when an operation in it interrupts the parse.
+func TestDocument(t *testing.T) {
+	mod := Build()
+	f := composition(t, mod, "document", ops.Document)
+	checkDocument(t, mod, f)
+}
+
+// TestDocumentCleanupMutant checks that TestDocument's checks fail for a document call whose
+// cleanup runs before each return of its body but not when an operation interrupts the parse.
+func TestDocumentCleanupMutant(t *testing.T) {
+	mod := Build()
+	f := composition(t, mod, "document", ops.Document)
+	stmts := f.Body.Stmts
+	p := stmts[len(stmts)-1].(*exec.Protect)
+	var unprotect func(b *exec.Block)
+	unprotect = func(b *exec.Block) {
+		var out []exec.Stmt
+		for _, st := range b.Stmts {
+			switch st := st.(type) {
+			case *exec.Return:
+				out = append(out, p.Finally.Stmts...)
+			case *exec.If:
+				unprotect(st.Then)
+			}
+			out = append(out, st)
+		}
+		b.Stmts = out
+	}
+	unprotect(p.Body)
+	f.Body.Stmts = append(stmts[:len(stmts)-1:len(stmts)-1], p.Body.Stmts...)
+	ft := &fakeT{}
+	checkDocument(ft, mod, f)
+	if !ft.failed {
+		t.Error("the checks pass for a document call without its cleanup on an interruption")
+	}
+}
+
+// fakeT records the failures of checks run on a mutant.
+type fakeT struct {
+	testing.TB
+	failed bool
+}
+
+func (f *fakeT) Helper()                           {}
+func (f *fakeT) Errorf(format string, args ...any) { f.failed = true }
+func (f *fakeT) Fatal(args ...any)                 { f.failed = true; panic(f) }
+
+func checkDocument(t testing.TB, mod *exec.Module, f *exec.Func) {
+	t.Helper()
+	for _, c := range []struct {
+		name          string
+		memo, ok      bool
+		interrupt     bool
+		high, reuse   int64
+		callHigh      int64
+		callReuse     int64
+		wantHigh      int64
+		wantReuse     int64
+		wantCallEvent string
+	}{
+		{name: "memoized", memo: true, ok: true, high: 2, reuse: 1, callHigh: 9, callReuse: 0, wantHigh: 9, wantReuse: 1, wantCallEvent: "call.memo"},
+		{name: "unmemoized failure", ok: false, high: 12, reuse: 2, callHigh: 9, callReuse: 1, wantHigh: 12, wantReuse: 2, wantCallEvent: "call.unmemoized"},
+		{name: "interrupted", memo: true, interrupt: true, high: 2, reuse: 1, callHigh: 9, callReuse: 0, wantHigh: 9, wantReuse: 1, wantCallEvent: "call.memo"},
+		{name: "interrupted unmemoized", interrupt: true, high: 12, reuse: 2, callHigh: 9, callReuse: 1, wantHigh: 12, wantReuse: 2, wantCallEvent: "call.unmemoized"},
+	} {
+		func() {
+			defer func() {
+				if x := recover(); x != nil && x != t {
+					panic(x)
+				}
+			}()
+			m := newMachine()
+			m.high, m.reuse, m.docMemo = c.high, c.reuse, c.memo
+			var atHigh, atReuse int64 = -1, -1
+			r := &trule{id: 2, body: func(m *machine) (any, bool) {
+				atHigh, atReuse = m.high, m.reuse
+				m.advance(2)
+				m.high, m.reuse = c.callHigh, c.callReuse
+				if c.interrupt {
+					panic(exec.Interrupt{Reason: "limit"})
+				}
+				return "v", c.ok
+			}}
+			res, err := exec.Run(mod, f, &start{machine: m, pos: 3}, r, int64(0))
+			if c.interrupt {
+				if _, ok := err.(exec.Interrupt); !ok {
+					t.Errorf("%s: %v, %v, want an interruption", c.name, res, err)
+				}
+			} else if err != nil || res[1] != c.ok {
+				t.Errorf("%s: %v, %v, want success %v", c.name, res, err, c.ok)
+			}
+			if atHigh != 4 || atReuse != 0 {
+				t.Errorf("%s: the call began with the frontier %d and reuse %d, want 4 and 0", c.name, atHigh, atReuse)
+			}
+			if m.high != c.wantHigh || m.reuse != c.wantReuse {
+				t.Errorf("%s: the call left the frontier %d and reuse %d, want %d and %d", c.name, m.high, m.reuse, c.wantHigh, c.wantReuse)
+			}
+			if !slices.Equal(m.events, []string{c.wantCallEvent}) {
+				t.Errorf("%s: calls %q, want %s", c.name, m.events, c.wantCallEvent)
+			}
+		}()
 	}
 }
 
