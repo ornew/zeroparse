@@ -187,8 +187,8 @@ func goTarget(s goSpec) *execgo.Target {
 			return "p.Document != nil"
 		case "doc.touch":
 			return "p.documentTouch(" + a[0] + ")"
-		case "doc.high":
-			return "p.docHigh"
+		case "doc.readEntry":
+			return fmt.Sprintf("p.documentTouch(%s.examined)\np.docReuse = max(p.docReuse, %s.reuse)", a[0], a[0])
 		case "doc.reuse":
 			return "p.docReuse"
 		case "doc.setReuse":
@@ -203,12 +203,8 @@ func goTarget(s goSpec) *execgo.Target {
 			return "reuseUntilEdit"
 		case "reuse.inParse":
 			return "reuseInParse"
-		case "memo.examined", "memo.reuse":
-			return a[0] + "." + strings.TrimPrefix(c.Callee, "memo.")
-		case "memo.setExamined":
-			return a[0] + ".examined = " + a[1]
-		case "memo.setReuse":
-			return a[0] + ".reuse = " + a[1]
+		case "memo.recordDoc":
+			return a[0] + ".examined, " + a[0] + ".reuse = p.docHigh, p.docReuse"
 		case "call.body":
 			return fmt.Sprintf("p.%s(%s, %s)", s.body, a[0], a[1])
 		case "lr.stale":

@@ -60,7 +60,7 @@ type machine struct {
 	reuse   int64
 	docMemo bool
 	// docActive tells whether the parse reads a Document (doc.active); examined and reuses hold what
-	// each entry records (memo.setExamined, memo.setReuse); reused counts the reused entries
+	// each entry records (memo.recordDoc); reused counts the reused entries
 	// (doc.reused) and parseOnly lists the entries reused only in this parse (doc.parseOnly).
 	docActive, obsActive bool
 	examined             map[*ref.Entry]int64
@@ -240,8 +240,11 @@ func (m *machine) Call(o *exec.Op, args []any) []any {
 	case "doc.touch":
 		m.high = max(m.high, args[0].(int64))
 		return nil
-	case "doc.high":
-		return []any{m.high}
+	case "doc.readEntry":
+		e := entryOf(args[0])
+		m.high = max(m.high, m.examined[e])
+		m.reuse = max(m.reuse, m.reuses[e])
+		return nil
 	case "doc.reuse":
 		return []any{m.reuse}
 	case "doc.setReuse":
@@ -260,15 +263,9 @@ func (m *machine) Call(o *exec.Op, args []any) []any {
 		return []any{int64(1)}
 	case "reuse.inParse":
 		return []any{int64(2)}
-	case "memo.examined":
-		return []any{m.examined[entryOf(args[0])]}
-	case "memo.reuse":
-		return []any{m.reuses[entryOf(args[0])]}
-	case "memo.setExamined":
-		m.examined[entryOf(args[0])] = args[1].(int64)
-		return nil
-	case "memo.setReuse":
-		m.reuses[entryOf(args[0])] = args[1].(int64)
+	case "memo.recordDoc":
+		e := entryOf(args[0])
+		m.examined[e], m.reuses[e] = m.high, m.reuse
 		return nil
 	case "call.body":
 		r := args[0].(*trule)

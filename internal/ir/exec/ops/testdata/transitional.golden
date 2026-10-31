@@ -487,37 +487,15 @@ transitional op memo.detached() Entry
   contract:
     // Returns a new entry under no key, which no lookup finds.
 
-transitional op memo.examined(e Entry) int
+transitional op memo.recordDoc(e Entry)
   component memo
-  reads memo
-  features document
-  cost <= 0
-  contract:
-    // Returns how far the call that stored the entry examined the input.
-
-transitional op memo.reuse(e Entry) Reuse
-  component memo
-  reads memo
-  features document
-  cost <= 0
-  contract:
-    // Returns how long the entry may be reused.
-
-transitional op memo.setExamined(e Entry, x int)
-  component memo
+  reads call
   writes memo
   features document
   cost <= 0
   contract:
-    // Records with the entry that its call examined the input up to x.
-
-transitional op memo.setReuse(e Entry, u Reuse)
-  component memo
-  writes memo
-  features document
-  cost <= 0
-  contract:
-    // Records with the entry that it may be reused as u tells.
+    // Records with the entry the examined frontier of the current call and how
+    // long its result may be reused, for the reuse of the entry (doc.readEntry).
 
 transitional op lr.stale(r Rule, pos int) bool
   component growth
@@ -712,15 +690,17 @@ transitional op doc.touch(end int)
   contract:
     // Extends the examined frontier of the current call to end, if end is past it.
 
-transitional op doc.high() int
+transitional op doc.readEntry(e Entry)
   component call
-  reads call
+  reads call, memo
+  writes call
   features document
   cost <= 0
   contract:
-    // Returns the examined frontier of the current call.
+    // Records that the current call read the entry e: extends its examined frontier to the one recorded
+    // with e and limits its reuse to the one recorded with e.
   requires:
-    // The parse reads a Document.
+    // The parse reads a Document, and e has a record (memo.recordDoc).
 
 transitional op doc.reuse() Reuse
   component call

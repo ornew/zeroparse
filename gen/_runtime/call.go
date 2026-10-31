@@ -403,11 +403,13 @@ func (p *Parser) callMemo(r *Rule, min int) (*Node, bool) {
 	e.far, e.expected = far, p.Keep(inner)
 	if p.Document != nil {
 		p.documentTouch(p.Pos + 1)
-		e.examined = p.docHigh
 		p.docReuse = p.leaderReuse(r.Leader, settled)
-		e.reuse = p.docReuse
-		if e.reuse == reuseInParse && (r.Leader || settled) {
-			p.docParseOnly = append(p.docParseOnly, memoPlace{start, e})
+		// A result that can change was not memoized, so its entry needs no record.
+		if r.Leader || settled {
+			e.examined, e.reuse = p.docHigh, p.docReuse
+			if p.docReuse == reuseInParse {
+				p.docParseOnly = append(p.docParseOnly, memoPlace{start, e})
+			}
 		}
 	}
 	p.MergeExpected(far, inner)

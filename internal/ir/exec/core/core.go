@@ -58,8 +58,7 @@ func Build() *Module {
 			b.Do("lr.read", e)
 			if doc {
 				b.If(C("doc.active"), func(b *Builder) {
-					b.Do("doc.touch", C("memo.examined", e))
-					b.Do("doc.limitReuse", C("memo.reuse", e))
+					b.Do("doc.readEntry", e)
 					b.If(C("memo.growing", e), func(b *Builder) { b.Do("doc.limitReuse", C("reuse.untilEdit")) })
 					b.Do("doc.reused")
 				})
@@ -107,15 +106,17 @@ func Build() *Module {
 		if doc {
 			b.If(C("doc.active"), func(b *Builder) {
 				b.Do("doc.touch", Add(R(ops.Pos), Int(1)))
-				b.Do("memo.setExamined", L("entry"), C("doc.high"))
 				b.If(C("rule.leader", r), func(b *Builder) {
 					b.IfElse(Not(L("settled")), func(b *Builder) {
 						b.Do("doc.setReuse", C("reuse.inParse"))
 					}, func(b *Builder) { b.Do("doc.limitReuse", C("reuse.untilEdit")) })
 				})
-				b.Do("memo.setReuse", L("entry"), C("doc.reuse"))
-				b.If(And(Eq(C("memo.reuse", L("entry")), C("reuse.inParse")), Bin("||", C("rule.leader", r), L("settled"))), func(b *Builder) {
-					b.Do("doc.parseOnly", L("start"), L("entry"))
+				// A result that can change was not memoized, so its entry needs no record.
+				b.If(Bin("||", C("rule.leader", r), L("settled")), func(b *Builder) {
+					b.Do("memo.recordDoc", L("entry"))
+					b.If(Eq(C("doc.reuse"), C("reuse.inParse")), func(b *Builder) {
+						b.Do("doc.parseOnly", L("start"), L("entry"))
+					})
 				})
 			})
 		}

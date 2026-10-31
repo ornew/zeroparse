@@ -160,14 +160,9 @@ stream commit pruned it.`,
 	add(&exec.Op{Name: "memo.detached", Component: Memo, Results: []exec.Type{entry},
 		Contract: `Returns a new entry under no key, which no lookup finds.`})
 
-	add(&exec.Op{Name: "memo.examined", Component: Memo, Params: entryArg, Results: []exec.Type{exec.TInt}, Reads: []string{Memo},
-		Features: []string{Document}, Contract: `Returns how far the call that stored the entry examined the input.`})
-	add(&exec.Op{Name: "memo.reuse", Component: Memo, Params: entryArg, Results: []exec.Type{reuse}, Reads: []string{Memo},
-		Features: []string{Document}, Contract: `Returns how long the entry may be reused.`})
-	add(&exec.Op{Name: "memo.setExamined", Component: Memo, Params: append(entryArg, exec.P("x", exec.TInt)), Writes: []string{Memo},
-		Features: []string{Document}, Contract: `Records with the entry that its call examined the input up to x.`})
-	add(&exec.Op{Name: "memo.setReuse", Component: Memo, Params: append(entryArg, exec.P("u", reuse)), Writes: []string{Memo},
-		Features: []string{Document}, Contract: `Records with the entry that it may be reused as u tells.`})
+	add(&exec.Op{Name: "memo.recordDoc", Component: Memo, Params: entryArg, Reads: []string{Call}, Writes: []string{Memo},
+		Features: []string{Document}, Contract: `Records with the entry the examined frontier of the current call and how
+long its result may be reused, for the reuse of the entry (doc.readEntry).`})
 	add(&exec.Op{Name: "lr.stale", Component: Growth, Params: []exec.Param{exec.P("r", rule), exec.P("pos", exec.TInt)},
 		Results: []exec.Type{exec.TBool}, Reads: []string{Growth, Rules},
 		Contract: `Reports whether the result of the rule at pos is evaluated again instead of reused: the rule
@@ -248,8 +243,10 @@ and the call's, and its reuse the shorter of reuse and the call's.`,
 	add(&exec.Op{Name: "doc.touch", Component: Call, Params: []exec.Param{exec.P("end", exec.TInt)}, Reads: []string{Call},
 		Writes: []string{Call}, Features: doc,
 		Contract: `Extends the examined frontier of the current call to end, if end is past it.`})
-	add(&exec.Op{Name: "doc.high", Component: Call, Results: []exec.Type{exec.TInt}, Reads: []string{Call}, Features: doc,
-		Contract: `Returns the examined frontier of the current call.`, Requires: inDoc})
+	add(&exec.Op{Name: "doc.readEntry", Component: Call, Params: entryArg, Reads: []string{Call, Memo}, Writes: []string{Call},
+		Features: doc,
+		Contract: `Records that the current call read the entry e: extends its examined frontier to the one recorded
+with e and limits its reuse to the one recorded with e.`, Requires: `The parse reads a Document, and e has a record (memo.recordDoc).`})
 	add(&exec.Op{Name: "doc.reuse", Component: Call, Results: []exec.Type{reuse}, Reads: []string{Call}, Features: doc,
 		Contract: `Returns how long the result of the current call may be reused.`, Requires: inDoc})
 	add(&exec.Op{Name: "doc.setReuse", Component: Call, Params: reuseArg, Writes: []string{Call}, Features: doc,

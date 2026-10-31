@@ -446,7 +446,6 @@ func (p *Parser) callMemo(r *Rule, min int) (*Node, bool) {
 	entry.far, entry.expected = far, p.Keep(inner)
 	if p.Document != nil {
 		p.documentTouch(p.Pos + 1)
-		entry.examined = p.docHigh
 		if r.Leader {
 			if !settled {
 				p.docReuse = reuseInParse
@@ -454,9 +453,11 @@ func (p *Parser) callMemo(r *Rule, min int) (*Node, bool) {
 				p.docReuse = max(p.docReuse, reuseUntilEdit)
 			}
 		}
-		entry.reuse = p.docReuse
-		if entry.reuse == reuseInParse && (r.Leader || settled) {
-			p.docParseOnly = append(p.docParseOnly, memoPlace{start, entry})
+		if r.Leader || settled {
+			entry.examined, entry.reuse = p.docHigh, p.docReuse
+			if p.docReuse == reuseInParse {
+				p.docParseOnly = append(p.docParseOnly, memoPlace{start, entry})
+			}
 		}
 	}
 	p.MergeExpected(far, inner)
