@@ -93,7 +93,15 @@ rule piece = .*`
 						if !armed || observed == nil || observed.Scratch != nil || observed.Control != nil {
 							t.Fatalf("%v/%v trace=%t recognition=%t cancel=%t: trace/cleanup failed", b, u, traceText, recognize, cancel)
 						}
-						if u == CodePoints {
+						// A parse that builds the text of each matched character decodes the
+						// input at the first of them, before the hook arms: every parse that
+						// builds nodes, and a recognition inside the capture of the predicate,
+						// whose value it needs. Later texts are substrings of the decoded input
+						// that charge nothing, so only cancellation, which the rest of the parse
+						// still polls, interrupts such a parse; the text of the trace hook in a
+						// recognition is the first text and is interrupted while decoding.
+						decodedEarly := !cancel && (!recognize || !traceText)
+						if u == CodePoints && !decodedEarly {
 							target := limits.ErrLimit
 							if cancel {
 								target = context.Canceled

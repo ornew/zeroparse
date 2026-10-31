@@ -2426,15 +2426,12 @@ export class Parser {
     s.put(pos, r);
   }
 
+  // text returns the text of [start, end): a range of the input, which costs a constant whatever
+  // its length (the string the slice builds is not part of the parse cost).
   text(start: number, end: number): string {
     const control = this.control;
     if (control !== null) {
-      if (this.offs !== null) {
-        control.charge(2);
-        start = this.offs[start]!;
-        end = this.offs[end]!;
-      }
-      return sliceStringSpend(this.src, start, end, control);
+      control.charge(1);
     }
     if (this.offs === null) {
       return this.src.slice(start, end);

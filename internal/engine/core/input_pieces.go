@@ -81,12 +81,25 @@ func (p DocumentPiece) Substring(from, to int, unit PositionUnit) string {
 
 // documentPieces keeps the editable text separate from the contiguous batch
 // and stream input paths. Each edit copies descriptors, not unchanged text.
+//
+// Text within one piece is a substring of that piece. A text that crosses
+// pieces is copied while the copies since the last edit stay shorter than the
+// document; the text that would reach its length flattens the whole document
+// into Full, and every later text slices it until the next edit (in code
+// points through an offset table built when a text first needs it). So the texts of a parse cost a constant each
+// plus at most twice the length of the document, and a parse that takes only
+// short texts across an edit copies only those.
 type documentPieces struct {
 	unit   PositionUnit
 	Parts  []DocumentPiece
 	N      int
 	Full   string
 	FullOK bool
+	// In code points, the offset table of Full (one of the two, as for a piece).
+	fullOffs      []int32
+	fullLargeOffs []int
+	// copied is the length of the texts copied across pieces since the last edit.
+	copied int
 }
 
 func NewDocumentPieces(text string, unit PositionUnit) *documentPieces {
@@ -245,11 +258,15 @@ func (d *documentPieces) Replace(start, end int, text string) int {
 		parts[i].start = n
 		n += parts[i].length(d.unit)
 	}
-	d.Parts, d.N, d.Full, d.FullOK = parts, n, "", false
+	d.Parts, d.N = parts, n
+	d.Full, d.FullOK, d.fullOffs, d.fullLargeOffs, d.copied = "", false, nil, nil, 0
 	if len(d.Parts) > 512 {
 		// Bound descriptor search and references to abandoned source chunks.
-		flat := d.Text(0, d.N)
-		*d = *NewDocumentPieces(flat, d.unit)
+		var b strings.Builder
+		for _, p := range d.Parts {
+			b.WriteString(p.Text)
+		}
+		*d = *NewDocumentPieces(b.String(), d.unit)
 	}
 	return added.length(d.unit) - (end - start)
 }
@@ -258,25 +275,120 @@ func (d *documentPieces) Text(start, end int) string {
 	if start == end {
 		return ""
 	}
-	if start == 0 && end == d.N && d.FullOK {
-		return d.Full
+	if !d.FullOK {
+		i, offset := d.find(start)
+		if p := d.Parts[i]; end <= p.start+p.length(d.unit) {
+			return p.Substring(offset, offset+end-start, d.unit)
+		}
+		return d.crossingText(i, start, end, nil)
 	}
-	i, offset := d.find(start)
-	if p := d.Parts[i]; end <= p.start+p.length(d.unit) {
-		return p.Substring(offset, offset+end-start, d.unit)
+	return d.fullText(start, end, nil)
+}
+
+// crossingText returns the text of [start, end), which starts in part i and crosses pieces, as
+// Text describes, calling spend (if not nil) with the size of each bounded step before taking it.
+func (d *documentPieces) crossingText(i, start, end int, spend func(uint64)) string {
+	if d.copied+(end-start) >= d.N {
+		d.flatten(spend)
+		return d.fullText(start, end, spend)
 	}
 	var b strings.Builder
 	for pos := start; pos < end; i++ {
+		if spend != nil {
+			spend(1)
+		}
 		p := d.Parts[i]
 		until := min(end, p.start+p.length(d.unit))
-		b.WriteString(p.Substring(pos-p.start, until-p.start, d.unit))
+		text := p.Substring(pos-p.start, until-p.start, d.unit)
+		for off := 0; off < len(text); {
+			n := min(4096, len(text)-off)
+			if spend != nil {
+				spend(uint64(n))
+			}
+			b.WriteString(text[off : off+n])
+			off += n
+		}
 		pos = until
 	}
-	s := b.String()
-	if start == 0 && end == d.N {
-		d.Full, d.FullOK = s, true
+	d.copied += end - start
+	return b.String()
+}
+
+// fullText returns the text of [start, end) from the flattened document. In code points, the
+// first text that is not the whole document builds the offset table of Full, calling spend (if
+// not nil) with the size of each bounded step before taking it; reading the whole document, as
+// Document.Text does, needs no table.
+func (d *documentPieces) fullText(start, end int, spend func(uint64)) string {
+	if d.unit == Bytes {
+		return d.Full[start:end]
 	}
-	return s
+	if start == 0 && end == d.N {
+		return d.Full
+	}
+	if d.fullOffs == nil && d.fullLargeOffs == nil {
+		d.buildFullOffs(spend)
+	}
+	if d.fullLargeOffs != nil {
+		return d.Full[d.fullLargeOffs[start]:d.fullLargeOffs[end]]
+	}
+	return d.Full[d.fullOffs[start]:d.fullOffs[end]]
+}
+
+// flatten joins the pieces into Full, calling spend (if not nil) with the size of each bounded
+// step before taking it. It publishes the result only once every step succeeds, so an
+// interrupted flattening leaves no partial cache.
+func (d *documentPieces) flatten(spend func(uint64)) {
+	size := 0
+	for _, p := range d.Parts {
+		size = CheckedTextSize(size, len(p.Text))
+	}
+	var b strings.Builder
+	b.Grow(size)
+	for _, p := range d.Parts {
+		if spend != nil {
+			spend(1)
+		}
+		for off := 0; off < len(p.Text); {
+			n := min(4096, len(p.Text)-off)
+			if spend != nil {
+				spend(uint64(n))
+			}
+			b.WriteString(p.Text[off : off+n])
+			off += n
+		}
+	}
+	d.Full, d.FullOK = b.String(), true
+}
+
+// buildFullOffs builds the offset table of Full in code points, as flatten charges its steps; an
+// interrupted build publishes no table.
+func (d *documentPieces) buildFullOffs(spend func(uint64)) {
+	var offs []int32
+	var large []int
+	if int64(len(d.Full)) > 1<<31-1 {
+		large = make([]int, 0, d.N+1)
+	} else {
+		offs = make([]int32, 0, d.N+1)
+	}
+	for i := 0; i < len(d.Full); {
+		if spend != nil {
+			spend(uint64(min(4096, len(d.Full)-i)))
+		}
+		for end := min(i+4096, len(d.Full)); i < end; {
+			if large != nil {
+				large = append(large, i)
+			} else {
+				offs = append(offs, int32(i))
+			}
+			_, size := utf8.DecodeRuneInString(d.Full[i:])
+			i += size
+		}
+	}
+	if large != nil {
+		d.fullLargeOffs = append(large, len(d.Full))
+	} else {
+		d.fullOffs = append(offs, int32(len(d.Full)))
+	}
 }
 
 // Small Documents retain the flat representation: at 1 KiB, piece lookup and

@@ -305,17 +305,6 @@ export function utf8LenSpend(s: string, control: BudgetControl): number {
   return n;
 }
 
-export function sliceStringSpend(s: string, start: number, end: number, control: BudgetControl): string {
-  // Native slicing/joining and allocation cannot be preempted. Reserve the
-  // visited extent in bounded chunks before publishing the native result.
-  const from = Math.max(0, Math.min(s.length, start < 0 ? s.length + start : start));
-  const to = Math.max(0, Math.min(s.length, end < 0 ? s.length + end : end));
-  for (let i = from; i < to; i += 128) control.charge(Math.min(128, to - i));
-  const result = s.slice(start, end);
-  control.check();
-  return result;
-}
-
 export function isByteSpend(s: string, i: number, control: BudgetControl): boolean {
   const c = valueUnitSpend(s, i, control);
   return c >= 0xdc80 && c <= 0xdcff && !(i > 0 && (valueUnitSpend(s, i - 1, control) & 0xfc00) === 0xd800);

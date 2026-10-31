@@ -110,10 +110,15 @@ type Input struct {
 	// of src without building new strings. In code points, offs[i] is the byte offset of position i
 	// (its length is the number of characters + 1); it is built when text first needs it, which a
 	// recognition often never does. For input containing invalid UTF-8, text in code points returns
-	// strings with U+FFFD substituted, so src is not used.
-	Src   string
-	SrcOK bool
-	Offs  []int32
+	// strings with U+FFFD substituted, so src is not used: the first text decodes the whole input
+	// into dec, with its offset table decOffs, and later texts slice it. decoded records that this
+	// was tried, since a decoded input too large for the table keeps copying.
+	Src     string
+	SrcOK   bool
+	Offs    []int32
+	dec     string
+	decOffs []int32
+	decoded bool
 	// Lines holds the positions where lines start, for lineCol on fully loaded input (built on
 	// first use; nil until then).
 	Lines      []int
@@ -125,6 +130,7 @@ type Input struct {
 // setSource records the whole input string s for use by text.
 func (in *Input) setSource(s string) {
 	in.Src, in.Offs = s, nil
+	in.dec, in.decOffs, in.decoded = "", nil, false
 	in.SrcOK = in.Unit == Bytes || utf8.ValidString(s) && len(s) <= 1<<31-1
 }
 
@@ -483,6 +489,14 @@ func (in *Input) Text(start, end int) string {
 		}
 		return in.Pieces.Text(start, end)
 	}
+	if !in.SrcOK && in.Unit != Bytes && in.Eof && in.Reader == nil && in.Base == 0 {
+		if !in.decoded {
+			in.decodeSource()
+		}
+		if in.decOffs != nil {
+			return in.dec[in.decOffs[start]:in.decOffs[end]]
+		}
+	}
 	if in.SrcOK {
 		if in.Unit == Bytes {
 			return in.Src[start:end]
@@ -502,6 +516,31 @@ func (in *Input) Text(start, end int) string {
 		return string(in.Bs[start-in.Base : end-in.Base])
 	}
 	return string(in.In[start-in.Base : end-in.Base])
+}
+
+// decodeSource decodes a whole code-point input containing invalid UTF-8 and builds the offset
+// table of the result, so that text slices it like a valid source. It runs once, on the first
+// text, and costs the length of the input; a recognition that takes no text never pays it.
+func (in *Input) decodeSource() {
+	var s string
+	if BudgetControlsEnabled && in.Control != nil {
+		s = in.detachedText(0, len(in.In))
+	} else {
+		s = string(in.In)
+	}
+	if len(s) > 1<<31-1 {
+		in.decoded = true
+		return
+	}
+	offs := make([]int32, 0, len(in.In)+1)
+	for i := 0; i < len(s); {
+		offs = append(offs, int32(i))
+		_, size := utf8.DecodeRuneInString(s[i:])
+		in.spendRead(uint64(size))
+		i += size
+	}
+	// An interrupted decoding leaves the input untouched, so the next text retries it.
+	in.dec, in.decOffs, in.decoded = s, append(offs, int32(len(s))), true
 }
 
 // isNewline reports whether position i holds a newline character (used to detect line starts).

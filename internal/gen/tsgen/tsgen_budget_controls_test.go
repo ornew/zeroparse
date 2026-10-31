@@ -236,7 +236,7 @@ function threshold(run:(n:number)=>Error|null):number {
 const wide=String.fromCodePoint(0x1000);
 // The budgets of recognition and of parsing: for "z", fifty "z" and fifty wide characters.
 const budgets=new Map<p.Unit,number[][]>([[p.CodePoints,[[10],[353],[303]]],[p.Bytes,[[17],[605],[1006]]]]);
-const parseBudgets=new Map<p.Unit,number[][]>([[p.CodePoints,[[11],[403],[403]]],[p.Bytes,[[18],[655],[1206]]]]);
+const parseBudgets=new Map<p.Unit,number[][]>([[p.CodePoints,[[11],[403],[403]]],[p.Bytes,[[18],[655],[1106]]]]);
 for(const unit of [p.CodePoints,p.Bytes]) {
  check(p.parse("z",unit).error===null&&p.recognize("z",unit)===null,"wide class fallback succeeds without controls");
  check(stable(p.parseWithOptions("z",{unit,signal:{aborted:false}}).node)===stable(p.parse("z",unit).node),"controlled class fallback preserves result");

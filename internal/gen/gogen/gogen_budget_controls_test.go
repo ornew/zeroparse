@@ -172,12 +172,15 @@ func TestStringAndMalformedTextBudget(t *testing.T){
   p:=&zprt.Parser{Control:zprt.X_newBudgetControl(context.Background(),Limits{Budget:127})}
   func(){defer func(){f,ok:=recover().(zprt.X_fatal);if !ok || !errors.Is(f.X_err,ErrLimit){t.Fatal("string spend not bounded",f)}}();invoke(p)}()
  }
- // Malformed-source normalization must account for both sizing and copying.
+ // Malformed-source normalization is charged once, for sizing and copying the input (4 per
+ // character) and for its offset table (1 per byte); later texts slice it for free.
  runes:=[]rune(strings.Repeat("�",300))
- p=&zprt.Parser{In:runes,Control:zprt.X_newBudgetControl(context.Background(),Limits{Budget: 1200})}
+ p=&zprt.Parser{In:runes,X_n:len(runes),Control:zprt.X_newBudgetControl(context.Background(),Limits{Budget: 2100})}
  if got:=p.Text(0,len(runes));got!=string(runes){t.Fatal("normalized text mismatch")}
- if p.Control.X_budgetUsed()!=1200{t.Fatalf("normalized counters: %+v",p.Control)}
- p=&zprt.Parser{In:runes,Control:zprt.X_newBudgetControl(context.Background(),Limits{Budget:1199})}
+ if p.Control.X_budgetUsed()!=2100{t.Fatalf("normalized counters: %+v",p.Control)}
+ if got:=p.Text(1,len(runes)-1);got!=string(runes[1:len(runes)-1]){t.Fatal("normalized substring mismatch")}
+ if p.Control.X_budgetUsed()!=2100{t.Fatalf("text of a normalized source charged: %+v",p.Control)}
+ p=&zprt.Parser{In:runes,X_n:len(runes),Control:zprt.X_newBudgetControl(context.Background(),Limits{Budget:2099})}
  func(){defer func(){f,ok:=recover().(zprt.X_fatal);if !ok || !errors.Is(f.X_err,ErrLimit){t.Fatal("normalized text unbounded",f)}}();p.Text(0,len(runes))}()
 }
 

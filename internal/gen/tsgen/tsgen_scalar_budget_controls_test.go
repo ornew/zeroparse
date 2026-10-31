@@ -67,8 +67,9 @@ for(const unit of [p.CodePoints,p.Bytes]) {
  function fits(n:number):boolean{return p.parseRuleWithOptions("fast",input,{unit,budget:n}).error===null}
  let lo=0,hi=1;while(!fits(hi)){hi*=2;check(hi<1000000,"finite matching budget")}
  while(lo+1<hi){const mid=Math.floor((lo+hi)/2);if(fits(mid))hi=mid;else lo=mid}
- const limited=p.parseWithOptions(input,{unit,budget:hi+128});
- check(limited.node===null&&limited.error instanceof p.ParseInterruptionError&&limited.error.kind==="budget-limit","source materialization exceeds fixed wrapper overhead after matching");
+ // The text of the source is a range of the input: it costs a constant, not its length.
+ const fitted=p.parseWithOptions(input,{unit,budget:hi+128});
+ check(fitted.error===null&&fitted.node!==null,"source text costs a constant after matching");
  check(p.parseWithOptions(input,{unit,budget:0}).error===null,"source materialization retry");
 }
 `

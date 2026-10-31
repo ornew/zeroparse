@@ -1,7 +1,6 @@
 package core
 
 import (
-	"strings"
 	"unicode/utf8"
 )
 
@@ -52,37 +51,19 @@ func NewControlledDocumentInput(text string, unit PositionUnit, c *BudgetControl
 	return in
 }
 
-// Materialization across immutable pieces charges bounded copies. Publish a
-// cached whole-document string only once every copy succeeds.
+// Text across immutable pieces copies or flattens as documentPieces.Text
+// does, charging each bounded step; an interrupted step publishes nothing.
 func (in *Input) controlledPieceText(start, end int) string {
 	d := in.Pieces
 	if start == end {
 		return ""
 	}
-	if start == 0 && end == d.N && d.FullOK {
-		return d.Full
-	}
-	i, off := d.find(start)
-	if piece := d.Parts[i]; end <= piece.start+piece.length(d.unit) {
-		return piece.Substring(off, off+end-start, d.unit)
-	}
-	var out strings.Builder
-	for pos := start; pos < end; i++ {
-		in.Control.Charge(1)
-		piece := d.Parts[i]
-		until := min(end, piece.start+piece.length(d.unit))
-		text := piece.Substring(pos-piece.start, until-piece.start, d.unit)
-		for offset := 0; offset < len(text); {
-			n := min(4096, len(text)-offset)
-			in.Control.Charge(uint64(n))
-			out.WriteString(text[offset : offset+n])
-			offset += n
+	if !d.FullOK {
+		i, off := d.find(start)
+		if piece := d.Parts[i]; end <= piece.start+piece.length(d.unit) {
+			return piece.Substring(off, off+end-start, d.unit)
 		}
-		pos = until
+		return d.crossingText(i, start, end, in.Control.Charge)
 	}
-	text := out.String()
-	if start == 0 && end == d.N {
-		d.Full, d.FullOK = text, true
-	}
-	return text
+	return d.fullText(start, end, in.Control.Charge)
 }

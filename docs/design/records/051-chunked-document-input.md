@@ -58,7 +58,12 @@ When the piece count exceeds 512, compact the logical text into one piece while 
 time its node was produced. A span fully contained in one immutable source
 range may reuse that string storage. A span crossing pieces must materialize
 its text into an owned immutable string; it must never expose a mutable buffer
-or depend on a later piece-table mutation. Memo reuse may still shift retained
+or depend on a later piece-table mutation. Spans crossing pieces are copied
+while the copies of the current edit generation stay shorter than the
+document; the span that would reach its length flattens the document, with
+its offset table, and later spans slice the flat string. Texts so cost a
+constant each plus at most twice the document length per generation, as the
+[cost model](../../../spec/runtime/parsing.md#cost) requires. Memo reuse may still shift retained
 nodes and node-valued fields in place under the current `Document` contract.
 
 Logical positions remain absolute positions in the configured unit. In
