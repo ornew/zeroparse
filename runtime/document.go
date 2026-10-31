@@ -48,19 +48,22 @@ func MakeDocument(root *Rule, text string, opts []ParseOption) (d *Document, err
 		return nil, err
 	}
 	defer recoverParse(&d, &err)
-	o = prepareOptions(o)
-	// Construction performs the same input decoding and work checks as a parse,
+	o = prepareText(o, text)
+	// Construction performs the same input decoding and budget checks as a parse,
 	// but its counters do not carry into subsequent invocations.
 	p := &Parser{unit: o.unit, Control: o.control}
 	p.setGrammar(root.g)
+	p.Expectations = o.expectations
 	if o.unit == CodePoints {
 		p.setSource(text)
 	} else if o.control != nil {
-		p.InputWork(uint64(len(text)))
+		p.SpendRead(uint64(len(text)))
 	}
 	o.control.Check()
 	o.control, o.prepared = nil, false
-	return &Document{State: newDocumentState(root, text, o.unit), defaults: o}, nil
+	state := newDocumentState(root, text, o.unit)
+	state.expectations = o.expectations
+	return &Document{State: state, defaults: o}, nil
 }
 
 // Text returns the current exact input, including invalid UTF-8 bytes.
@@ -106,11 +109,8 @@ func (d *Document) ResolveParseOptions(opts []ParseOption) (parseOptions, error)
 	if o.maxDepth == 0 {
 		o.maxDepth = d.State.root.g.maxDepth
 	}
-	if d.State.root.g.NoWorkControls && (o.context != nil || o.limits != (WorkLimits{})) {
-		return o, fmt.Errorf("this parser was generated without work controls (generate with -work-controls to use WithContext and WithWorkLimits)")
-	}
-	if !WorkControlsEnabled && (o.context != nil || o.limits != (WorkLimits{})) {
-		return o, fmt.Errorf("work controls are disabled in this generated reference parser")
+	if d.State.root.g.NoBudgetControls && (o.context != nil || !o.limits.disabled()) {
+		return o, fmt.Errorf("this parser was generated without budget controls (generate with -budget-controls to use WithContext and WithLimits)")
 	}
 	if err := o.validateDiagnostics(); err != nil {
 		return o, err
@@ -281,7 +281,7 @@ func (d *documentState) editReuse(start, end int, replacement string) (int, erro
 	var kept memoTable
 	for pos := 0; pos < len(d.memo.slots) && pos < reuse; pos++ {
 		for e := d.memo.slots[pos]; e != nil; e = e.next {
-			if e.examined > reuse || e.growing || e.provisional {
+			if e.examined > reuse || e.growing || e.reuse != reuseAfterEdits {
 				continue
 			}
 			copyEntry := kept.alloc()
@@ -327,27 +327,31 @@ func documentByteBoundary(text string, pos int) error {
 }
 
 // parse retains completed memo entries after ordinary syntax failures. A
-// panic or work interruption discards all entries because they may depend on
+// panic or budget interruption discards all entries because they may depend on
 // unfinished left-recursion growth or partially evaluated actions.
 func (d *documentState) parse(o parseOptions) (*Node, error) {
-	return DocumentParseConverted(d, o, func(n *Node, _ *WorkControl, _ error) *Node { return n })
+	return DocumentParseConverted(d, o, func(n *Node, _ *BudgetControl, _ error) *Node { return n })
 }
 
 // DocumentParseConverted keeps Node parsing and final typed conversion inside
-// the same work-controlled invocation and memo cleanup boundary.
+// the same budget-controlled invocation and memo cleanup boundary.
 //
 // DocumentParseConverted is for generated parsers; not a stable API.
-func DocumentParseConverted[T any](d *documentState, o parseOptions, convert func(*Node, *WorkControl, error) T) (res T, err error) {
+func DocumentParseConverted[T any](d *documentState, o parseOptions, convert func(*Node, *BudgetControl, error) T) (res T, err error) {
 	defer recoverParse(&res, &err)
 	if o.unit != d.unit {
 		return res, fmt.Errorf("document parse cannot change unit")
 	}
+	if o.expectations != d.expectations {
+		return res, fmt.Errorf("document parse cannot change expectations")
+	}
 	if d.root == nil {
 		return res, fmt.Errorf("document start rule is missing")
 	}
-	o = prepareOptions(o)
+	o = prepareText(o, d.text)
 	p := &Parser{unit: d.unit, MaxDepth: o.maxDepth, Control: o.control}
 	p.setGrammar(d.root.g)
+	p.Expectations = o.expectations
 	p.Observation = newObservation(&o.observe)
 	defer p.releaseObservation()
 	if d.unit == Bytes {
@@ -363,6 +367,7 @@ func DocumentParseConverted[T any](d *documentState, o parseOptions, convert fun
 			panic(x)
 		}
 		d.memo = p.memo
+		d.memo.removeParseOnly(p.docParseOnly)
 	}()
 	p.Control.Check()
 	v, ok := p.Call(d.root, 0)
@@ -385,6 +390,22 @@ func DocumentParseConverted[T any](d *documentState, o parseOptions, convert fun
 	return res, err
 }
 
+// removeParseOnly removes from the table the entries of es that are in it: results that only the
+// parse that stored them reuses (reuseInParse).
+func (t *memoTable) removeParseOnly(es []memoPlace) {
+	for _, x := range es {
+		if x.pos >= len(t.slots) {
+			continue
+		}
+		for link := &t.slots[x.pos]; *link != nil; link = &(*link).next {
+			if *link == x.e {
+				*link = x.e.next
+				break
+			}
+		}
+	}
+}
+
 // publishDocumentError separates caller-owned diagnostics from private memo
 // entries. Strings are immutable, but the error objects and slice containers
 // must not be shared with a later invocation.
@@ -394,7 +415,7 @@ func publishDocumentError(p *Parser, err error) error {
 		if e == nil {
 			return e
 		}
-		p.valueWork(len(e))
+		p.spendValue(len(e))
 		out := make(SyntaxErrors, len(e))
 		for i, item := range e {
 			out[i] = cloneDocumentError(p, item)
@@ -406,21 +427,21 @@ func publishDocumentError(p *Parser, err error) error {
 }
 
 func cloneDocumentError(p *Parser, e *SyntaxError) *SyntaxError {
-	p.StepWork()
+	p.Spend()
 	if e == nil {
 		return nil
 	}
 	out := new(SyntaxError)
 	*out = *e
 	if e.Expected != nil {
-		p.valueWork(len(e.Expected))
+		p.spendValue(len(e.Expected))
 		out.Expected = make([]string, len(e.Expected))
-		copyWork(p, out.Expected, e.Expected)
+		copySpend(p, out.Expected, e.Expected)
 	}
 	if e.Messages != nil {
-		p.valueWork(len(e.Messages))
+		p.spendValue(len(e.Messages))
 		out.Messages = make([]string, len(e.Messages))
-		copyWork(p, out.Messages, e.Messages)
+		copySpend(p, out.Messages, e.Messages)
 	}
 	return out
 }
