@@ -189,6 +189,11 @@ func (v *verifier) fn(f *Func) {
 		v.errorf("no body")
 		return
 	}
+	Walk(f.Body, func(st Stmt) {
+		if p, ok := st.(*Protect); ok && (len(f.Body.Stmts) == 0 || f.Body.Stmts[len(f.Body.Stmts)-1] != p) {
+			v.errorf("a protect that is not the last statement of the function body")
+		}
+	}, nil)
 	v.block(f.Body, top, false)
 	if len(f.Results) > 0 && completes(f.Body) {
 		v.errorf("the end of a function with results is reachable")
@@ -210,10 +215,68 @@ func completes(st Stmt) bool {
 		return s.Cond != nil || leaves(s.Body, s.Label)
 	case *If:
 		return s.Else == nil || completes(s.Then) || completes(s.Else)
+	case *Protect:
+		return completes(s.Body)
 	case *Exit, *Break, *Continue, *Return:
 		return false
 	}
 	return true
+}
+
+// cleanup checks the statements of the cleanup of a Protect, besides their types: the cleanup ends
+// normally, depends on no register, and neither moves the parse nor runs code that may end it.
+func (v *verifier) cleanup(b *Block) {
+	Walk(b, func(st Stmt) {
+		switch s := st.(type) {
+		case *Exit, *Break, *Continue, *Return, *Loop, *Protect, *Assert:
+			v.errorf("a cleanup with a %T", st)
+		case *Set:
+			for _, d := range s.Dst {
+				if d.Reg {
+					v.errorf("a cleanup assigns register %s", d.Name)
+				} else if d.Name != "" && !declaredIn(b, d.Name) {
+					v.errorf("a cleanup assigns %s, which it does not declare", d.Name)
+				}
+			}
+		}
+	}, func(x Expr) {
+		if r, ok := x.(*Reg); ok {
+			v.errorf("a cleanup reads register %s", r.Name)
+		}
+		c, ok := x.(*Call)
+		if !ok {
+			return
+		}
+		o := v.m.Op(c.Callee)
+		if o == nil {
+			v.errorf("a cleanup calls %s, which is not an operation", c.Callee)
+			return
+		}
+		if o.NoReturn {
+			v.errorf("a cleanup calls %s, which may end the parse", o.Name)
+		}
+		for _, w := range o.Writes {
+			if v.m.register(w) != nil {
+				v.errorf("a cleanup calls %s, which writes register %s", o.Name, w)
+			}
+		}
+		for _, r := range o.Reads {
+			if v.m.register(r) != nil {
+				v.errorf("a cleanup calls %s, which reads register %s", o.Name, r)
+			}
+		}
+	})
+}
+
+// declaredIn reports whether a Let in b or its nested blocks declares name.
+func declaredIn(b *Block, name string) bool {
+	found := false
+	Walk(b, func(st Stmt) {
+		if l, ok := st.(*Let); ok && slices.Contains(l.Names, name) {
+			found = true
+		}
+	}, nil)
+	return found
 }
 
 // leaves reports whether a statement in b exits or breaks to the label.
@@ -317,6 +380,11 @@ func (v *verifier) stmt(st Stmt, s *scope) {
 		}
 	case *Assert:
 		v.want(st.Cond, s, TBool, "assert")
+	case *Protect:
+		v.block(st.Body, s, false)
+		// The cleanup sees the locals declared before the Protect, not those of its body.
+		v.block(st.Finally, s, false)
+		v.cleanup(st.Finally)
 	case *Comment:
 	default:
 		v.errorf("unknown statement %T", st)

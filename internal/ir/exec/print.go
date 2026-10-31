@@ -182,6 +182,12 @@ func (p *printer) stmt(s Stmt, depth int) {
 			p.stmts(s.Else.Stmts, depth+1)
 		}
 		p.line(depth, "}")
+	case *Protect:
+		p.line(depth, "protect {")
+		p.stmts(s.Body.Stmts, depth+1)
+		p.line(depth, "} finally {")
+		p.stmts(s.Finally.Stmts, depth+1)
+		p.line(depth, "}")
 	case *Let:
 		p.line(depth, "let %s = %s", strings.Join(s.Names, ", "), expr(s.Value))
 	case *Set:

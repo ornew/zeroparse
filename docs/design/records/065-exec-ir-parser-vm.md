@@ -177,7 +177,11 @@ backend and every generated parser are hosts of the same parser VM. Exec IR spec
   growing, provisional) through accessor operations.
 - **Composition.** Exec IR functions that sequence operations under structured control: blocks, `if`, `loop` with
   labeled `break` and `continue`, `return`, labeled block exits, calls to functions, operations, rule bodies and host
-  primitives. There is no `goto` and no exception; a fatal condition is an operation that does not return. Locals are
+  primitives. There is no `goto` and no exception; a fatal condition is an operation that does not return. A function
+  may end with a protected region, `protect { body } finally { cleanup }`, whose cleanup runs however the body ends:
+  at its end, on a return, and when an operation ends the parse or the host unwinds. The cleanup restores state that
+  the body saved, so it neither branches out, reads or writes registers, calls functions nor ends the parse; a target
+  prints it as its unwinding cleanup, a deferred call in Go and `try`/`finally` in TypeScript. Locals are
   scalars (`bool`, `int`, sized `i32`, `u32`, `u64` with defined wraparound) and handles. Compositions have no
   records, arrays or maps of their own: data structures live inside operations, where targets choose them.
 

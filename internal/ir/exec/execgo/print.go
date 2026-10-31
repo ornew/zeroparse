@@ -447,6 +447,12 @@ func (p *printer) stmt(st exec.Stmt) {
 		p.loop(s)
 	case *exec.If:
 		p.ifStmt(s, "if ")
+	case *exec.Protect:
+		// The Protect ends the function body, so a deferred call runs its cleanup when the body ends.
+		p.w("defer func() {\n")
+		p.stmts(s.Finally)
+		p.w("}()\n")
+		p.body(s.Body)
 	case *exec.Set:
 		dead := p.dead
 		if p.stores != nil && p.stores.Removed[s] {

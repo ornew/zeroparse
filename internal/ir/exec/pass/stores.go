@@ -159,6 +159,11 @@ func (s *stores) stmt(st exec.Stmt, live bool) bool {
 		s.header(st.Post)
 		s.block(st.Body, live)
 		return true
+	case *exec.Protect:
+		// The cleanup runs however the body ends.
+		after := s.block(st.Body, live)
+		s.block(st.Finally, live)
+		return after
 	case *exec.If:
 		if live {
 			s.header(st.Init)

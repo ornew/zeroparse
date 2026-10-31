@@ -260,6 +260,19 @@ type Continue struct{ Label string }
 // Return returns from the function with Values.
 type Return struct{ Values []Expr }
 
+// Protect runs Body and then Finally, its cleanup, however Body ends: when it runs to its end,
+// when it returns, and when an operation ends the parse (an Interrupt) or the host unwinds through
+// it. A Protect is the last statement of its function's body, so that its cleanup runs as the
+// function ends, after the values of a return are computed. The cleanup holds no exit, break,
+// continue, return, loop, nested Protect or Assert; it assigns only its own locals, reads no
+// register, and calls no function and no operation that reads or writes a register or may end the
+// parse. It reads the parameters and the locals declared before the Protect, not those of Body. A
+// target prints it as its form of unwinding cleanup (a deferred call in Go, try and finally in
+// TypeScript).
+type Protect struct {
+	Body, Finally *Block
+}
+
 // Assert fails a conformance case when Cond does not hold. Compositions do not use it.
 type Assert struct {
 	Cond Expr
@@ -277,6 +290,7 @@ func (*Break) stmt()    {}
 func (*Continue) stmt() {}
 func (*Return) stmt()   {}
 func (*Assert) stmt()   {}
+func (*Protect) stmt()  {}
 func (*Comment) stmt()  {}
 
 // Expr is an expression.

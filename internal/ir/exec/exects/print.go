@@ -526,6 +526,16 @@ func (p *printer) stmt(st exec.Stmt) {
 			p.line("%s;", p.set(s.Init))
 		}
 		p.ifStmt(s, "if")
+	case *exec.Protect:
+		p.line("try {")
+		p.depth++
+		p.stmts(s.Body)
+		p.depth--
+		p.line("} finally {")
+		p.depth++
+		p.stmts(s.Finally)
+		p.depth--
+		p.line("}")
 	case *exec.Set:
 		if c, ok := s.Values[0].(*exec.Call); ok && len(s.Values) == 1 && !p.packedCall(c) && p.opStmt(c, p.places(s), "") {
 			return

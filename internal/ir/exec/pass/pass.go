@@ -106,6 +106,8 @@ func mapBlock(b *exec.Block, fn func(exec.Expr) exec.Expr) *exec.Block {
 				n = &exec.Loop{Label: st.Label, Init: set(st.Init), Cond: x(st.Cond), Post: set(st.Post), Body: blk(st.Body)}
 			case *exec.If:
 				n = &exec.If{Init: set(st.Init), Cond: x(st.Cond), Then: blk(st.Then), Else: blk(st.Else)}
+			case *exec.Protect:
+				n = &exec.Protect{Body: blk(st.Body), Finally: blk(st.Finally)}
 			case *exec.Let:
 				n = &exec.Let{Names: slices.Clone(st.Names), Value: x(st.Value)}
 			case *exec.Set:
@@ -285,6 +287,9 @@ func prune(ss []exec.Stmt) []exec.Stmt {
 				}
 				continue
 			}
+		case *exec.Protect:
+			s.Body.Stmts = prune(s.Body.Stmts)
+			s.Finally.Stmts = prune(s.Finally.Stmts)
 		}
 		out = append(out, st)
 		switch st.(type) {
@@ -317,6 +322,9 @@ func splice(ss []exec.Stmt) []exec.Stmt {
 					s.Else = nil
 				}
 			}
+		case *exec.Protect:
+			s.Body.Stmts = splice(s.Body.Stmts)
+			s.Finally.Stmts = splice(s.Finally.Stmts)
 		}
 		out = append(out, st)
 	}
