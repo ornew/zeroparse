@@ -98,15 +98,16 @@ The proof relies on the following, which the specification does not state.
   farthest failure there.
 - **(A2) Reuse across lookahead states.** Condition (L), which the reference
   implementation applies and the specification does not mention.
-- **(A3) Node equality.** `==` and `!=` compare two nodes by their rule and
-  their range, not by identity. [Operators](../language/actions.md#operators-and-functions)
-  states that nodes compare by identity, which memoization decides; this proof
-  assumes the rule by rule and range that the chapter is to state instead. The
-  rule and the range of a node are part of the value, so by (I1) of the
-  theorem a comparison of two nodes decides alike in both parses: in
-  particular, two calls of one rule at one position have equal results, and
-  their nodes compare equal. A comparison with `nil` depends only on whether a
-  value is `nil`, which is also part of the value.
+- **(A3) Node equality.** `==` and `!=` compare two nodes by a key, not by
+  identity: a node of a rule by its rule and its range, and any other node, of
+  a terminal, a string, an error, a list or a hidden rule, by its kind and its
+  range. [Operators](../language/actions.md#operators-and-functions) states
+  that nodes compare by identity, which memoization decides; this proof
+  assumes the comparison by key that the chapter is to state instead. The key
+  of a node is part of the value, so equality is a function of the values
+  compared, and by (I1) of the theorem a comparison decides alike in both
+  parses. A comparison with `nil` depends only on whether a value is `nil`,
+  which is also part of the value.
 - **(A4) Cycles.** Condition (C), the revision of the second item of
   [Evaluations of Rules](../runtime/parsing.md#evaluations-of-rules) that
   covers every rule of the cycle other than the growing leader. That item
@@ -157,7 +158,7 @@ is a node of the kind error whose text is its message
 cannot read that text: `text` does not accept a value of the type `error`, so
 `text($x)` on an error value is a compile-time error, and the type `error`
 declares no field ([Built-In Functions](../language/actions.md#built-in-functions)).
-By (A3), `==` compares an error node by its rule and range, which do not
+By (A3), `==` compares an error node by its kind and range, which do not
 depend on $\lambda$, and never reads its message. So $s$, $q$,
 the run-time error and the examined range are the same for both states, each
 `#recover` recovers in both or in neither, and $\varepsilon$ has the same
@@ -232,7 +233,7 @@ following.
 1. *A terminal, an anchor, a predicate or an action.* These read the same state
    in both parses, so they have the same outcome and examine the same input.
    The values they read are equal by (I1), though they may be different nodes,
-   and by (A3) a comparison of nodes reads only their rule and range.
+   and by (A3) equality is a function of the values compared.
 2. *A combinator.* A sequence, choice, repetition, option, lookahead, cut,
    capture or `#recover` combines the outcomes of its parts by the rules of
    [Rule Expressions](../language/parser-expressions.md) and records them in

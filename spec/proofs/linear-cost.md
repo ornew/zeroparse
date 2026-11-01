@@ -247,8 +247,13 @@ The outlines leave these steps to be made precise.
    a recursion that Lemma 3 does not bound, so counting their evaluations by
    their calls, and their calls by Lemma 2, is circular. The step must bound
    the evaluations of such rules directly. A cycle of calls that consume no
-   input before them is a left recursion, whose leaders are memoized, so each
-   call on such a cycle follows input that a body consumed, and the calls
-   along one chain are at increasing positions. A call inside an unbounded
+   input before them is a left recursion. The reference implementation always
+   memoizes its leaders, since a growth keeps its seed in the memo table, but
+   the first exception of
+   [Evaluations of Rules](../runtime/parsing.md#evaluations-of-rules) does not
+   exempt a leader called from one place, such as the start rule in
+   `main = main "a" / "a"`. Once the specification states that leaders are
+   memoized, each call on such a cycle follows input that a body consumed, and
+   the calls along one chain are at increasing positions. A call inside an unbounded
    repetition of a body makes a tree of calls instead, which the activations of
    Lemma 4 must account for.

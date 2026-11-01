@@ -73,7 +73,10 @@ chapter states the guarantee and not this mechanism.
     recovered error remains at the end of the run. During the run no call
     read the current result of a growth, directly or through an entry stored
     by a call that did, even of a growth that started and ended within the
-    run.
+    run. This condition is taken from the intended mechanism: the reference
+    implementation refuses a run whose calls read the current result of a
+    growth open at its start, but does not yet refuse one that read the
+    current result of a growth that started and ended within the run.
   - *Resuming.* A repetition resumes a record only outside a lookahead and a
     `skip`. It resumes in one of two ways. **Whole**: the record of the same
     repetition at the same position, stored earlier in the same parse, or by
