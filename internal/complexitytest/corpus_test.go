@@ -95,6 +95,20 @@ func corpusEntries() []corpusEntry {
 				"x%d = [i * 2 for i in range(10)]\n",
 			}, ""),
 			sizes: double(40), shortSizes: double(10), order: Linear},
+		// Parameter lists and dictionary displays whose actions fold over a list of at most one
+		// element: the / marker of the parameters, and the #repeat(,1) value of the display.
+		{name: "python bounded folds", grammar: "../../testdata/grammars/python/python.zp", variants: 3,
+			source: "one parameter list or dictionary display that grows with n",
+			build: func(n, v int) string {
+				switch v {
+				case 0:
+					return "def f(" + list("", "a%d", ", ", "")(n) + ", /, b=1):\n    pass\n"
+				case 1:
+					return "f = lambda " + list("", "a%d", ", ", "")(n) + ", /: 0\n"
+				}
+				return "x = {" + list("", "%d: 1", ", ", "")(n) + "}\n"
+			},
+			sizes: double(500), shortSizes: double(100), order: Linear},
 		{name: "cel", grammar: "../../testdata/grammars/cel/cel.zp", variants: 3, source: units,
 			build: repeated("true", []string{
 				" && request.auth.claims.email.endsWith(\"@example.com\") && %d > 0",

@@ -414,8 +414,12 @@ The groups are addressed by these mechanisms:
 - **Lambdas over bounded lists.** A fold or map over a list with a constant bound on its number of elements runs its
   lambda a constant number of times, so condition 4 checks its copies as copies outside the lambda
   ([Lemma 7](../../../spec/proofs/linear-cost.md#lemma-7-lambdas-over-bounded-lists)). Python's parameter lists and
-  dictionary displays fold over the `/` marker and a `#repeat(,1)` value, and they carry no cause; a bounded fold inside
-  a map over a list that is not bounded still copies its outer values once for each element of that list.
+  dictionary displays fold over the `/` marker and a `#repeat(,1)` value, and they carry no cause; the corpus measures
+  them linear. A bounded fold inside a map over a list that is not bounded still copies its outer values once for each
+  element of that list, and a fold whose accumulator doubles stays exponential, since its factor is exponential in the
+  bound. The accumulator of a bounded fold is taken to hold what any number of steps can add, not at most the bound:
+  a fold over `#repeat(,1)` that adds the value of the rule's own recursion on each step is reported exponential,
+  though it runs at most once and holds that value once, which condition 4 classes polynomial.
 - **Recovery-skip refinement of the classifier.** A `#recover` skip is not a scanning source once repetition-run reuse
   records the ends of skips per position.
 - **Constant-cost text in the cost model.** The cost model guarantees that the text of a node costs a constant in a

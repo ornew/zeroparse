@@ -292,7 +292,10 @@ func (k *classifier) lambdaCtx(call *grammar.Call, i int, lam *grammar.Lambda, t
 	if len(call.Args) > list {
 		listArg = call.Args[list]
 	}
-	bounded := listArg != nil && k.sizeOf(listArg, tc, listSize).bounded()
+	// A fold whose lambda builds a value that holds the accumulator twice doubles it on each step:
+	// over a bounded list the growth is still a constant factor, but one exponential in the bound,
+	// so the fold is checked as a fold over a list that is not bounded.
+	bounded := listArg != nil && k.sizeOf(listArg, tc, listSize).bounded() && !(fold && k.doubles(lam, tc))
 	// An element of the list argument can hold anything that the list can. The elements of a list
 	// that is not bounded are distinct parts of it, each seen once; the elements of a bounded list
 	// are seen again whenever an enclosing lambda repeats.
@@ -338,6 +341,24 @@ func (k *classifier) lambdaCtx(call *grammar.Call, i int, lam *grammar.Lambda, t
 		}
 	}
 	return tc
+}
+
+// doubles reports whether the value of the lambda of a fold can hold its accumulator, the first
+// parameter, more than once.
+func (k *classifier) doubles(lam *grammar.Lambda, tc termCtx) bool {
+	if len(lam.Params) == 0 {
+		return false
+	}
+	params := maps.Clone(tc.params)
+	if params == nil {
+		params = map[string]param{}
+	}
+	for j, n := range lam.Params {
+		params[n] = param{acc: j == 0}
+	}
+	tc.params, tc.lambda = params, true
+	acc := lam.Params[0]
+	return k.sizeOf(lam.Body, tc, textSize).acc[acc] > 1 || k.sizeOf(lam.Body, tc, listSize).acc[acc] > 1
 }
 
 // elemSize describes what the size of an element of the list t can depend on: anything that the
@@ -515,13 +536,20 @@ func (k *classifier) sizeOfAny(t grammar.Term, tc termCtx) content {
 					c.add(p.elem)
 					return
 				}
-				outer = true
-				for _, e := range k.captures[tc.rule][x.Name] {
-					c.add(k.deepSize(e, tc, "$"+x.Name))
+				// A value from outside the lambda counts as outer only when it is not bounded.
+				exprs := k.captures[tc.rule][x.Name]
+				if len(exprs) == 0 {
+					outer = true
+				}
+				for _, e := range exprs {
+					d := k.deepSize(e, tc, "$"+x.Name)
+					outer = outer || !d.bounded()
+					c.add(d)
 				}
 			case *grammar.IndexRef:
-				outer = true
-				c.add(k.deepSize(k.byName[tc.rule].Expr, tc, fmt.Sprintf("$%d", x.Index)))
+				d := k.deepSize(k.byName[tc.rule].Expr, tc, fmt.Sprintf("$%d", x.Index))
+				outer = outer || !d.bounded()
+				c.add(d)
 			case *grammar.VarRef:
 				c.vars = true
 			}

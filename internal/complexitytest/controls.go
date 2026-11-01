@@ -292,8 +292,8 @@ func Controls() []Control {
 		// inside a lambda over a list that is not bounded, the same fold runs once for each of its
 		// elements.
 		{
-			Name: "Doubling fold over a bounded list", Family: "bounded lambda",
-			Source: "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(text($a), $b, (acc, y) => acc + acc + text($a))\n",
+			Name: "Fold over a bounded list", Family: "bounded lambda",
+			Source: "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(text($a), $b, (acc, y) => acc + text($a))\n",
 			Input:  func(n int) string { return rep("x", n) + "yy" },
 			Sizes:  double(250), ShortSizes: double(100), Order: Linear, Class: ClassLinear, Positive: true,
 		},
@@ -301,6 +301,12 @@ func Controls() []Control {
 			Name: "Bounded map copying a value from outside", Family: "bounded lambda",
 			Source: "rule main = a:\"x\"* b:\"y\" #repeat(,2) => map($b, (y) => text($a) + text(y))\n",
 			Input:  func(n int) string { return rep("x", n) + "yy" },
+			Sizes:  double(250), ShortSizes: double(100), Order: Linear, Class: ClassLinear, Positive: true,
+		},
+		{
+			Name: "Bounded elements inside a map that is not bounded", Family: "bounded lambda",
+			Source: "rule main = zs:\"z\"* b:\"y\" #repeat(,2) => map($zs, (z) => foldl(\"\", $b, (acc, y) => acc + text(y)))\n",
+			Input:  func(n int) string { return rep("z", n) + "yy" },
 			Sizes:  double(250), ShortSizes: double(100), Order: Linear, Class: ClassLinear, Positive: true,
 		},
 		{

@@ -234,14 +234,22 @@ over at most $m$ evaluations gives at most a constant times
 $m (a^m (I + B) + B)$, which is $c (I + E + S + 1)$ for a constant $c$.
 $\square$
 
+When the value of the lambda holds the first parameter at most once, the
+recurrence is $A_{j+1} \le A_j + (r + 1) B$, so $A_j \le I + j (r + 1) B$,
+which grows linearly with $m$ rather than as $a^m$. Condition 4 applies the
+lemma only to such folds: a fold whose lambda can hold the first parameter
+twice multiplies it by a factor that is exponential in $m$, a constant that
+a bound such as `#repeat(,30)` makes larger than any input.
+
 The copies of such a call are therefore those of a constant number of copies,
 in the context of the call, of the initial value, the list and the values from
 outside the lambda. This is how condition 4 checks them: they repeat once for
 each element only when a lambda around the call is over a list that is not
-bounded, and the first parameter of the fold includes what the initial value
+bounded, and the first parameter of a fold includes what the initial value
 and the value of the lambda include, so that a copy of it that includes the
-value of a call on the recursion is checked as such a copy. The proof does not
-need the bound $a^m$ to be small, only to be a constant.
+value of a call on the recursion is checked as such a copy. The lemma itself
+needs $a^m$ only to be a constant; the restriction to folds that hold the first
+parameter once keeps the constant of the class proportional to $m$.
 
 ## Theorem (Linear Cost)
 

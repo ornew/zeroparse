@@ -754,9 +754,13 @@ necessary.
    performs the operation, nor a fold accumulator: the first parameter of the
    lambda of `foldl` or `foldr` over a list that is not bounded. A list is
    **bounded** when its number of elements is bounded by a constant of the
-   grammar, as the list of a repetition with an upper bound, such as
-   `x:a #repeat(,2)`, a `list(...)`, and the `concat`, `map` or `filter` of
-   bounded lists are. The size is the one that the operation copies: the
+   grammar that the classifier can see: the value of a capture of an
+   expression whose matches are bounded in length, or of a repetition with an
+   upper bound, such as `x:a #repeat(,2)`, through choices and options; a
+   `list(...)` or a list literal; and a value built only from bounded lists
+   and literals, by `concat`, `map`, `filter` or a fold, without a variable, a
+   lambda parameter or the value of a call on a recursion with the rule. The
+   size is the one that the operation copies: the
    characters of a string, or the elements of a list. A value includes the
    value of such a call when it is the value of the call, passes it on, as `$x`
    does, is an element of it, as `$x[0]` is, or is built from it by `+`,
@@ -777,7 +781,10 @@ necessary.
    most a constant number of times, so its copying operations are checked as
    copies outside it, in the lambdas around it, and the first parameter of a
    fold over it holds what the initial value and the value of the lambda hold,
-   at most a constant multiple of their sizes. A copying operation that copies
+   at most a constant multiple of their sizes. A fold whose lambda builds a
+   value that can hold the first parameter more than once, as `acc + acc`
+   does, doubles it on each step, by a factor exponential in the bound, and it
+   is checked as a fold over a list that is not bounded. A copying operation that copies
    the value of a variable is linear given an environment bound.
 5. **Left recursion in lookaheads and recoveries.** No rule grows inside a
    lookahead, or recovers an error while it grows, at a position where another

@@ -117,8 +117,12 @@ func TestClassifyComplexity(t *testing.T) {
 		{"tail passed on by right recursion after its user", "rule main = s $$\nrule s []string = \"\\\"\" t:r => $t\nrule r []string = m / l\nrule m []string = i \",\" t:r => $t\nrule l []string = e:i \"\\\"\" => list($e)\nrule i string = x:(\"(\" s \")\" / [a-z]+) => text($x)\n", ClassLinear, 0},
 		// A lambda over a list with at most a constant number of elements runs at most that many
 		// times: its copies from outside it and of a fold accumulator are a constant number of
-		// copies. Over a list that is not bounded, or inside a lambda over one, they are not.
-		{"doubling fold over a bounded list", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(text($a), $b, (acc, y) => acc + acc + text($a))\n", ClassLinear, 0},
+		// copies. Over a list that is not bounded, or inside a lambda over one, they are not, and
+		// neither are those of a fold whose accumulator doubles, by a factor exponential in the
+		// bound.
+		{"fold over a bounded list", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(text($a), $b, (acc, y) => acc + text($a))\n", ClassLinear, 0},
+		{"doubling fold over a bounded list", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(text($a), $b, (acc, y) => acc + acc + text($a))\n", ClassExp, 0},
+		{"bounded elements inside a map", "rule main = zs:\"z\"* b:\"y\" #repeat(,2) => map($zs, (z) => foldl(\"\", $b, (acc, y) => acc + text(y)))\n", ClassLinear, 0},
 		{"doubling fold over a list", "rule main = a:\"x\"* b:\"y\"* => foldl(text($a), $b, (acc, y) => acc + acc)\n", ClassExp, 0},
 		{"bounded map copying a value from outside", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => map($b, (y) => text($a) + text(y))\n", ClassLinear, 0},
 		{"map copying a value from outside", "rule main = a:\"x\"* b:\"y\"* => map($b, (y) => text($a) + text(y))\n", ClassUnknown, 0},
