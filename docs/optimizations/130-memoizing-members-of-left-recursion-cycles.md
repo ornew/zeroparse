@@ -66,7 +66,7 @@ A member that is called from one place is still transient, so a grammar like the
 
 ## Reproduction
 
-Base `f52b6bd9`, Go 1.27.1, Apple silicon, benchlock, started with a load below 8. Test binaries of the `bench`
+Base `2d59b30d`, Go 1.27.1, Apple silicon, benchlock, started with a load below 8. Test binaries of the `bench`
 package, one per revision, ran interleaved for 10 rounds with `-benchtime=200ms -benchmem` over `Parse` and
 `Recognize` (left-recursive calculator, JSON, Minilang), `Incremental`, `IncrementalLong` and `Stream`; benchstat
 compared them. Tests: `TestLeftRecursionMemberMemoLinear`, `TestLeftRecursionMemberMemoMatchesNoMemo`,

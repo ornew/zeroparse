@@ -65,7 +65,7 @@ its walks are not abandoned in the same way. Such a grammar stays quadratic, whi
 
 ## Reproduction
 
-Base `049b5245`, Go 1.27.1, Apple M3 Max, benchlock, each run started with a load below 8. Test binaries of the
+Base `90c3e01f`, Go 1.27.1, Apple M3 Max, benchlock, each run started with a load below 8. Test binaries of the
 `bench` package, one per revision, ran interleaved for 11 rounds with `-benchmem` over `Parse` and `Recognize` (JSON,
 left-recursive calculator, Minilang, Recovery), `Incremental` and `Stream`; benchstat compared them. Tests:
 `TestSkipRunsMatchParsesWithoutRecords`, `TestSkipRunsNegativeControls`, `TestSkipRunsBudgetAbort`,

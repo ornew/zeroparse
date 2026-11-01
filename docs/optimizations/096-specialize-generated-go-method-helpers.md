@@ -35,8 +35,8 @@ adopted.
 
 The 131-profile comparison used Go 1.27.1 on an Apple M3 Max
 (darwin/arm64), with `GOMAXPROCS=16`, `GOGC=100` and `GOMEMLIMIT=off`.
-Three alternating 500 ms samples compared main `77f12f2` with the source-pinned
-candidate in this implementation, based on budget-control baseline `186e1b0`. The candidate included a source-format fix and regression
+Three alternating 500 ms samples compared main `744138e` with the source-pinned
+candidate in this implementation, based on budget-control baseline `a43814b`. The candidate included a source-format fix and regression
 tests. Samples were serialized. The same-source ablation disabled only the specializer while leaving budget controls enabled.
 The fixed-allocation check uses 100 iterations and five alternating pairs.
 Build benchmark binaries before timing and alternate processes under the same

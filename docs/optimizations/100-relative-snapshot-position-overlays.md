@@ -44,7 +44,7 @@ not inferred from those measurements.
 
 The comparison used the no-tag absolute-position build as the reference and
 `-tags zp_snapshot_position_overlays` for the candidate from the same source
-revision: the commit containing this record. Its parent is `eee93b9`; no-tag
+revision: the commit containing this record. Its parent is `9570b71`; no-tag
 comparisons use the candidate source, rather than a different historical revision. Measurements ran on Go 1.27.1, Apple M3 Max (darwin/arm64), with
 `GOMAXPROCS=16` and `GOGC=100`. Timed runs used three serialized ABBA blocks and
 500 ms per benchmark sample. Each block runs reference, candidate, candidate,

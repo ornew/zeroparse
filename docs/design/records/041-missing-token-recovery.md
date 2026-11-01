@@ -158,7 +158,7 @@ but falsely reports source text; choose an explicit Missing value. Always enabli
 strict baseline; prefer the invocation option.
 
 Ten serialized alternating pairs on Apple M3 Max with Go 1.27.1 and GOMAXPROCS=1 compared the candidate with
-main `12af6ec`. Across JSON, left-recursive arithmetic, Operators Rule arithmetic and recovery inputs in both
+main `a34b20e`. Across JSON, left-recursive arithmetic, Operators Rule arithmetic and recovery inputs in both
 position units, strict Closure parse medians were about 2–4% slower; bytes/op and allocations/op were essentially
 unchanged. On a small literal fixture, enabled-valid parsing added 64 B and one allocation over annotated strict
 parsing. Enabled-missing parsing used about 19 allocations and 36.5 KB/op, versus about 3 allocations and 35.8 KB/op

@@ -64,7 +64,7 @@ The attribute must not change whether the expression matches, which branch wins,
 
 ### Observed Baseline and Proposed Outcome
 
-The baseline measurements below were executed on main `7cc59d8` using the grammar source form supported by that revision. They establish the existing diagnostic positions, not implementation or acceptance of the selected target syntax.
+The baseline measurements below were executed on main `8aca682` using the grammar source form supported by that revision. They establish the existing diagnostic positions, not implementation or acceptance of the selected target syntax.
 
 ```zp
 rule number = [0-9]+ "." [0-9]+

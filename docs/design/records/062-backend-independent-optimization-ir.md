@@ -32,7 +32,7 @@ grammar.Grammar ──check, analyze──▶ Core IR ───────┼�
 
 ## Motivation
 
-The evidence below was measured at commit `4e2f3763` with Go 1.27.1 on an Apple M3 Max (darwin/arm64).
+The evidence below was measured at commit `34ea7a12` with Go 1.27.1 on an Apple M3 Max (darwin/arm64).
 
 ### Six Lowerings of One AST
 

@@ -78,7 +78,7 @@ code. These results describe selected capture workloads and do not establish a
 general parser speedup.
 
 A subsequent full snapshot exposed an XML cost absent from those fixtures.
-Five alternating 500 ms runs against the exact parent `d16f33e` measured XML
+Five alternating 500 ms runs against the exact parent `fb58e78` measured XML
 `Parse` at 1.254× CodePoints and 1.394× Bytes, and `Recognize` at 1.380×.
 Allocated bytes fell by about 15–17%, but all five pairs were slower. Scratch
 versus the same-source disabled reference took 0.966×/0.976×/0.922× time;
@@ -93,7 +93,7 @@ unresolved; a later current-main comparison is recorded below.
 
 A later comparison on Go 1.27.1, Apple M3 Max, darwin/arm64,
 `GOMAXPROCS=4`, `GOGC=100` and `GOMEMLIMIT=off` measured the full 256 KiB XML
-input in five alternating 500 ms rounds. Against exact parent `d16f33e`,
+input in five alternating 500 ms rounds. Against exact parent `fb58e78`,
 current generated `Parse` took 0.9478× the time in Bytes (range
 0.8973–0.9567) and 0.9414× in CodePoints (0.9368–0.9582); `Recognize` took
 0.948× (0.9313–0.9688).

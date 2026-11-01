@@ -343,8 +343,8 @@ The typed API converts the ordinary Node result after parsing. It is an
 opt-in compatibility feature, not a runtime optimization: conversion can cost
 substantially more than returning Nodes, and both representations may coexist.
 
-Measurements used the implementation in this commit on base `1cf6840`
-(runtime source `73f7c01`), Go 1.27.1, Node 22.18.0 and TypeScript 5.9.3 on
+Measurements used the implementation in this commit on base `529af0f`
+(runtime source `0356eff`), Go 1.27.1, Node 22.18.0 and TypeScript 5.9.3 on
 Apple M3 Max, Darwin/arm64. Large inputs contain 4,000 field-heavy items,
 24,000 capture-free code points, 2,000 good/bad recovery pairs, or 6,000 shared
 fold/LR levels. Small inputs are the first exported fixture inputs.

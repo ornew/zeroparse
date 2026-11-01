@@ -11,7 +11,7 @@
   to their generic caller. Unused recognition captures are omitted;
   diagnostics, silent lookahead, labels and external entry remain exact.
 - Conditions: Go 1.27.1, darwin/arm64, Apple M3 Max, 16 CPUs. Baseline
-  `b288c8e`; regenerate the same grammars and prebuild both binaries.
+  `c96fe18`; regenerate the same grammars and prebuild both binaries.
   Five alternating 300 ms pairs cover eight workloads, both units and
   recognition/Node output (32 conditions, 110.552 seconds). A separate
   five-pair 300 ms schedule covers eight ParseAST controls (27.928 seconds).

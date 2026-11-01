@@ -10,7 +10,7 @@
   generation decisions and negative-lookahead/recovery exclusions are unchanged.
   This affects the shared sampling constructor, which requires a grammar AST,
   rather than matching in any backend or generated parser.
-- Five alternating 200 ms pairs compare baseline `9159f94` with this dependency
+- Five alternating 200 ms pairs compare baseline `38b2ecb` with this dependency
   propagation on Apple M3 Max, Go 1.27.1. Grammars are parsed before timing;
   only `analyze(g, "main")` runs in the timed loop. Each chain ends in `"é"`
   and has the listed derivation depth (one more rule than the depth):
@@ -52,7 +52,7 @@
 - Reproduce with
   `go test ./sample -run '^$' -bench '^BenchmarkSampleAnalysis$' -benchtime=200ms -benchmem`.
   Build parent/candidate binaries with the same benchmark source; restore only
-  `sample/analysis.go` from `9159f94` through a Go overlay for the parent. Run
+  `sample/analysis.go` from `38b2ecb` through a Go overlay for the parent. Run
   five alternating pairs with no tests/builds/probes concurrently. Raw results
   stay local. The full-suite checkpoint follows the current core compiler
   analysis optimization group; batch-runtime benchmark workloads are unchanged.

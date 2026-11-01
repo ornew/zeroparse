@@ -37,8 +37,8 @@ counts are unchanged. Typed generated Go already read string fields directly.
 ## Reproduction
 
 All runs use Apple M3 Max, Go 1.27.1, `GOMAXPROCS=16`. The migration comparison builds
-the `bench` test binary at `9bd2d2d` (before the migration, with its own grammars) and
-at `d4fd8c0` (after it, without this change), and runs each from its own tree, since
+the `bench` test binary at `cc17889` (before the migration, with its own grammars) and
+at `1eb44ac` (after it, without this change), and runs each from its own tree, since
 the benchmarks read grammars at run time. Three alternating rounds of two samples each
 give six samples per case:
 
@@ -52,11 +52,11 @@ with the same pattern for `generated/codepoints` and `generated_ast` of
 `BenchmarkParse`, for the `closure`, `bytecode` and `generated` cases of
 `BenchmarkRecognize`, and for all of `BenchmarkIncremental`, `BenchmarkStream` and
 `BenchmarkPrepare`. The change itself is measured the same way on `BenchmarkParse/XML`
-and `BenchmarkRecognize/XML`, `d4fd8c0` against the candidate. Raw results stay local.
+and `BenchmarkRecognize/XML`, `1eb44ac` against the candidate. Raw results stay local.
 
 ## Results
 
-**Migration, before this change.** Median time of `d4fd8c0` relative to `9bd2d2d`.
+**Migration, before this change.** Median time of `1eb44ac` relative to `cc17889`.
 Bytes and allocations per operation are unchanged within 0.3% on every parse,
 recognition, incremental and stream case (XML `generated_ast` bytes +1.7%).
 
@@ -76,7 +76,7 @@ Preparing from source takes 7–8% longer for JSON and minilang, whose rewritten
 grammars have more actions to check and compile; loading `.zpc` files is
 0.94–1.08 with no consistent direction.
 
-**This change, on XML.** Median time, `d4fd8c0` → candidate:
+**This change, on XML.** Median time, `1eb44ac` → candidate:
 
 | Case | Before | After | Change |
 |:--|--:|--:|--:|

@@ -441,8 +441,8 @@ suite passes across 18 packages. The validation covers the following cases:
 
 The lazy Closure setup and generated-Go budget-control implementation are
 implemented with the measured costs below. Piece-backed `Document` input is
-already adopted independently. Measurements compared main `77f12f2`,
-the eager-graph prototype `2ae994f`, and the lazy implementation described in
+already adopted independently. Measurements compared main `744138e`,
+the eager-graph prototype `06f048e`, and the lazy implementation described in
 this record; source fingerprints were fixed. Five alternating one-second rounds
 used Go 1.27.1 on Apple M3 Max (darwin/arm64), `GOMAXPROCS=16`, `GOGC=100`, and
 no memory limit. In Closure/CodePoints no-control parses, lazy/main paired
@@ -478,8 +478,8 @@ retained heap was 1.1019–1.1609 times eager across the four measured grammars.
 
 ### Broader Backend and Workload Comparison
 
-Three alternating 500 ms rounds compared main `77f12f2` with prototype
-`d6e4e7f` across 131 profiles on Go 1.27.1, Apple M3 Max (darwin/arm64),
+Three alternating 500 ms rounds compared main `744138e` with prototype
+`70e27fe` across 131 profiles on Go 1.27.1, Apple M3 Max (darwin/arm64),
 `GOMAXPROCS=16`, `GOGC=100`, with no memory limit. Paired median ratios against
 exact main ranged as follows:
 
@@ -520,7 +520,7 @@ not universal latency bounds. Synchronous parsing cannot preempt a caller-held r
 [Optimization 096](../../optimizations/096-specialize-generated-go-method-helpers.md)
 records the selected nil-control method branches and ordinary allocation,
 capture and expectation helpers. Three alternating 500 ms samples across all
-131 profiles against `77f12f2` reduced the generated Node/recognition range to
+131 profiles against `744138e` reduced the generated Node/recognition range to
 1.039–1.332× and typed parsing to 1.082–1.234×. A same-source generation-only
 ablation measured 0.760–0.969× ordinary Node/recognition time and 0.815–0.936×
 typed time; eight active profiles had medians of 0.985–1.005×. Active harnesses

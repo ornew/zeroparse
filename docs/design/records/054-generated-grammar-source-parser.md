@@ -243,7 +243,7 @@ returns the public grammar AST; the generated parser returns its concrete
 source AST without the public adapter.
 Diagnostic equivalence was not checked, so these timings and byte counts are
 not a fair frontend comparison and do not establish a winner or default. The
-medians below were measured at source revision `90b4cf7`. Each operation parses
+medians below were measured at source revision `bddfbcc`. Each operation parses
 the complete source string: `zp.ParseGrammar` for the manual frontend and
 generated Go `ParseAST` in CodePoints for the typed frontend. Compilation and
 code generation are outside the timed region. Small uses

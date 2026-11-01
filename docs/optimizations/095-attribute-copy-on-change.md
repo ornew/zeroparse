@@ -19,7 +19,7 @@ Preserve the legacy normalized nil-versus-empty slice shapes, including containe
 
 ## Reproduction
 
-The initial 315-row comparison used baseline commit `c693d51` and a candidate
+The initial 315-row comparison used baseline commit `ed427a6` and a candidate
 source snapshot, with an eager same-source mode as a separate counterfactual.
 Five alternating samples ran 1-second benchmarks on Go 1.27.1, Apple M3 Max
 (darwin/arm64), GOMAXPROCS=16, GOGC=100 and GOMEMLIMIT=off. Inputs were plain,
@@ -65,7 +65,7 @@ go test -c -o /tmp/zp-copy-candidate.test ./internal/compile
 
 Build the baseline binary from a candidate checkout using a Go overlay. The
 overlay JSON maps the checkout's `compile.go` and `normalize_attributes.go` to
-their original, byte-for-byte files from commit `c693d51`, and maps
+their original, byte-for-byte files from commit `ed427a6`, and maps
 `normalize_attributes_test.go` to a benchmark-only file containing its package
 declaration, required imports, benchmark globals, and adapted benchmark
 function. Keep calls on the original `normalizeAttributes(g)` and

@@ -26,7 +26,7 @@ document describes the benchmarks, analyzes the results, and records how they ca
 
 ## Where ZeroParse Stands
 
-This analysis describes the generated full-suite snapshot in [benchmarks.md](benchmarks.md), measured on 2026-10-29 at commit `13b3d186` (Go 1.27.1, Apple M3 Max, darwin/arm64, 16 cores, `GOMAXPROCS=16`). It contains 253 benchmark cases, three samples per case, and the Go benchmarks took 892.334 seconds; the generated TypeScript timings and the parser sizes were captured in the same run. This is one revision's snapshot, not a before-and-after comparison; ratios below compare operations within this run and do not attribute changes to a particular mechanism.
+This analysis describes the generated full-suite snapshot in [benchmarks.md](benchmarks.md), measured on 2026-10-29 at commit `356a61a9` (Go 1.27.1, Apple M3 Max, darwin/arm64, 16 cores, `GOMAXPROCS=16`). It contains 253 benchmark cases, three samples per case, and the Go benchmarks took 892.334 seconds; the generated TypeScript timings and the parser sizes were captured in the same run. This is one revision's snapshot, not a before-and-after comparison; ratios below compare operations within this run and do not attribute changes to a particular mechanism.
 Budget-control behavior and its generated-Go cost are described in
 [design 033](design/records/033-cancellable-parses-and-budgets.md) and
 [optimization record 096](optimizations/096-specialize-generated-go-method-helpers.md).
@@ -53,7 +53,7 @@ A separate generated-Go typed-allocation bootstrap and its focused measurements 
 
 **Grammar style.** The calculator workload takes 2.30× as long with left recursion as with Operators Rule parsing on closure (1.98× generated, 1.62× typed). The generated Recovery workload takes about the same time as Minilang, but skips broken statements and therefore performs different matching work.
 
-**VM Parse Timing Recheck (2026-10-14).** Five alternating 1-second samples on Go 1.27.1 (Apple M3 Max, darwin/arm64, `GOMAXPROCS=16`, `GOGC=100`, `GOMEMLIMIT=off`) compared the historical grammar revisions `8177b32` and `296a2c1`. They are sibling commits with the same parent, so this ratio is not a chronological before/after. All eight VM medians were below parity, but paired ranges span 0.959–1.027; the earlier short-run slowdown was not reproduced. Allocation counts changed by at most one, with no broad memory change.
+**VM Parse Timing Recheck (2026-10-14).** Five alternating 1-second samples on Go 1.27.1 (Apple M3 Max, darwin/arm64, `GOMAXPROCS=16`, `GOGC=100`, `GOMEMLIMIT=off`) compared the historical grammar revisions `8177b32` and `4d1dbff`. They are sibling commits with the same parent, so this ratio is not a chronological before/after. All eight VM medians were below parity, but paired ranges span 0.959–1.027; the earlier short-run slowdown was not reproduced. Allocation counts changed by at most one, with no broad memory change.
 
 | Input | VM | Unit | `8177b32 / 296a2c1` median (paired range) |
 |:--|:--|:--|--:|
@@ -66,13 +66,13 @@ A separate generated-Go typed-allocation bootstrap and its focused measurements 
 | Operators Rule arithmetic | Iterative | Bytes | 0.990 (0.987–1.005) |
 | Operators Rule arithmetic | Iterative | CodePoints | 0.988 (0.961–0.992) |
 
-The run covered four parser backends—closure, recursive VM, iterative VM and generated Go—two grammars and both position units (240 serialized rows). JSON inputs were 262,220 bytes / 255,295 runes (SHA-256 `1f66b46fe4b8009e7932f4f309d073835969cb34002c95a5ab29225254f00ddb`); Operators Rule arithmetic was 133,457 bytes/runes (SHA-256 `cb5fe1452f3f605804e5b32e9f20e9a266aafd9472c6c25053b52bcd8a62f0be`). Closure and generated-Go controls were included; historical runtime sources and the generated-Go controls matched across the sibling revisions. The JSON source differed by two redundant groups; source parsing and compilation were outside the timed loop, but the compiled grammar may still affect parsing, so the comparison does not isolate a runtime cause. On the eight VM profiles, current main `a1acd16` medians versus `296a2c1` ranged 0.998–1.027; this cumulative comparison does not isolate a later change. No runtime change or default-policy conclusion follows from this verification.
+The run covered four parser backends—closure, recursive VM, iterative VM and generated Go—two grammars and both position units (240 serialized rows). JSON inputs were 262,220 bytes / 255,295 runes (SHA-256 `1f66b46fe4b8009e7932f4f309d073835969cb34002c95a5ab29225254f00ddb`); Operators Rule arithmetic was 133,457 bytes/runes (SHA-256 `cb5fe1452f3f605804e5b32e9f20e9a266aafd9472c6c25053b52bcd8a62f0be`). Closure and generated-Go controls were included; historical runtime sources and the generated-Go controls matched across the sibling revisions. The JSON source differed by two redundant groups; source parsing and compilation were outside the timed loop, but the compiled grammar may still affect parsing, so the comparison does not isolate a runtime cause. On the eight VM profiles, current main `0317a06` medians versus `4d1dbff` ranged 0.998–1.027; this cumulative comparison does not isolate a later change. No runtime change or default-policy conclusion follows from this verification.
 
 **Incremental parsing.** In this snapshot, a one-character edit and reparse of the 300-function Minilang document takes 116–133 µs across the three backends, compared with 15.6–24.5 ms for a fresh full parse. For the 50,000-record CSV document, edit and reparse take 1.76–1.80 ms and allocate 487–504 KB/op.
 
 **Generated XML capture scratch.** An earlier focused comparison found slower
 generated XML parsing and recognition despite lower allocated bytes. At main
-commit `244be64`, five alternating 500 ms rounds against the original parent
+commit `2ef247b`, five alternating 500 ms rounds against the original parent
 measured 0.941–0.948× median time across Parse and Recognize, with lower
 allocations and matching input and Node output. A same-source disabled control
 also favored scratch in the medians. Intervening changes prevent attribution

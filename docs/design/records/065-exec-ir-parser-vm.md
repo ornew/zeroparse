@@ -50,7 +50,7 @@ the same performance gates to grammar code as to the runtime.
 
 ## Motivation
 
-The evidence below was measured at commit `f52b6bd9`. The repository history starts on 2026-10-07, so the window
+The evidence below was measured at commit `2d59b30d`. The repository history starts on 2026-10-07, so the window
 covers 2026-10-07 to 2026-10-30: 1,263 commits.
 
 ### Four Copies of One Core
@@ -644,7 +644,7 @@ instantiations share a GC shape, and does not help TypeScript or the engine.
 
 ## Appendix A: Inventory
 
-Measured at `f52b6bd9`. Line counts are approximate, from function boundaries in non-test sources, and include
+Measured at `2d59b30d`. Line counts are approximate, from function boundaries in non-test sources, and include
 comments.
 
 ### Implementations

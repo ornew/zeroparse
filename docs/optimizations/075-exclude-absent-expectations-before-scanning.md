@@ -15,7 +15,7 @@
   cost, and saturated filters retain linear worst-case duplicate work.
   Plain and typed generated parser recycling clears the filter with the
   active record. TypeScript is unchanged.
-- Compare baseline `896c64d` with this filter on Go 1.27.1, Apple M3 Max,
+- Compare baseline `9ab5633` with this filter on Go 1.27.1, Apple M3 Max,
   darwin/arm64. Five alternating 300 ms pairs of prebuilt binaries, without
   competing builds/tests, cover 38 conditions. CPython 3.14.0's vendored
   `_pydecimal.py` and `typing.py` are 229,038 and 134,633 bytes. Medians:
@@ -79,8 +79,8 @@
   records stay local; the clean-commit full-suite checkpoint below provides
   the broader comparison.
 
-- The full-suite checkpoint measures clean commit `2c68ccf`: 131 cases with
-  three samples each, 459.013 seconds. Relative to the separate `5610082`
+- The full-suite checkpoint measures clean commit `a139c2f`: 131 cases with
+  three samples each, 459.013 seconds. Relative to the separate `98544ff`
   full snapshot, typed median time ranges 0.799–1.034× and bytes
   0.988–1.000× across the eight workloads. These noninterleaved snapshots
   do not isolate this method's effect; use the paired controls above for

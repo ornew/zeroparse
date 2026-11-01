@@ -18,7 +18,7 @@
   This is an allocation attribution, not a CPU fraction; compilation includes
   all phases. Profile totals also include benchmark setup.
 - Five alternating parent/candidate pairs with a 200 ms benchtime compare
-  baseline `a1424e5` with component propagation on Apple M3 Max, Go 1.27.1.
+  baseline `6d15c6f` with component propagation on Apple M3 Max, Go 1.27.1.
   Grammar parsing and fixture generation are outside timing; full `Compile`
   with default options is measured. Chains have the listed generated rules
   plus `main`, in either declaration order; a leaf action either reads `x`
@@ -69,7 +69,7 @@
 - Reproduce with
   `go test ./internal/compile -run '^$' -bench '^BenchmarkVariableDependencies$' -benchtime=200ms -benchmem`.
   Build both binaries with identical benchmark source, restoring only
-  `analysis.go` from `a1424e5` via a Go overlay for the parent. Alternate five
+  `analysis.go` from `6d15c6f` via a Go overlay for the parent. Alternate five
   pairs with no concurrent tests/builds/probes. For allocation attribution,
   run `BenchmarkVariableDependencies/no-vars/caller-first-512` separately
   with `-benchtime=1s -memprofile=/tmp/zp-compile.pprof`, and inspect

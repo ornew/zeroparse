@@ -95,7 +95,7 @@ Go command overhead and test linking, rather than pure compiler time or a
 cold dependency build. Generation, parser execution and build costs are
 separate measurements.
 
-Integration onto `d93132a` independently passed the five-mode Go/TypeScript
+Integration onto `9ec4768` independently passed the five-mode Go/TypeScript
 workloads, unshared TypeScript corpus, rollback and identity checks, all ten
 standalone parser modules (short tests and vet), generated freshness, and site
 tests. Three alternating three-second production/control pairs on that tree

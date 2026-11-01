@@ -17,7 +17,7 @@ Generated Go uses `Parse(input, opts ...ParseOption)`, `WithMaxDepth(n)` and `Wi
 
 ## Motivation
 
-At `bc4f820`, the generated Go parser's 100,000-call guard accepts Go source with 16,000 nested parentheses but
+At `645a8c2`, the generated Go parser's 100,000-call guard accepts Go source with 16,000 nested parentheses but
 returns `nesting too deep: more than 100000 rule calls` at 17,000 and 30,000. Go 1.27.1's `go/parser` accepts all
 three inputs. The exact input is `"package p; var x = " + strings.Repeat("(", n) + "1" + strings.Repeat(")", n)`.
 Both generated `Recognize` and `ParseAST`, with byte positions, show this difference. An isolated
@@ -226,7 +226,7 @@ The complete acceptance checklist is:
 
 ## Performance and Results
 
-Measurements compare `e45ff82` with the depth-option implementation on the same
+Measurements compare `7400721` with the depth-option implementation on the same
 source base, using Go 1.27.1, Node.js 24.19.0, Apple M3 Max and `GOMAXPROCS=4`.
 Three alternating baseline/candidate rounds run without competing builds or
 benchmarks. The standalone grammar is `n+`, with `n = "(" n ")" / "é"`: small

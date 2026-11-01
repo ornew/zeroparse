@@ -1,6 +1,6 @@
 # 84. Complete Typed Go-Local Capture Layouts
 
-This extends the generator at `268634e`. Measurements compare the candidate
+This extends the generator at `decb635`. Measurements compare the candidate
 with its own generation-only reference control, rather than an older revision.
 
 The typed Go direct emitter retains the complete ordered capture-name layout

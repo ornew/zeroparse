@@ -203,7 +203,7 @@ modules, generated-output freshness checks and Go vet pass.
 
 Measured on 2026-10-11 with Go 1.27.1 on Apple M3 arm64, GOMAXPROCS=4,
 five alternating parent/candidate pairs and 300 ms per benchmark sample. The
-parent generator is `f8c2399`; regenerating fixtures from `6fac146` produces
+parent generator is `c85db9e`; regenerating fixtures from `9a0eee2` produces
 identical source. Both fixtures use the same benchmark harness and inputs.
 Across 36 existing Node, Recognize and typed AST cases for capture-heavy,
 capture-free and TypeScript grammars generated as Go, allocation counts are

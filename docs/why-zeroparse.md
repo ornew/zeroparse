@@ -188,7 +188,7 @@ targets toward that aim.
 
 ### Measured Today
 
-All figures come from [Benchmark Results](benchmarks.md): commit `13b3d186`, Go 1.27.1, Apple M3 Max (darwin/arm64, 16
+All figures come from [Benchmark Results](benchmarks.md): commit `356a61a9`, Go 1.27.1, Apple M3 Max (darwin/arm64, 16
 cores), median of three runs, positions in code points, measured on 2026-10-29. Times differ between machines. The
 standard-library parsers do different work, so the ratios compare different outputs: `encoding/json` builds values
 without positions, `encoding/xml` returns tokens, `encoding/csv` returns records, and `go/parser` builds a positioned Go

@@ -343,7 +343,7 @@ gains.
 
 ### Local Measurements for Typed Go Document Conversion
 
-The typed Document slice was measured against main `dd19e0f` on an Apple M3 Max (darwin/arm64), Go 1.27.1,
+The typed Document slice was measured against main `501f527` on an Apple M3 Max (darwin/arm64), Go 1.27.1,
 `GOMAXPROCS=1`, `GOGC=100`, and `GOMEMLIMIT=off`. Three alternating 200 ms main/candidate pairs on the existing
 Node fixture found median candidate/main ratios of 0.984–1.003 across fresh batch and near-EOF `Edit+Parse`
 cases in both units; paired ranges were 0.975–1.025. Allocations per operation were unchanged and bytes per
@@ -374,7 +374,7 @@ expensive grammars or typical editor workloads.
 
 The measurements ran on an Apple M3 Max (darwin/arm64) with Go 1.27.1, `GOMAXPROCS=16` and `GOMAXPROCS=1`. The
 measured candidate is `4b6597df`, which publishes shared frozen results. The measured base is `origin/main` at
-`a0f7ceaa`. Both arms use the same generated fixture of 4,096 records: a batch `[]Item` grammar with a near-EOF edit
+`481427ec`. Both arms use the same generated fixture of 4,096 records: a batch `[]Item` grammar with a near-EOF edit
 benchmark. Each arm runs ten interleaved rounds of two identical copies, and the table reports the mean of the
 two arms' medians of `ns/op`. The allocation and retained-heap figures come from one profiled run at 200 iterations
 (`memprofilerate=1`) and from a fresh process per probe.

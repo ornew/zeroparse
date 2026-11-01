@@ -28,7 +28,7 @@ bodies are unchanged.
 
 ## Reproduction
 
-Baseline `178943c` and the candidate differ only in `internal/engine/check.go`.
+Baseline `0a61065` and the candidate differ only in `internal/engine/check.go`.
 Both run on Apple M3 Max with Go 1.27.1. Three alternating
 baseline/candidate rounds of two samples each give six samples per case:
 

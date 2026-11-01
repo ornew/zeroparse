@@ -153,7 +153,7 @@ Focused core and generated-runtime tests cover JSON parity, nil values, nil vers
 
 ## Performance and Results
 
-The final Go JSON writer was compared with the same benchmark source at main `40ab3257` and the candidate revision. Measurements used Go 1.27.1 on Apple M3 Max (`darwin/arm64`, `GOMAXPROCS=16`), five alternating pairs, and a 200 ms benchtime. Both inputs are synthetic: an 8-child record and a 512-node chain.
+The final Go JSON writer was compared with the same benchmark source at main `978f9fca` and the candidate revision. Measurements used Go 1.27.1 on Apple M3 Max (`darwin/arm64`, `GOMAXPROCS=16`), five alternating pairs, and a 200 ms benchtime. Both inputs are synthetic: an 8-child record and a 512-node chain.
 
 | Workload | Main median | Candidate median | B/op, main → candidate | Allocs/op, main → candidate |
 | --- | ---: | ---: | ---: | ---: |

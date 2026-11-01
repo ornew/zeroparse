@@ -11,7 +11,7 @@
   occurrences. This changes shared type checking before compilation or
   generation, not the parsing runtimes or generated matching code.
 - Five alternating parent/candidate pairs with a 200 ms benchtime compare
-  baseline `0ab91da` with this change on Apple M3 Max, Go 1.27.1. Grammar parsing and Program
+  baseline `7c2d37b` with this change on Apple M3 Max, Go 1.27.1. Grammar parsing and Program
   setup are outside the timer; each iteration runs the complete `checkTypes`,
   including dependency analysis, recursive inference and diagnostic checking.
   The recursive fixture repeats `"😀" x:main` in `main`; the record fixture
@@ -56,7 +56,7 @@
 - Reproduce with
   `go test ./internal/engine -run '^$' -bench '^BenchmarkCaptureChecking$' -benchtime=200ms -benchmem`.
   Build parent/candidate binaries with the same benchmark source, restoring
-  `check.go` and `types.go` from `0ab91da` through a Go overlay for the parent.
+  `check.go` and `types.go` from `7c2d37b` through a Go overlay for the parent.
   Run five alternating pairs for recursive sizes 1,024/8,192 and all
   record/mixed/unique/control cases, without concurrent tests/builds/probes.
   Large recursive cases use separate single-iteration diagnostics. Raw

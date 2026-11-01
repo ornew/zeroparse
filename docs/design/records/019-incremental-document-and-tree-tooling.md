@@ -19,7 +19,7 @@ proposal addresses the surrounding costs and gives grammar authors reproducible 
 
 ### Evidence
 
-The comparison scope is ZeroParse at `9353e0922641` and Tree-sitter at
+The comparison scope is ZeroParse at `f29d1220cb87` and Tree-sitter at
 [`e9930e091568`](https://github.com/tree-sitter/tree-sitter/tree/e9930e0915685efb98a9d325b8f23dfdb9e99559).
 ZeroParse's [input representation](../../../internal/engine/core/input.go), [Document reuse](../../../internal/engine/document/document.go),
 [incremental tests](../../../internal/engine/document_test.go) and

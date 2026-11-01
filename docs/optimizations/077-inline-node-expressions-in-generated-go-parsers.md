@@ -14,7 +14,7 @@
   projections, predicates, retained saved trees, external `ParseRule` and
   route selection.
 - Focused measurements: Go 1.27.1, darwin/arm64, Apple M3 Max, 16 CPUs;
-  baseline `b3f00b5`; five alternating 300 ms pairs for 32 Node/recognition
+  baseline `bae4d79`; five alternating 300 ms pairs for 32 Node/recognition
   conditions and eight `ParseAST` controls. Ratios are candidate/baseline
   ratios within each pair, summarized by their median. JSON/CSV/XML/Outline
   Node median ratios range 0.817–0.937×. Operators Rule Node median ratios are
@@ -27,7 +27,7 @@
   controls save about 188 KB/six allocations for Minilang and 273 KB/six
   allocations for Recovery in this schedule; this is Node-construction
   propagation, not typed-emitter adoption or retained-heap evidence.
-  The full-suite snapshot at `afc3129` includes this change; see
+  The full-suite snapshot at `b43c759` includes this change; see
   [Where ZeroParse stands](../performance.md#where-zeroparse-stands) for current
   comparisons. That run is not paired attribution for this optimization.
 - Three paired isolated compiler runs (`go tool compile -pack`, shared
@@ -83,7 +83,7 @@
   `go test ./bench -run '^$' -bench '^BenchmarkParse$/./^generated_ast$' -benchtime=300ms -count=1`.
   The public Recognize benchmark uses its default unit; reproduce Bytes by
   invoking `Recognize(input, Bytes)` for the same workloads. Alternate five
-  pairs against baseline `b3f00b5` with the same grammars, generation options
+  pairs against baseline `bae4d79` with the same grammars, generation options
   and benchmark harness, using each revision's own generated outputs. For
   the public suite, `go generate ./bench` regenerates its parsers; prebuild
   each revision separately with `go test -c -o bench.test ./bench`, then

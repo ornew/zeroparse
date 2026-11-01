@@ -9,7 +9,7 @@
   path copies no records and allocates no replacement map. All engine backends
   apply this; generated parsers have no Document API.
 - Five alternating pairs, Apple M3 Max, Go 1.27.1, 200 ms per sample, compare
-  baseline `95f4e3a` with this same-generation run-map retention. The focused
+  baseline `a0dc741` with this same-generation run-map retention. The focused
   workload has 100,000 `ab\n` lines and replaces one character in the middle.
   Compilation, document construction, initial parsing and the optional unchanged
   parse are outside the timer; Edit plus the final Parse are measured. With the

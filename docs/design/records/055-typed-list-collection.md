@@ -165,7 +165,7 @@ GOMAXPROCS=16 go test ./internal/engine -run '^$' \
   -bench '^BenchmarkNodeListConstruction$' -benchmem -benchtime=500ms -count=5
 ```
 
-Regression controls compare the complete change with `2afb673` using the
+Regression controls compare the complete change with `4c924cc` using the
 existing JSON and XML Parse workloads, all three runtime backends plus
 generated Go, and both position units. Five alternating 500 ms samples give
 median time ratios of 0.893–1.004, allocated-byte ratios of 0.9983–1.0011,

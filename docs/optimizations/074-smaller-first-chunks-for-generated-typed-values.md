@@ -12,7 +12,7 @@
   The direct typed runtime and conversion
   after Node parsing share this allocator; ordinary `Parse`, `Recognize`
   and the engine backends do not change.
-- Compare baseline `70511fa` against this allocator change on Go 1.27.1,
+- Compare baseline `f0f9466` against this allocator change on Go 1.27.1,
   Apple M3 Max, darwin/arm64, using identical accepted inputs and five
   alternating 300 ms pairs with no competing builds or tests. Medians:
 
@@ -67,9 +67,9 @@
   `BenchmarkChunkParseAST` with the same 300 ms flags. Alternate five pairs
   of the prebuilt binaries. Focused raw output remains local; a full-suite
   checkpoint follows this optimization.
-- The subsequent full-suite checkpoint measures clean commit `5610082`:
+- The subsequent full-suite checkpoint measures clean commit `98544ff`:
   131 cases with three samples each, 457.810 seconds. Compared with the
-  previous `98ef6db` snapshot, typed-workload median times range
+  previous `bca9167` snapshot, typed-workload median times range
   0.965–1.056× and bytes 0.967–1.010×. Allocation counts increase by
   34/12/38/12/12/88/81/7 for JSON, CSV, XML, Operators Rule, left recursion,
   minilang conversion, recovery conversion and outline, respectively.

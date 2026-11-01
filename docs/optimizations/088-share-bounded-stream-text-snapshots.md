@@ -27,7 +27,7 @@ are struct-layout sizes, not allocated heap size classes.
 
 ## Evidence
 
-Measurements use the bounded-snapshot source based on main revision `b18832d`.
+Measurements use the bounded-snapshot source based on main revision `7e0370d`.
 Thirty-three timed cases used five alternating 500 ms pairs on Go 1.27.1,
 Apple M3 Max (`darwin/arm64`), with `GOMAXPROCS=4`. All timed cases compare
 the default with the same-source copying reference and exact parent. Ratios
@@ -73,15 +73,15 @@ UTF-8, random ranges, boundaries, oversized requests, requests with too little
 loaded input, short reads, early EOF and near-`MaxInt` positions. A one-byte
 reader check confirms that text access does not trigger another read. Parser
 regeneration has no output changes. Current integration checks on the
-bounded-snapshot source based on `b18832d` pass: root tests (engine 602.313
+bounded-snapshot source based on `7e0370d` pass: root tests (engine 602.313
 s), generator freshness, all ten parser modules, vet and site tests. Focused
 default/reference stream tests pass for both units and all three engine
 backends, including the frame-reference interaction. Independent source review
 passes.
 
 Build the default and `zp_reference_stream_text` binaries from the same
-bounded-snapshot source based on `b18832d`. Build exact-parent binaries from a
-separate `b18832d` worktree with the same Go version. For each case, run
+bounded-snapshot source based on `7e0370d`. Build exact-parent binaries from a
+separate `7e0370d` worktree with the same Go version. For each case, run
 parent, reference and default in alternating ABC/CBA order for five pairs;
 keep backend and unit fixed. Each timed case uses a 500 ms benchmark interval:
 

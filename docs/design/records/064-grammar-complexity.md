@@ -45,7 +45,7 @@ four ways:
 
 ### Measured growth
 
-Revision `e71bf2f2`, Go 1.27.1, darwin/arm64, closure backend, code points. Each figure gives:
+Revision `8acf9918`, Go 1.27.1, darwin/arm64, closure backend, code points. Each figure gives:
 
 - the exact threshold of `Limits.Budget`, found by bisection to 0.5%;
 - the rule evaluations reported by `Profile.Evals`;

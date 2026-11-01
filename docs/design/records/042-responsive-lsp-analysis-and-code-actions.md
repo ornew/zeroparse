@@ -293,7 +293,7 @@ Synthetic bursts of 32 or 256 edits per document held two generations for one do
 
 An additional paired comparison of `analyzeContext` used Go 1.27.1 on an Apple
 M3 Max (darwin/arm64), `GOMAXPROCS=16`, `GOGC=100`, five alternating pairs, and
-300 ms per sample. It compared main `da5dbed` with the cancellable-lexer
+300 ms per sample. It compared main `31f30c3` with the cancellable-lexer
 candidate. Median candidate time was 3.7% higher for the small input, with a
 noisy paired range of 0.863–1.135×; allocated bytes were 40,416 versus 40,400.
 For many rules, median time was 1.4% higher and bytes were 3,143,447 versus
@@ -307,7 +307,7 @@ below.
 
 A separate five-pair, 300 ms alternating comparison measured the ordinary
 `syntax.Parse` path on the same Go 1.27.1, Apple M3 Max, `GOMAXPROCS=16` and
-`GOGC=100` setup, comparing main `da5dbed` with the lexer candidate. For a
+`GOGC=100` setup, comparing main `31f30c3` with the lexer candidate. For a
 256-rule grammar, the paired median was 1.0252× (range 1.018–1.037), with
 bytes/op 874,516→874,520 and allocations/op unchanged at 3,613. For a 64 KiB
 ASCII comment, the median was 1.0459× (1.031–1.069), with bytes/op
@@ -320,7 +320,7 @@ measure cancellation latency or parser/compiler/lint interruption.
 
 A five-pair, 300 ms alternating comparison then measured `syntax.Parse` and
 `ParsePartialContext` on Go 1.27.1, Apple M3 Max (darwin/arm64),
-`GOMAXPROCS=4`, `GOGC=100`, and `GOMEMLIMIT` off, against main `67080bf`.
+`GOMAXPROCS=4`, `GOGC=100`, and `GOMEMLIMIT` off, against main `667303c`.
 For ordinary Parse on Small, Self, Comments and ActionComments inputs, the
 candidate/base median ratios were 1.0148, 1.0186, 1.0089 and 1.0176; paired
 ranges were 1.0110–1.0412, 0.9976–1.0374, 0.9976–1.0615 and 1.0098–1.0252.
@@ -334,7 +334,7 @@ latency.
 
 A five-pair, 300 ms alternating comparison of ordinary compilation used Go
 1.27.1 on an Apple M3 Max (darwin/arm64), `GOMAXPROCS=4`, `GOGC=100`, and
-`GOMEMLIMIT` off, with main `bd128f4` as the base. Candidate/base median time
+`GOMEMLIMIT` off, with main `fee2514` as the base. Candidate/base median time
 ratios were 1.0293 for a 512-rule dependency case (range 1.0137–1.0767,
 approximately +57 B/op and one extra allocation/op), 1.0195 for JSON
 (1.0034–1.0298), 1.0086 for a source grammar (0.9988–1.0247), and 1.0136 for
@@ -353,7 +353,7 @@ coarser polling, so this does not establish a hard cancellation-latency bound.
 
 A five-pair, 300 ms alternating comparison of the lint-enabled analysis path
 used Go 1.27.1 on an Apple M3 Max (darwin/arm64), `GOMAXPROCS=4`, `GOGC=100`,
-and `GOMEMLIMIT` off, comparing main `4f84b74` with the lint-context candidate.
+and `GOMEMLIMIT` off, comparing main `932881b` with the lint-context candidate.
 Candidate/base median time ratios (with the paired range) were:
 
 | Input | Analyze | Lint diagnostics |
@@ -370,7 +370,7 @@ while a lint helper is active, or retained heap.
 
 A separate five-pair alternating comparison measured ordinary validation and
 LSP analysis after adding cancellable grammar validation, against main
-`87a4088` on Go 1.27.1, Apple M3 Max (darwin/arm64),
+`b47526b` on Go 1.27.1, Apple M3 Max (darwin/arm64),
 `GOMAXPROCS=4`, `GOGC=100`, with `GOMEMLIMIT` off. Validation subbenchmarks ran
 for 500 ms and existing LSP Analyze subbenchmarks for 300 ms. The following
 are medians of paired candidate/base time ratios, followed by the observed
@@ -398,7 +398,7 @@ cancellable-context path, cancellation latency or input parsing.
 A focused end-to-end compilation comparison of the normalization change used
 already-parsed ASTs, excluding source parsing. It ran on Go 1.27.1 on an Apple
 M3 Max (darwin/arm64), `GOMAXPROCS=1`, `GOGC=100`, `GOMEMLIMIT` off, with five
-alternating 300 ms pairs against baseline `3f46735`. The source-grammar fixture
+alternating 300 ms pairs against baseline `787aac2`. The source-grammar fixture
 was identical between baseline and candidate; the attribute-heavy fixture had
 64 `@error` annotations. The table gives median paired candidate/base time
 ratios:
@@ -428,7 +428,7 @@ A separate comparison measured full `Compile`/`CompileContext` and
 `Run`/`RunContext` calls on already-parsed JSON, source-grammar, and
 64-`@error`-annotation ASTs. It used Go 1.27.1 on an Apple M3 Max
 (darwin/arm64), `GOMAXPROCS=1`, `GOGC=100`, with no `GOMEMLIMIT`, and five
-alternating 200 ms pairs against main `74d6a8c`. The baseline used the same lint
+alternating 200 ms pairs against main `29c08cd`. The baseline used the same lint
 benchmark driver through a test-only Go overlay. Values are paired-median
 candidate/base time ratios:
 
@@ -454,7 +454,7 @@ cancellation latency, peak memory, or real-editor behavior. Sources are
 ### Lint Metadata Cancellation
 
 Five alternating 200 ms pairs compared the final lint-metadata traversal with
-main `43b66f6`, using the same `BenchmarkSuccessProofLintCancellation` cases
+main `3747884`, using the same `BenchmarkSuccessProofLintCancellation` cases
 and already-parsed JSON, source-grammar, and 64-`@error`-annotation ASTs. The
 environment was Go 1.27.1 on an Apple M3 Max (darwin/arm64),
 `GOMAXPROCS=1`, `GOGC=100`, with no `GOMEMLIMIT`. Values are paired-median
@@ -476,7 +476,7 @@ runtime, cancellation latency, peak memory, or real-editor behavior.
 
 ### Shared Grammar Metadata Collection
 
-Five alternating 200 ms pairs compared main `ace727f` with the final shared
+Five alternating 200 ms pairs compared main `f2872db` with the final shared
 metadata collectors, using already-parsed JSON, source-grammar, and 64-
 `@error`-annotation ASTs. Whole `Compile`/`CompileContext` and `Run`/`RunContext`
 calls were measured with Go 1.27.1 on an Apple M3 Max (darwin/arm64),
@@ -510,7 +510,7 @@ arguments directly.
 
 ### Character-Class Analysis Cancellation
 
-Five alternating 200 ms pairs compared main `4bbbb7e` with the class-analysis
+Five alternating 200 ms pairs compared main `3817a25` with the class-analysis
 change. Go 1.27.1 on an Apple M3 Max (darwin/arm64), `GOMAXPROCS=1`,
 `GOGC=100`, and no `GOMEMLIMIT` were used. Measurements cover whole
 `Compile`/`CompileContext` and `Run`/`RunContext` calls on already-parsed JSON,
@@ -540,7 +540,7 @@ a general speedup or regression claim.
 
 ### Grammar and LSP Formatting Cancellation
 
-Five alternating 200 ms pairs compared main `4e21b0e` with the formatting
+Five alternating 200 ms pairs compared main `e7df37d` with the formatting
 cancellation change, using Go 1.27.1 on an Apple M3 Max (darwin/arm64),
 `GOMAXPROCS=1`, `GOGC=100`, and no `GOMEMLIMIT`. Inputs were parsed or
 analyzed before timed calls. The table shows paired-median candidate/base time
@@ -581,7 +581,7 @@ the baseline. Raw results remain outside the repository.
 
 ### LSP Symbol, Hover, and Completion Rendering
 
-Five serial alternating 200 ms pairs compared main `bca31b7` with the render
+Five serial alternating 200 ms pairs compared main `ac621af` with the render
 cancellation change on Go 1.27.1, Apple M3 Max (darwin/arm64),
 `GOMAXPROCS=1`, `GOGC=100`, with no `GOMEMLIMIT`. Inputs were analyzed before
 the timed request-rendering calls. The table shows paired-median candidate/main
@@ -620,7 +620,7 @@ outside the repository.
 
 ### Occurrence Request Cancellation
 
-Five alternating 200 ms pairs compared main `fa2917c` with the occurrence
+Five alternating 200 ms pairs compared main `7ec28b7` with the occurrence
 cancellation change on Go 1.27.1, Apple M3 Max (darwin/arm64),
 `GOMAXPROCS=1`, `GOGC=100`, and no `GOMEMLIMIT`. The 20 profiles cover 32 or
 4,096 references, plus a 64 KiB new identifier for rename, across references,
@@ -675,7 +675,7 @@ Position lookup still uses the existing bounded index conversions. JSON
 decoding, individual string comparisons, allocation, and wire encoding remain
 indivisible; this adds cooperative cancellation points but no wall-clock bound.
 
-Five alternating 200 ms pairs compared the change with main `651deef` on Go
+Five alternating 200 ms pairs compared the change with main `f054d0c` on Go
 1.27.1, Apple M3 Max (darwin/arm64), `GOMAXPROCS=1`, `GOGC=100`, and no
 `GOMEMLIMIT`. The ten profiles used pre-analyzed JSON, dense-token, source-
 grammar, comment, and incomplete-operators documents; they measured
@@ -727,7 +727,7 @@ formatting, allocations, and wire encoding remain indivisible, so this does not
 provide a wall-clock bound.
 
 Five alternating 200 ms pairs compared the code-action request path with parent
-`4c744fd` on Go 1.27.1, Apple M3 Max (darwin/arm64), `GOMAXPROCS=1`,
+`208427f` on Go 1.27.1, Apple M3 Max (darwin/arm64), `GOMAXPROCS=1`,
 `GOGC=100`, and no `GOMEMLIMIT`. The eight workloads include request JSON
 decoding, cached lint-result mapping and response construction, plus
 suppression-candidate analysis and lint where applicable; initial snapshot
@@ -774,7 +774,7 @@ helpers, while ordinary background paths retain their existing behavior.
 Allocations, map operations and individual string comparisons remain
 indivisible, so polling does not establish a wall-clock bound.
 
-Five alternating 200 ms pairs compared main `d7fd2ab` and the metadata
+Five alternating 200 ms pairs compared main `1791d4b` and the metadata
 cancellation change on Go 1.27.1, Apple M3 Max (darwin/arm64),
 `GOMAXPROCS=1`, `GOGC=100`, and no `GOMEMLIMIT`. The full stage includes
 text-index and declaration-index construction, tokenization, parsing,
@@ -872,7 +872,7 @@ and rechecks pending requests. The four execution slots and 64 logical-request
 limit remain unchanged. This does not add FIFO fairness or establish an exact
 whole-process goroutine ceiling.
 
-A comparison against `1aeff8d` used the same framed resource harness with only
+A comparison against `2b030b0` used the same framed resource harness with only
 `responsive.go` restored for the baseline. Five alternating fresh-process pairs
 covered 1 and 64 requests, each with tiny hover or large code-action parameters
 (40 processes). The environment was Go 1.27.1, Apple M3 Max (darwin/arm64),

@@ -3,7 +3,7 @@
 This page covers what ZeroParse aims to be, where it earns its first proof, what must become true on the way, and how
 progress is measured. It is written for contributors who are choosing what to work on and judging the result; the
 summary for readers is [Why ZeroParse](why-zeroparse.md). Facts about ZeroParse refer to this repository. Benchmark figures come from
-[Benchmark Results](benchmarks.md) (commit `13b3d186`, Go 1.27.1, Apple M3 Max, darwin/arm64, median of three runs,
+[Benchmark Results](benchmarks.md) (commit `356a61a9`, Go 1.27.1, Apple M3 Max, darwin/arm64, median of three runs,
 positions in code points). Comparisons checked on 2026-10-29.
 
 ## Vision and Positioning
