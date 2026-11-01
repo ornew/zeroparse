@@ -75,7 +75,7 @@ func (noExprs) Choice(e *grammar.Choice, alts []struct{}, firsts []First, build 
 	return struct{}{}
 }
 func (noExprs) Optional(e *grammar.Optional, m struct{}, build bool) struct{} { return struct{}{} }
-func (noExprs) And(m struct{}) struct{}                                       { return struct{}{} }
+func (noExprs) And(m struct{}, keepsState bool) struct{}                      { return struct{}{} }
 func (noExprs) Not(m struct{}) struct{}                                       { return struct{}{} }
 func (noExprs) Atomic(m struct{}, build bool) struct{}                        { return struct{}{} }
 func (noExprs) Discard(m struct{}) struct{}                                   { return struct{}{} }

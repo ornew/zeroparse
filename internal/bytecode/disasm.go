@@ -161,6 +161,9 @@ func (m *Module) operands(in Instr, str func(int) string, names func([]int) stri
 		if bb == 1 {
 			return fmt.Sprintf("not -> %d", a)
 		}
+		if c == 1 {
+			return "and keeps"
+		}
 		return "and"
 	case OpEndLook:
 		if a == 1 {

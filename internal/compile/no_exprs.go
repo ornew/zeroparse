@@ -24,7 +24,7 @@ func (NoExprs) Choice(e *grammar.Choice, alts []struct{}, firsts []First, build 
 	return struct{}{}
 }
 func (NoExprs) Optional(e *grammar.Optional, m struct{}, build bool) struct{} { return struct{}{} }
-func (NoExprs) And(m struct{}) struct{}                                       { return struct{}{} }
+func (NoExprs) And(m struct{}, keepsState bool) struct{}                      { return struct{}{} }
 func (NoExprs) Not(m struct{}) struct{}                                       { return struct{}{} }
 func (NoExprs) Atomic(m struct{}, build bool) struct{}                        { return struct{}{} }
 func (NoExprs) Discard(m struct{}) struct{}                                   { return struct{}{} }

@@ -1912,6 +1912,8 @@ export class Parser {
   popped: Dep[] = [];
   ctxs: CtxTable[] = [];
   looks: number[] = [];
+  lookRecs: number[] = []; // the recovered errors at the start of each lookahead in looks
+  foundSet: CtxSet | null = null; // the set of the result that ctxFind last returned
   obsGuard: number[] = [];
   seedSeq = 0;
   farthest = 0;
@@ -2993,7 +2995,7 @@ export class Parser {
     if (s === null || !this.reusable(s.e!.silent, s.e!.errs.length)) {
       return null;
     }
-    this.replayDeps(c.gp, s.deps);
+    this.replayDeps(this.pos, c.gp, c.present, s.deps);
     return s.e;
   }
 
@@ -3118,9 +3120,12 @@ export class Parser {
     return out;
   }
 
-  // replayDeps passes the stored dependencies of a reused result to the innermost frame, as if the
-  // evaluation that produced them had run in the current context gamma[gp:].
-  replayDeps(gp: number, ds: Sdep[]): void {
+  // replayDeps passes the stored dependencies of a reused result at pos, whose present set is
+  // present, to the innermost frame, as if the evaluation that produced them had run in the current
+  // context gamma[gp:]: the seeds it read with their current identities, and each observation with
+  // the seeds that its outcome read in the current context (replayObs) as well as those it read
+  // where it was made. A frame that cannot check an observation depends on those seeds instead.
+  replayDeps(pos: number, gp: number, present: number, ds: Sdep[]): void {
     if (this.depFrames.length === 0 || ds.length === 0) {
       return;
     }
@@ -3129,15 +3134,49 @@ export class Parser {
     for (const d of ds) {
       if (d.kind === depObs) {
         buf.push({ kind: depObs, idx: d.site, d: depth, val: d.val });
+        this.replayObs(buf, pos, gp, present, d.site, depth);
       } else {
         const i = this.gammaFind(gp, d.rule, d.min);
         if (i < 0) {
           continue;
         }
-        buf.push({ kind: d.kind, idx: i, d: depth, val: d.val });
+        buf.push({ kind: d.kind, idx: i, d: depth, val: this.gamma[i]!.id });
       }
     }
     this.mergeDeps(buf);
+  }
+
+  // replayObs appends to buf the shadows of the seeds that the outcome memoized for the lookahead
+  // site at pos in the current context read, and the observations it depends on with their shadows.
+  replayObs(buf: Dep[], pos: number, gp: number, present: number, site: number, depth: number): void {
+    for (const s of this.obsGuard) {
+      if (s === site) {
+        return;
+      }
+    }
+    this.obsGuard.push(site);
+    try {
+      const s = this.ctxFind(pos, gp, headKey(ctxLookKind, site, 0, present), present, null);
+      if (s === null) {
+        return;
+      }
+      const set = this.foundSet!;
+      for (let j = 0; j < set.seeds.length; j += 2) {
+        const i = this.gammaFind(gp, set.seeds[j]!, set.seeds[j + 1]!);
+        if (i >= 0) {
+          buf.push({ kind: depShadow, idx: i, d: depth, val: this.gamma[i]!.id });
+        }
+      }
+      for (const o of set.obs) {
+        const v = this.obsValue(pos, gp, present, o);
+        if (v !== obsNone) {
+          buf.push({ kind: depObs, idx: o, d: depth, val: v });
+          this.replayObs(buf, pos, gp, present, o, depth);
+        }
+      }
+    } finally {
+      this.obsGuard.pop();
+    }
   }
 
   // table returns the table of the growths gamma[gp:] at pos, creating it if create is set, or null.
@@ -3179,8 +3218,42 @@ export class Parser {
     }
   }
 
+  // obsFree returns the outcome memoized for the lookahead site at pos in the current context, or
+  // obsNone, and whether it was obtained without reading the seed of the growth g, directly or
+  // through the observations it depends on. Such an outcome is the outcome of the lookahead for every
+  // seed of g: an evaluation follows the same path, and reads the same seeds, as long as the seeds
+  // it reads are equal.
+  obsFree(pos: number, gp: number, present: number, site: number, g: GrowState): { v: number; free: boolean } {
+    for (const s of this.obsGuard) {
+      if (s === site) {
+        return { v: obsNone, free: false };
+      }
+    }
+    this.obsGuard.push(site);
+    try {
+      const s = this.ctxFind(pos, gp, headKey(ctxLookKind, site, 0, present), present, null);
+      if (s === null) {
+        return { v: obsNone, free: false };
+      }
+      const set = this.foundSet!;
+      for (let j = 0; j < set.seeds.length; j += 2) {
+        if (set.seeds[j] === g.rule && set.seeds[j + 1] === g.min) {
+          return { v: s.id, free: false };
+        }
+      }
+      for (const o of set.obs) {
+        if (!this.obsFree(pos, gp, present, o, g).free) {
+          return { v: s.id, free: false };
+        }
+      }
+      return { v: s.id, free: true };
+    } finally {
+      this.obsGuard.pop();
+    }
+  }
+
   // ctxFind looks up a result of head h, whose present set is present, in the table of the growths
-  // gamma[gp:] at pos for the current context.
+  // gamma[gp:] at pos for the current context, and leaves its set in foundSet.
   ctxFind(pos: number, gp: number, h: string, present: number, env: Value[] | null): CtxSlot | null {
     const t = this.table(pos, gp, false);
     if (t === null) {
@@ -3211,6 +3284,7 @@ export class Parser {
       for (let x: CtxSlot | null = s.vals.get(k) ?? null; x !== null; x = x.next) {
         this.spend();
         if (env === null && x.env === null || sameValues(x.env, env, this.control)) {
+          this.foundSet = s;
           return x;
         }
       }
@@ -3315,10 +3389,12 @@ export class Parser {
     const g = this.gamma.length;
     if (f.pos === this.pos && f.gp < g && this.gamma[g - 1]!.pos === this.pos && this.gamma[g - 1]!.cycle === this.gamma[f.gp]!.cycle) {
       this.looks.push(site);
+      this.lookRecs.push(this.recovered.length);
       this.pushFrame(this.pos, f.gp);
       return;
     }
     this.looks.push(-1);
+    this.lookRecs.push(0);
   }
 
   // lookEnd ends the innermost lookahead, whose expression matched if ok.
@@ -3327,6 +3403,7 @@ export class Parser {
       return;
     }
     const site = this.looks.pop()!;
+    const rec = this.lookRecs.pop()!;
     if (site < 0) {
       return;
     }
@@ -3338,7 +3415,9 @@ export class Parser {
         break;
       }
     }
-    if (!read) {
+    if (!read || (ok && this.recovered.length > rec)) {
+      // Errors recovered in a matching lookahead stay recorded after it, so its outcome does not
+      // summarize it: the seeds it read stay dependencies.
       this.mergeDeps(ds);
       return;
     }
@@ -3390,14 +3469,14 @@ export class Parser {
       const id = this.gamma[g.gi]!.id;
       const j = this.findJump(g, id);
       if (j !== null) {
-        this.replayDeps(g.gp, j.deps);
+        this.replayDeps(g.start, g.gp, g.present, j.deps);
         this.mergeKept(j.far, j.exp);
         this.setSeed(g, j.end, j.id);
         continue;
       }
       const s = this.ctxFind(g.start, g.gp, headKey(ctxStepKind, g.rule, g.min, g.present), g.present, null);
       if (s !== null && this.reusable(s.silent, s.e!.errs.length)) {
-        this.replayDeps(g.gp, s.deps);
+        this.replayDeps(g.start, g.gp, g.present, s.deps);
         this.mergeKept(s.far, s.exp);
         if (!this.advance(g, s.e!, s.id, { seed: id, far: s.far, exp: s.exp, silent: s.silent, deps: s.deps })) {
           return false;
@@ -3462,6 +3541,10 @@ export class Parser {
     const obs: Sdep[] = [];
     for (const d of st.deps) {
       if (d.kind === depSeed && (d.rule !== g.rule || d.min !== g.min)) {
+        other = true;
+      } else if (d.kind === depShadow && d.rule === g.rule && d.min === g.min) {
+        // A lookahead of the step read the growth's own seed: its outcome holds for this seed
+        // only, while a jump checks its observations under the first seed of the run.
         other = true;
       } else if (d.kind === depObs || d.kind === depShadow) {
         obs.push(d);
@@ -3557,8 +3640,15 @@ export class Parser {
       if (j.silent && this.silent === 0) {
         continue;
       }
+      // Each step of the jump made its observations under its own seed, and the jump is taken from
+      // the first: an observation holds for the jump only if its outcome is the same for every seed
+      // of the growth.
       for (const d of j.deps) {
-        if (d.kind === depObs && this.obsValue(g.start, g.gp, g.present, d.site) !== d.val) {
+        if (d.kind !== depObs) {
+          continue;
+        }
+        const o = this.obsFree(g.start, g.gp, g.present, d.site, g);
+        if (o.v !== d.val || !o.free) {
           continue next;
         }
       }

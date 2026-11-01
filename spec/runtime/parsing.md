@@ -389,13 +389,20 @@ exceptions.
   generated parser outside a Document parse and a TypeScript parser compare no
   range. A result that read a growing result is kept only until the first
   growth of its context ends, and never enters the memo of a later parse.
+  A lookahead counts as observed by its outcome only if nothing else of it
+  remains after it: a positive lookahead whose expression makes a capture or
+  binds a variable outside the rules that it calls, or that matches after
+  recovering from errors, is not observed, and the growing results that it
+  read count as read by the result around it.
 - A growing rule evaluates its body once for each step of the growth, and the
   number of steps is at most two more than the length of the input it
   consumes. A leader that grows at a position where another growth of its
   cycle is in progress grows again in each context in which it is called
   there. A step of such a growth reuses the step that an earlier growth of the
   leader took from the same growing result under the same condition, and a run
-  of steps that read no other growing result is taken at once.
+  of steps that read no other growing result is taken at once when every
+  lookahead that those steps observed has the same outcome now and that
+  outcome read no growing result of the leader itself.
 
 Every other result of a rule of a left-recursion cycle is memoized like that of
 any rule. Calls at a later position finish their own growth, outside the

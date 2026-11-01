@@ -25,7 +25,9 @@ type ExprBuilder[M any] interface {
 	// character can skip.
 	Choice(e *grammar.Choice, alts []M, firsts []First, build bool) M
 	Optional(e *grammar.Optional, m M, build bool) M
-	And(m M) M
+	// And matches m without consuming input. keepsState reports that m can leave a capture or a
+	// variable binding in effect after it (LookKeepsState).
+	And(m M, keepsState bool) M
 	Not(m M) M
 	Atomic(m M, build bool) M
 	Discard(m M) M
@@ -182,7 +184,7 @@ func (c *Walker[M]) Expr(e grammar.Expr, s *Scope, build bool) M {
 
 	case *grammar.And:
 		// Captures and variable definitions inside a positive lookahead remain valid after it.
-		return c.Builder.And(c.Expr(e.Expr, s, build && hasCapturesControlled(e.Expr, control)))
+		return c.Builder.And(c.Expr(e.Expr, s, build && hasCapturesControlled(e.Expr, control)), LookKeepsState(e.Expr))
 
 	case *grammar.Not:
 		c.noCaptures(e.Expr)

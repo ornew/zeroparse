@@ -19,8 +19,10 @@ func depMemoGrammars(seeds int) []gentest.Case {
 // depMemoDiffers compares, on every backend, the results of the grammar with the dependency
 // memo and the results of the grammar compiled without a memo that evaluates every call in a
 // context again (ParseOptions.ContextMemoOff), and returns the differences, ignoring an input that
-// exhausts a limit in either. It returns false if the grammar does not compile.
-func depMemoDiffers(t *testing.T, c gentest.Case, limit int) ([]string, bool) {
+// exhausts a limit in either. With unexamined, the memo leaves examined ranges out of identities
+// and outcomes (ParseOptions.ContextMemoUnexamined). It returns false if the grammar does not
+// compile.
+func depMemoDiffers(t *testing.T, c gentest.Case, limit int, unexamined bool) ([]string, bool) {
 	t.Helper()
 	g, err := parseTest(c.Src)
 	if err != nil {
@@ -34,9 +36,9 @@ func depMemoDiffers(t *testing.T, c gentest.Case, limit int) ([]string, bool) {
 	for _, in := range c.Inputs {
 		for _, backend := range []Backend{Closure, Bytecode, BytecodeIterative} {
 			for _, recognize := range []bool{false, true} {
-				o := ParseOptions{Backend: backend, Recognize: recognize}
+				o := ParseOptions{Backend: backend, Recognize: recognize, ContextMemoUnexamined: unexamined}
 				got, err := memo.ParseWith("", in, o)
-				o.ContextMemoOff = true
+				o.ContextMemoUnexamined, o.ContextMemoOff = false, true
 				want, wantErr := ref.ParseWith("", in, o)
 				a, b := gentest.ResultJSON(got, err), gentest.ResultJSON(want, wantErr)
 				if a != b && !strings.Contains(a+b, "budget") && !strings.Contains(a+b, "limit") {
@@ -61,7 +63,7 @@ func TestLeftRecursionDependencyMemoRandom(t *testing.T) {
 	}
 	compiled, n := 0, 0
 	for _, c := range depMemoGrammars(seeds) {
-		diffs, ok := depMemoDiffers(t, c, 3)
+		diffs, ok := depMemoDiffers(t, c, 3, false)
 		if !ok {
 			continue
 		}
@@ -88,19 +90,23 @@ func TestLeftRecursionDependencyMemoControls(t *testing.T) {
 	}
 	cases := depMemoGrammars(seeds)
 	for _, m := range []struct {
-		name     string
-		mutation int
+		name       string
+		mutation   int
+		unexamined bool // a difference shows only without examined ranges
 	}{
-		{"seed identities", core.CtxIgnoreSeeds},
-		{"observations", core.CtxIgnoreObs},
-		{"present growths", core.CtxIgnorePresent},
-		{"canonical seeds", core.CtxNoCanonical},
+		{"seed identities", core.CtxIgnoreSeeds, false},
+		{"observations", core.CtxIgnoreObs, false},
+		{"present growths", core.CtxIgnorePresent, false},
+		{"canonical seeds", core.CtxNoCanonical, false},
+		{"jumps over observations of the growing seed", core.CtxJumpAnySeed, false},
+		{"replayed observations", core.CtxStaleReplay, true},
+		{"lookaheads with recovered errors", core.CtxLookErrors, false},
 	} {
 		t.Run(m.name, func(t *testing.T) {
 			core.ContextMemoMutation = m.mutation
 			defer func() { core.ContextMemoMutation = 0 }()
 			for _, c := range cases {
-				if diffs, _ := depMemoDiffers(t, c, 1); len(diffs) > 0 {
+				if diffs, _ := depMemoDiffers(t, c, 1, m.unexamined); len(diffs) > 0 {
 					return
 				}
 			}

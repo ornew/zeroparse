@@ -905,7 +905,12 @@ func (mc *Machine) step(vm *Program, b *vmBody, resume, rok bool, rv *value.Node
 			}
 			mc.ents = append(mc.ents, vmEntry{kind: kind, ip: in.A, save: mc.save()})
 			p.Silent++
-			p.LookBegin(ip)
+			if in.C == 1 {
+				// A lookahead that leaves captures or bindings is no observation.
+				p.LookBegin(-1)
+			} else {
+				p.LookBegin(ip)
+			}
 		case bytecode.OpEndLook:
 			e := mc.ents[len(mc.ents)-1]
 			mc.ents = mc.ents[:len(mc.ents)-1]

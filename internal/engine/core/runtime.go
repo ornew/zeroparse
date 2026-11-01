@@ -635,7 +635,7 @@ func (p *Parser) CallBegin(r *Rule, min int) (st CallState, v *value.Node, ok, h
 	if ctx && known && !p.strictCtx() {
 		if s := p.ctxFind(key.Pos, gp, ctxHeadKey{kind: ctxCall, id: int32(key.Rule), min: int32(key.Min), ms: key.MissingSilent, present: present}, key.Env); s != nil && p.reusable(s.e.silent, len(s.e.Errs)) {
 			p.SeedReads++
-			p.replayDeps(gp, s.deps)
+			p.replayDeps(key.Pos, gp, present, s.deps)
 			e := s.e
 			p.replayEntry(e)
 			if !e.Ok {
@@ -825,7 +825,7 @@ func (p *Parser) GrowNext(g *GrowState) bool {
 		id := p.Gamma[g.gi].id
 		if j := p.findJump(g, gp, id); j != nil {
 			p.SeedReads++
-			p.replayDeps(gp, j.deps)
+			p.replayDeps(g.start, gp, g.present, j.deps)
 			p.MergeExpected(j.far, j.exp)
 			p.touch(j.examined)
 			p.lw = Min2(p.lw, j.from)
@@ -835,7 +835,7 @@ func (p *Parser) GrowNext(g *GrowState) bool {
 		h := ctxHeadKey{kind: ctxStep, id: int32(g.Key.Rule), min: int32(g.Key.Min), ms: g.Key.MissingSilent, present: g.present}
 		if s := p.ctxFind(g.start, gp, h, nil); s != nil && p.reusable(s.silent, len(s.e.Errs)) {
 			p.SeedReads++
-			p.replayDeps(gp, s.deps)
+			p.replayDeps(g.start, gp, g.present, s.deps)
 			p.MergeExpected(s.far, s.exp)
 			p.touch(s.examined)
 			p.lw = Min2(p.lw, s.from)
@@ -914,6 +914,10 @@ func (p *Parser) advance(g *GrowState, res *MemoEntry, rid uint64, st runStep) b
 		switch {
 		case d.kind == depSeed && (growKey{d.rule, d.min, d.ms}) != own:
 			other = true
+		case d.kind == depShadow && (growKey{d.rule, d.min, d.ms}) == own:
+			// A lookahead of the step read the growth's own seed: its outcome holds for this seed
+			// only, while a jump checks its observations under the first seed of the run.
+			other = true
 		case d.kind == depObs || d.kind == depShadow:
 			obs = append(obs, d)
 		}
@@ -986,8 +990,14 @@ next:
 		if j.silent && p.Silent == 0 {
 			continue
 		}
+		// Each step of the jump made its observations under its own seed, and the jump is taken
+		// from the first: an observation holds for the jump only if its outcome is the same for
+		// every seed of the growth.
 		for _, d := range j.deps {
-			if d.kind == depObs && p.obsValue(g.start, gp, g.present, d.site) != d.val && ContextMemoMutation != CtxIgnoreObs {
+			if d.kind != depObs || ContextMemoMutation == CtxIgnoreObs {
+				continue
+			}
+			if v, free := p.obsFree(g.start, gp, g.present, d.site, g.growKey()); v != d.val || !free && ContextMemoMutation != CtxJumpAnySeed {
 				continue next
 			}
 		}

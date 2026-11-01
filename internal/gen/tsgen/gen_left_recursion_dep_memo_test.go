@@ -57,23 +57,35 @@ func TestGeneratedTSLeftRecursionDependencyMemo(t *testing.T) {
 // depMemoTSMutations are the changes of the TypeScript runtime for the negative controls of
 // TestGeneratedTSLeftRecursionDependencyMemoControls, each a list of replacements: a reuse that
 // does not compare the identities of the seeds read, that does not check observations, a result in
-// the memo reused whatever its present set, and equal step results given the same identity without
-// comparing them.
+// the memo reused whatever its present set, equal step results given the same identity without
+// comparing them, a jump that uses observations whose outcomes read the growing seed, a reused
+// result that replays the seeds its observations read where it was made, and an observation that
+// summarizes a lookahead that recovered errors.
 var depMemoTSMutations = map[string][][2]string{
 	"seed identities": {
 		{"k += this.gamma[i]!.id + \",\";\n", "k += \"0,\";\n"},
 		{"if (d.kind === depSeed) k += d.val + \",\";\n", "if (d.kind === depSeed) k += \"0,\";\n"},
 	},
 	"observations": {
-		{"const v = this.obsValue(pos, gp, present, o);\n", "const v = o * 0 - 2;\n"},
+		{"const v = this.obsValue(pos, gp, present, o);\n        if (v === obsNone) {\n", "const v = o * 0 - 2;\n        if (v === obsNone) {\n"},
 		{"if (d.kind === depObs) k += d.val + \",\";\n", "if (d.kind === depObs) k += \"-2,\";\n"},
-		{"if (d.kind === depObs && this.obsValue(g.start, g.gp, g.present, d.site) !== d.val) {", "if (d.kind === depObs && false) {"},
+		{"if (o.v !== d.val || !o.free) {", "if (false) {"},
 	},
 	"present growths": {
 		{"return !c.ctx || c.known && (c.present & ~present) === 0;\n", "return true;\n"},
 	},
 	"canonical seeds": {
 		{"if (c.e.errs.length === 0 && this.nodesEqual(", "if (true || this.nodesEqual("},
+	},
+	"jumps over observations of the growing seed": {
+		{"if (o.v !== d.val || !o.free) {", "if (o.v !== d.val) {"},
+	},
+	"replayed observations": {
+		{"buf.push({ kind: d.kind, idx: i, d: depth, val: this.gamma[i]!.id });", "buf.push({ kind: d.kind, idx: i, d: depth, val: d.val });"},
+		{"this.replayObs(buf, pos, gp, present, d.site, depth);\n", "\n"},
+	},
+	"lookaheads with recovered errors": {
+		{"if (!read || (ok && this.recovered.length > rec)) {", "if (!read) {"},
 	},
 }
 

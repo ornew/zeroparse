@@ -470,6 +470,10 @@ func (b *coreBuilder) node(e grammar.Expr, s *coreScope, build bool) (core.Node,
 		if err != nil {
 			return nil, err
 		}
+		if compile.LookKeepsState(e.Expr) {
+			// Its captures and bindings outlast it: no observation (compile.LookKeepsState).
+			return b.set(&core.Look{Body: x}, e, false), nil
+		}
 		b.looks++
 		return b.set(&core.Look{Body: x, Site: b.looks}, e, false), nil
 	case *grammar.Not:

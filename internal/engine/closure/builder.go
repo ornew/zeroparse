@@ -304,9 +304,13 @@ func (b *Builder) Optional(e *grammar.Optional, m core.Matcher, build bool) core
 	}
 }
 
-func (b *Builder) And(m core.Matcher) core.Matcher {
+func (b *Builder) And(m core.Matcher, keepsState bool) core.Matcher {
 	b.looks++
 	site := b.looks
+	if keepsState {
+		// A lookahead that leaves captures or bindings is no observation (Parser.LookBegin).
+		site = -1
+	}
 	return func(p *core.Parser) (*value.Node, bool) {
 		start, prevCut := p.Pos, p.Cut
 		p.Silent++

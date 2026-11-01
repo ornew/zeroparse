@@ -53,6 +53,9 @@ const (
 	CtxIgnorePresent              // a result in the memo table is reused whatever its present set
 	CtxNoCanonical                // equal step results get the same identity without comparing them
 	CtxKeepSeedResults            // a Document keeps the results that read a seed for later parses
+	CtxJumpAnySeed                // a jump uses observations whose outcomes read the growing seed
+	CtxStaleReplay                // a reuse replays the seeds its observations read where they were made
+	CtxLookErrors                 // an observation summarizes a lookahead that recovered errors
 )
 
 // growRec is a growth in progress: the leader's key, its current seed and the seed's identity.
@@ -343,9 +346,12 @@ func (p *Parser) stored(ds []dep) ([]sdep, bool) {
 	return out, ctx
 }
 
-// replayDeps passes the stored dependencies of a reused result to the innermost frame, as if the
-// evaluation that produced them had run in the current context Gamma[gp:].
-func (p *Parser) replayDeps(gp int, ds []sdep) {
+// replayDeps passes the stored dependencies of a reused result at pos, whose present set is
+// present, to the innermost frame, as if the evaluation that produced them had run in the current
+// context Gamma[gp:]: the seeds it read with their current identities, and each observation with
+// the seeds that its outcome read in the current context (replayObs) as well as those it read where
+// it was made. A frame that cannot check an observation depends on those seeds instead.
+func (p *Parser) replayDeps(pos, gp int, present uint64, ds []sdep) {
 	if len(p.frames) == 0 || len(ds) == 0 {
 		return
 	}
@@ -358,12 +364,47 @@ func (p *Parser) replayDeps(gp int, ds []sdep) {
 			if i < 0 {
 				continue
 			}
-			buf = append(buf, dep{kind: d.kind, idx: int32(i), d: depth, val: d.val})
+			v := p.Gamma[i].id
+			if ContextMemoMutation == CtxStaleReplay {
+				v = d.val
+			}
+			buf = append(buf, dep{kind: d.kind, idx: int32(i), d: depth, val: v})
 		case depObs:
 			buf = append(buf, dep{kind: depObs, idx: d.site, d: depth, val: d.val})
+			if ContextMemoMutation != CtxStaleReplay {
+				buf = p.replayObs(buf, pos, gp, present, d.site, depth)
+			}
 		}
 	}
 	p.mergeDeps(buf)
+}
+
+// replayObs appends to buf the shadows of the seeds that the outcome memoized for the lookahead
+// site at pos in the current context read, and the observations it depends on with their shadows.
+func (p *Parser) replayObs(buf []dep, pos, gp int, present uint64, site, depth int32) []dep {
+	for _, s := range p.obsGuard {
+		if s == site {
+			return buf
+		}
+	}
+	p.obsGuard = append(p.obsGuard, site)
+	defer func() { p.obsGuard = p.obsGuard[:len(p.obsGuard)-1] }()
+	s, set := p.ctxFindSet(pos, gp, ctxHeadKey{kind: ctxLook, id: site, present: present}, nil)
+	if s == nil {
+		return buf
+	}
+	for _, k := range set.seeds {
+		if i := p.gammaFind(gp, int(k.rule), int(k.min), k.ms); i >= 0 {
+			buf = append(buf, dep{kind: depShadow, idx: int32(i), d: depth, val: p.Gamma[i].id})
+		}
+	}
+	for _, o := range set.obs {
+		if v := p.obsValue(pos, gp, present, o); v != obsNone {
+			buf = append(buf, dep{kind: depObs, idx: o, d: depth, val: v})
+			buf = p.replayObs(buf, pos, gp, present, o, depth)
+		}
+	}
+	return buf
 }
 
 // table returns the context table of the growths Gamma[gp:] at pos, creating it if create is set,
@@ -393,6 +434,7 @@ func (p *Parser) dropTable(i int) {
 type lookRec struct {
 	site   int32
 	hw, lw int
+	rec    int // the recovered errors at its start
 }
 
 // The values of an observation other than outcomes (obsOutcome).
@@ -437,16 +479,52 @@ func (p *Parser) obsValue(pos, gp int, present uint64, site int32) uint64 {
 	return s.id
 }
 
+// obsFree returns the outcome memoized for the lookahead site at pos in the current context, or
+// obsNone, and reports whether it was obtained without reading the seed of the growth g, directly
+// or through the observations it depends on. Such an outcome is the outcome of the lookahead for
+// every seed of g: an evaluation follows the same path, and reads the same seeds, as long as the
+// seeds it reads are equal.
+func (p *Parser) obsFree(pos, gp int, present uint64, site int32, g growKey) (uint64, bool) {
+	for _, s := range p.obsGuard {
+		if s == site {
+			return obsNone, false
+		}
+	}
+	p.obsGuard = append(p.obsGuard, site)
+	defer func() { p.obsGuard = p.obsGuard[:len(p.obsGuard)-1] }()
+	s, set := p.ctxFindSet(pos, gp, ctxHeadKey{kind: ctxLook, id: site, present: present}, nil)
+	if s == nil {
+		return obsNone, false
+	}
+	for _, k := range set.seeds {
+		if k == g {
+			return s.id, false
+		}
+	}
+	for _, o := range set.obs {
+		if _, free := p.obsFree(pos, gp, present, o, g); !free {
+			return s.id, false
+		}
+	}
+	return s.id, true
+}
+
 // ctxFind looks up a result of head h in the context table of pos for the current context.
 func (p *Parser) ctxFind(pos, gp int, h ctxHeadKey, env []any) *ctxSlot {
+	s, _ := p.ctxFindSet(pos, gp, h, env)
+	return s
+}
+
+// ctxFindSet is ctxFind that also returns the set of the result, which lists what it depends on.
+func (p *Parser) ctxFindSet(pos, gp int, h ctxHeadKey, env []any) (*ctxSlot, *ctxSet) {
 	t := p.table(pos, gp, false)
 	if t == nil {
-		return nil
+		return nil, nil
 	}
 	p.Spend()
 	sets := t.heads[h]
 	if sets == nil {
-		return nil
+		return nil, nil
 	}
 next:
 	for _, s := range *sets {
@@ -475,11 +553,11 @@ next:
 		for x := s.vals[k]; x != nil; x = x.next {
 			p.Spend()
 			if env == nil && x.env == nil || p.memoKeyEqual(x.env, env) {
-				return x
+				return x, s
 			}
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // ctxStore stores slot as the result of head h in the context of the growths Gamma[gp:] at pos,
@@ -590,13 +668,15 @@ func (p *Parser) reusable(silent bool, errs int) bool {
 
 // LookBegin starts a lookahead of the given site. In a context at the current position, the
 // lookahead records what it reads, so that a result that depends on it records its outcome
-// instead of the seeds it read (LookEnd).
+// instead of the seeds it read (LookEnd). A site of -1 is a lookahead that can leave captures or
+// bindings in effect after it (compile.LookKeepsState): what it reads stays a dependency of the
+// result around it.
 func (p *Parser) LookBegin(site int) {
-	if n := len(p.frames); n > 0 {
+	if n := len(p.frames); n > 0 && site >= 0 {
 		f := &p.frames[n-1]
 		if g := len(p.Gamma); f.pos == p.Pos && f.gp < g && p.Gamma[g-1].key.Pos == p.Pos && p.Gamma[g-1].cycle == p.Gamma[f.gp].cycle {
 			// The examined range of the lookahead is part of its observation.
-			p.looks = append(p.looks, lookRec{site: int32(site), hw: p.Hw, lw: p.lw})
+			p.looks = append(p.looks, lookRec{site: int32(site), hw: p.Hw, lw: p.lw, rec: len(p.Recovered)})
 			p.Hw, p.lw = p.Pos, p.Pos
 			p.pushFrame(p.Pos, f.gp)
 			return
@@ -623,7 +703,9 @@ func (p *Parser) LookEnd(ok bool) {
 			break
 		}
 	}
-	if !read {
+	// A matching lookahead that recovered errors leaves them after it, so its outcome does not
+	// summarize it: what it read stays a dependency.
+	if !read || ok && len(p.Recovered) > l.rec && ContextMemoMutation != CtxLookErrors {
 		p.mergeDeps(ds)
 		return
 	}

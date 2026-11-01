@@ -240,7 +240,50 @@ rule main = S $$
 rule S = S "q" / R "s" / "y"
 rule R = R "r" / S "t"`,
 		Inputs: []string{"y", "yts", "ytsts", "ytrs", "ytsqtrrs", "yq", "yqts", "yt", "ytst", ""},
+	}, {
+		// The capture that M's lookahead makes holds the seed it read after the lookahead, so
+		// the lookahead's outcome does not summarize it.
+		Name: "capture in a lookahead",
+		Src: `@start
+rule main = S $$
+rule S = M P S "q" / "y" ("qqqqqqqq")?
+rule P = M ""
+rule M = &(x:S) => $x
+rule U = P P`,
+		Inputs: []string{"y", "yq", "yqq", "yqqq", "yqqqq"},
+	}, {
+		// The error recovered in M's lookahead is at the end of the seed it read.
+		Name: "error recovered in a lookahead",
+		Src: `@start
+rule main = S $$
+rule S = M P S "q" / "y" ("qqqqqqqq")?
+rule P = M ""
+rule M = &(S (("!") #recover(skip=[q]))) ""
+rule U = P P`,
+		Inputs: []string{"y", "yq", "yqq", "yqqq", "yqqqq"},
+	}, {
+		// The lookahead &L of S reads the seed of S in some contexts of T only: a jump of S taken
+		// from one seed holds only where the outcome of &L is the same for every seed of S.
+		Name: "lookahead that reads the growing seed",
+		Src: `@start
+rule main = T $$
+rule T = &S S "!" "z" / S "q" "!" "z" "#" / T "!" / "yqq"
+rule S = &L S "q" / "y"
+rule L = T "!" / &T S "q" "q"`,
+		Inputs: []string{"yqq!z#", "yqq", "yqq!", "y"},
+	}, {
+		Name: "lookahead that reads the growing seed, longer alternative",
+		Src: `@start
+rule main = T $$
+rule T = &S S "!" "z" / S "q" "!" "z" "#" / T "!" / "yqq!z#@" / "yqq"
+rule S = &L S "q" / "y"
+rule L = T "!" / &T S "q" "q"`,
+		Inputs: []string{"yqq!z#", "yqq", "yqq!", "y"},
 	}}
+	// A recovering grammar whose jumps read the growing seed through a lookahead on this input.
+	r := RandomRecoveringCycleGrammar(2964)
+	r.Inputs = append(r.Inputs, "baabcac")
+	cases = append(cases, r)
 	for s := int64(0); s < int64(seeds); s++ {
 		cases = append(cases, RandomCycleGrammar(s, false), RandomCycleGrammar(s, true), RandomRecoveringCycleGrammar(s))
 	}

@@ -439,8 +439,13 @@ func (c *bcompiler) void(e grammar.Expr, s *Scope) {
 		c.m.Code[ch].A = c.here()
 		c.m.Code[end].A = c.here()
 	case *grammar.And:
-		// The values inside are dropped by ENDLOOK; the captures are kept.
-		c.emit(bytecode.OpLook, 0, 0, 0)
+		// The values inside are dropped by ENDLOOK; the captures are kept. C marks a lookahead that
+		// can leave captures or bindings (LookKeepsState).
+		keeps := int32(0)
+		if LookKeepsState(e.Expr) {
+			keeps = 1
+		}
+		c.emit(bytecode.OpLook, 0, 0, keeps)
 		c.void(e.Expr, s)
 		c.emit(bytecode.OpEndLook, 0, 0, 0)
 	case *grammar.Not:

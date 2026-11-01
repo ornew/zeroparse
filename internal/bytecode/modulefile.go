@@ -431,6 +431,9 @@ func ValidateModule(m *Module, fieldType func(text string) error) error {
 			flag(x.B, 1)
 			if x.B == 1 { // a positive lookahead does not use the jump target
 				forward(ip, x.A, n)
+				flag(x.C, 0)
+			} else {
+				flag(x.C, 1)
 			}
 		case OpNext:
 			if x.A < 0 || int(x.A) >= ip {

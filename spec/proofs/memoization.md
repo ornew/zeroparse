@@ -55,8 +55,8 @@ answered with that growth's current result. The **context** of a call of $A$
 at $p$ is $\Gamma$, the sequence of the growths of the leaders of the cycle of
 $A$ that are open at $p$ when it starts, each with its leader and its current
 result, and its **present set** $P$ is the set of those leaders. By Lemma 2 a
-call reads no other open growth. A lookahead at $p$ in a context **observes** its outcome: whether
-its expression matched, and its examined range.
+call reads no other open growth. A lookahead at $p$ in a context can **observe** its outcome: whether
+its expression matched, and its examined range; (D) states which lookaheads do.
 
 **The two parses.** The **reference parse** $\mathcal{R}$ evaluates every call
 as the language chapters define it: the body of the rule is evaluated, except
@@ -84,9 +84,22 @@ evaluating it, under these conditions:
   it that read one. It answers a call with the same key and state and the
   present set $P$ from it only if each growth that it read is open with an
   equal current result and each observed lookahead has the same observation,
-  as a result kept in the same way gives it. It treats a step of a growth, the
-  evaluation of the body of a leader from a current result, in the same way.
-  It drops what it keeps when the first growth open at $p$ ends.
+  as a result kept in the same way gives it. Only a lookahead that leaves
+  nothing after it but whether its expression matched is observed: a negative
+  lookahead, or a positive one whose expression makes no capture and binds no
+  variable outside the rules that it calls, and that matches without
+  recovering from an error. The growths that another lookahead reads count as
+  read by the call. A call that $\mathcal{M}$ answers from what it keeps
+  counts, for the calls around it, as reading the growths that it reads in
+  $\mathcal{R}$ there with their current results, those that its observed
+  lookaheads read included. It treats a step of a growth, the evaluation of
+  the body of a leader from a current result, in the same way. It may also
+  take at once a run of steps of a growth of $L$ that read no other growth,
+  from a current result equal to the one that the run started from, but only
+  if each lookahead that the steps observed has the same observation now and
+  that observation, as a result kept in the same way gives it, read no current
+  result of $L$, directly or through the lookaheads that it observed. It drops
+  what it keeps when the first growth open at $p$ ends.
 
 (S) is the last item of
 [Evaluations of Rules](../runtime/parsing.md#evaluations-of-rules) that
@@ -105,8 +118,9 @@ of the reference implementation, whose trace reports them. A parse that records
 no range may, in (D), take two observations to be the same when the
 expressions of both lookaheads matched or both failed, and two current results
 to be equal whatever their ranges. Lemma 4 then gives $y$ the outcome $\omega$
-but not necessarily the range $\rho$: by (A1) the range of a lookahead enters
-only the range of the call around it. For such a parse the proof below holds
+but not necessarily the range $\rho$: an observed lookahead leaves nothing
+after it but whether its expression matched, and its range enters only the
+range of the call around it. For such a parse the proof below holds
 with the ranges left out, that is, with soundness, Lemma 3, Lemma 4 and the
 invariant reduced to outcomes, dropping (I2). The cases of the theorem derive
 outcomes only from outcomes, so (I1), and with it the theorem, holds unchanged.
@@ -261,9 +275,15 @@ the same steps as long as each step reads the same state, and, as in Lemma 1,
 the state that a step reads differs between them only in the growths open at
 $p$ at their start. A call of a leader at $p$ is answered with a current
 result in both or in neither: only a growth of the cycle of the rule can
-answer it (Lemma 2), and the present sets are equal; when it is, the result is equal, since $x$ read it. A lookahead at
-$p$ that reads such a growth has the same outcome and range in both, since $x$
-observed it, and by (A1) its expression records nothing outside it. A call at
+answer it (Lemma 2), and the present sets are equal; when it is, the result is
+equal, since $x$ read it. A lookahead at $p$ that reads such a growth and that
+$x$ observed has the same outcome and range in both, and nothing else of it
+remains after it: by (A1) its expression records no expected item and no
+farthest failure; a failing expression and a negative lookahead have no other
+effect; and an observed positive lookahead leaves no capture or binding, those
+of the rules that it calls ending with them, and recovers no error when it
+matches. A lookahead that $x$ did not observe is evaluated as part of $x$, and
+the growths that it reads are among those that $x$ read. A call at
 $p$ within $x$ that grows a leader of the cycle grows it in both, from the same
 failing seed; its steps read the growths open at the start of $x$ only in the
 ways above, so by induction on the steps they have the same outcomes, and so
@@ -313,8 +333,17 @@ following.
    outcome and range of an evaluation of $\mathcal{M}$ that completed before,
    which satisfies (I1) and (I2); so by Lemma 4 they hold for $x$. Equal
    current results read in both parses are equal by (I1). A step of a growth
-   answered in the same way, or a run of steps, has by Lemma 4 the outcomes
-   that evaluating the steps gives.
+   answered in the same way has by Lemma 4 the outcome that evaluating it
+   gives. In a run of steps of a growth of $L$ taken at once, from current
+   results $r_0, \dots, r_{k-1}$ to $r_1, \dots, r_k$, step $i$ read only the
+   growth of $L$, with the current result $r_{i-1}$, and observed lookaheads.
+   The run is taken from a current result equal to $r_0$, and each of those
+   lookaheads has now the observation that its step recorded, obtained without
+   reading a current result of $L$. An evaluation that reads no current result
+   of $L$ is the same whatever that result is, so each lookahead also has that
+   observation while the current result is $r_{i-1}$. By induction on $i$,
+   Lemma 4 gives step $i$ the outcome $r_i$, so the run has the outcomes that
+   evaluating its steps gives.
 5. *A call that evaluates the body of a rule, or grows a leader.* A body
    evaluation is nested in $x$ and satisfies (I1) and (I2). A growth evaluates
    the body with the current result fixed, compares the end of its outcome with
