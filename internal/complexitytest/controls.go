@@ -351,6 +351,23 @@ func Controls() []Control {
 			Input:  func(n int) string { return rep("#", n) },
 			Sizes:  double(250), ShortSizes: double(100), Order: Linear, Class: ClassLinear, Positive: true,
 		},
+		// The values that reach a binding are those after the earlier items of its sequence. Here
+		// they are the constants of the choice before it and the flags that the recursion clears
+		// and sets; a closure over every value found, regardless of order, would add 2 without end.
+		{
+			Name: "Context flags set after a choice of values", Family: "bounded binding",
+			Source: "var ctx int\nrule main = (\"0\" {ctx := 64} / {ctx := 0}) (\"1\" {ctx := ctx + 2})? (r / .)* $$\nrule r = g:\"*\"? \"#\" {ctx := ctx - ctx % 4 + len($g) * 2} r / \"(\" {ctx := ctx - ctx / 4 % 2 * 4 + 4} r / \"y\" {ctx / 4 % 2 == 1}\n",
+			Input:  func(n int) string { return "01" + rep("*#(", n) },
+			Sizes:  double(250), ShortSizes: double(100), Order: Linear, Class: ClassLinear, Positive: true,
+		},
+		// A guard after the call does not filter the values that the binding before the call reads,
+		// which grow with the depth of the recursion.
+		{
+			Name: "Counter guarded after a call after consumed input", Family: "bounded binding",
+			Source: "var v int\nrule main = (r / .)* $$\nrule r = \"#\" {v := v + 1} r {v < 3} / \"y\" {v >= 0}\n",
+			Input:  func(n int) string { return rep("#", n) },
+			Sizes:  double(50), ShortSizes: double(25), Order: Poly(3), Class: ClassExp,
+		},
 	}
 	for i := range cs {
 		if cs[i].BecomesLinear && becomesLinearLanded {

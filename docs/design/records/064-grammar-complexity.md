@@ -407,13 +407,16 @@ The groups are addressed by these mechanisms:
   reasons for the class Unknown.
 - **Bounded-binding refinement of the classifier.** A binding that reads its own earlier value is not exponential when
   its values come from a set bounded by a constant. Condition 1 exempts a variable with finite values: a `bool`, or an
-  `int` whose bindings read only itself and literals, with at most 4096 values reachable from its initial value
-  through its bindings and their guards
-  ([Lemma 8](../../../spec/proofs/linear-cost.md#lemma-8-finite-values)). This covers Python's `isdict`. TypeScript's
-  context flags stay within seven bits, since every capture that a binding measures is bounded (`"*"`, `"async"`,
-  `list($m)`), but some of those bindings read captures, so the set is not computed from the bindings alone; Python's
-  `lv` has an unguarded binding `lv := lv + 8192`, and its `ind`, CUE's `sv` and YAML's `n` read the lengths of
-  unbounded captures. The profile shows a constant number of evaluations per byte and at most four evaluations of a
+  `int` whose bindings read only itself, literals and the lengths of captures bounded by a constant, with at most 4096
+  values reachable from its initial value
+  ([Lemma 8](../../../spec/proofs/linear-cost.md#lemma-8-finite-values)). The values that reach a binding are those
+  after the earlier elements of its sequence, so the order matters: TypeScript's start rule sets its context flags
+  `ctx` to 64 or 0 by a choice and then adds 2, which a closure over every value found would repeat without end, and
+  its other bindings clear and set bits, adding `len` of the captures `"*"`, `"async"` and `list($m)`. The flags take
+  at most 128 values, and the TypeScript class is the polynomial of its identifier scans. This
+  also covers Python's `isdict`. Python's `lv` has an unguarded binding `lv := lv + 8192`, and its `ind`, CUE's `sv`
+  and YAML's `n` read the lengths of unbounded captures. For TypeScript the profile shows a constant number of
+  evaluations per byte and at most four evaluations of a
   memoized rule per position at every nesting depth, so no exponential input exists. Memoizing across variable values
   that a rule does not read would lower a constant, not the order. A recursive call that follows consumed input does
   not bound the values: in `main = (r / .)* $$` with `r = "#" {v := v + 1} r / "y" {v >= 0}`, each start reaches every
@@ -487,8 +490,7 @@ The groups are addressed by these mechanisms:
 | python | module-whitespace | 4 | token-scan refinement | 1 | 1.00 | n |
 | python | tokens | 20 | token-scan refinement | 6 | 1.00 | n |
 | python | whitespace | 70 | token-scan refinement | 5 | 1.00 | n |
-| typescript | ctx-bindings | 38 | bounded-binding refinement | 19 | 1.01 | n |
-| typescript | nested | 266 | open | 4 | 1.00 | n |
+| typescript | nested | 266 | open | 23 | 1.01 | n |
 | typescript | identifiers | 239 | token-scan refinement | 5 | 1.00 | n |
 | typescript | whitespace-and-templates | 3 | token-scan refinement | 3 | 1.00 | n |
 | cue | hash-count | 1 | bounded-binding refinement | 2 | 1.00 | n |

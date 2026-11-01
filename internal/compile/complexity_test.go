@@ -168,14 +168,22 @@ func TestClassifyComplexity(t *testing.T) {
 		// Only a polynomial class has a degree.
 		{"exponential with a polynomial cause", "var s string = \"a\"\nrule main = r (a / \"a\")* $$\nrule r = \"x\" {s := s + s} r / {len(s) > 0}\nrule a = \"a\"* \"c\"\n", ClassExp, 0},
 		// A variable whose values lie in a set bounded by a constant adds a constant number of
-		// combinations of values, whatever its bindings read; the set of an int comes from its
-		// initial value, bindings that read only it, and the guards before them.
+		// combinations of values; the set of an int comes from its initial value and bindings that
+		// read only it, literals and bounded lengths, applied to the values after the earlier
+		// items of their sequences.
 		{"counter before a call", "var v int\nrule main = (r / .)* $$\nrule r = \"#\" {v := v + 1} r / \"y\" {v >= 0}\n", ClassExp, 0},
 		{"guarded counter before a call", "var v int\nrule main = (r / .)* $$\nrule r = \"#\" {v < 3} {v := v + 1} r / \"y\" {v >= 0}\n", ClassLinear, 0},
 		{"counter modulo a constant", "var v int = 1\nrule main = r $$\nrule r = \"#\" {v := (v * 3 + 1) % 7} r / \"y\" {v != 0}\n", ClassLinear, 0},
 		{"counter guarded outside a repetition", "var v int\nrule main = r $$\nrule r = \"(\" {v < 3} (\"#\" {v := v + 1})* r \")\" / \"y\" {v >= 0}\n", ClassExp, 0},
-		{"guard before another binding", "var v int\nrule main = r $$\nrule r = \"#\" {v < 3} {v := v + 1} {v := v + 1} r / \"y\" {v >= 0}\n", ClassExp, 0},
-		{"counter that reads a capture", "var v int\nrule main = r $$\nrule r = x:\"#\" {v < 3} {v := v + len($x)} r / \"y\" {v >= 0}\n", ClassExp, 0},
+		{"guard before another binding", "var v int\nrule main = r $$\nrule r = \"#\" {v < 3} {v := v + 1} {v := v + 1} r / \"y\" {v >= 0}\n", ClassLinear, 0},
+		{"counter that reads a capture", "var v int\nrule main = r $$\nrule r = x:\"#\"+ {v < 3} {v := v + len($x)} r / \"y\" {v >= 0}\n", ClassExp, 0},
+		{"counter that reads a bounded capture", "var v int\nrule main = r $$\nrule r = x:\"#\" {v < 3} {v := v + len($x)} r / \"y\" {v >= 0}\n", ClassLinear, 0},
+		{"counter that reads the bounded value of a recursive rule", "var v int\nrule main = r $$\nrule r = x:k \"#\" {v := v - v % 4 + len($x)} r / \"y\" {v >= 0}\nrule k = a:\"*\"? (\"[\" k \"]\")? => $a\n", ClassLinear, 0},
+		// The values that reach a binding are those after the earlier items of its sequence: a
+		// binding after a choice of constants reads only them, and a guard after the call does
+		// not filter what the binding reads.
+		{"flags set after a choice of values", "var ctx int\nrule main = (\"0\" {ctx := 64} / {ctx := 0}) (\"1\" {ctx := ctx + 2})? r $$\nrule r = g:\"*\"? \"#\" {ctx := ctx - ctx % 4 + len($g) * 2} r / \"(\" {ctx := ctx - ctx / 4 % 2 * 4 + 4} r \")\" / \"y\" {ctx / 4 % 2 == 1}\n", ClassLinear, 0},
+		{"guard after the call", "var v int\nrule main = r $$\nrule r = \"#\" {v := v + 1} r {v < 3} / \"y\" {v >= 0}\n", ClassExp, 0},
 		{"Boolean toggled before a call", "var b bool\nrule main = r $$\nrule r = x:\"#\" {b := !b && len($x) > 0} r / \"y\" {b}\n", ClassLinear, 0},
 		{"counter divided by zero", "var v int\nrule main = r $$\nrule r = \"#\" {v := v + 1 / v} r / \"y\" {v >= 0}\n", ClassLinear, 0},
 		{"rebinding after the left call", "var k int\nrule main = e $$\nrule e = e \"x\" {k := k + 1} / \"x\" {k >= 0}\n", ClassLinearEnv, 0},

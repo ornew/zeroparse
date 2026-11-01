@@ -11,7 +11,8 @@ func tsx(src func(n int) string) func(n int) string {
 }
 
 // tsNestings are the nesting families of the typescript grammar: the recursion of expressions,
-// types, functions, classes and JSX, which the nested reasons and the ctx bindings follow.
+// types, functions, classes and JSX, which the nested reasons follow under every value of the
+// context flags ctx.
 func tsNestings() []TriageFamily {
 	return []TriageFamily{
 		{Name: "nested parentheses", Build: tsStmt(nest("(", "a", ")")), Sizes: doubling(500, 3), Order: Linear},
@@ -57,16 +58,13 @@ func triageTypescript() []TriageGroup {
 				{Name: "long tagged templates", Build: tsStmt(func(n int) string { return "tag`" + rep("a$", n) + "${b}`" }), Sizes: doubling(2000, 3), Order: Linear},
 				{Name: "nested tagged templates", Build: tsStmt(nest("tag`a${", "b", "}c`")), Sizes: doubling(300, 3), Order: Linear},
 			}},
-		{Grammar: "typescript", ID: "ctx-bindings", Witness: true, Pattern: `the cost can grow exponentially: the binding ctx :=`,
-			Shape:  "bindings of the context flags ctx that read its earlier value; every binding keeps ctx in [0, 128) (bits of yield, await, in, decorator, conditional type, JSX), so the memo key of a rule takes at most 128 values at a position, and the values that occur are fixed by the enclosing constructs",
-			Assign: "F101", Order: Linear, Families: tsNestings()},
 		{Grammar: "typescript", ID: "nested", Pattern: nestedPattern,
 			Shape:  "units of statements, expressions, types and JSX nested through their recursion, every call on it memoized under the ctx value of its context",
-			Assign: "F100", Order: Linear, Families: []TriageFamily{
+			Assign: "F100", Order: Linear, Families: append([]TriageFamily{
 				{Name: "nested parentheses and arrows", Build: tsStmt(func(n int) string { return rep("((a) => ", n) + "a" + rep(")", n) }), Sizes: doubling(300, 3), Order: Linear},
 				{Name: "nested ternaries", Build: tsStmt(func(n int) string { return rep("a ? (b) : ", n) + "c" }), Sizes: doubling(300, 3), Order: Linear},
 				{Name: "nested type assertions and satisfies", Build: tsStmt(nest("(<T>(", "a", " as U) satisfies V)")), Sizes: doubling(200, 3), Order: Linear},
 				{Name: "nested indexed and optional chains", Build: tsStmt(nest("a?.[", "b", "]!")), Sizes: doubling(300, 3), Order: Linear},
-			}},
+			}, tsNestings()...)},
 	}
 }

@@ -748,17 +748,32 @@ necessary.
    caller. A variable with **finite values** is exempt from this condition: a
    `bool` variable, or an `int` variable whose values form a set of at most
    4096 values, the least set that holds its initial value and, for each of
-   its bindings and each value in the set that passes the guards of the
-   binding, the value that the binding binds from it. Every binding of the
-   variable must read only the variable itself and literals, through `+`, `-`,
-   `*`, `/`, `%`, unary `-` and parentheses; a value whose evaluation is an
-   error, as a division by zero, is not bound. The **guards** of a binding are
-   the predicates that read only its variable and literals and that are
-   earlier elements of a sequence around the binding, which the binding is in
-   through groups, options, choices, captures, discards and atomic expressions
-   only, with no binding of the variable in the elements between them: every
-   evaluation of the binding follows a guard that has succeeded on the value
-   that the binding reads. When every binding is a literal or binds a variable
+   its bindings, the values that the binding binds from the values that can
+   reach it. Every binding of the variable must read only the variable
+   itself, `int` and `bool` literals, and operands `len($c)` of a capture `c`
+   whose value has a length of at most 256 that the classifier can see: the
+   text of an expression that matches a bounded number of characters, a list
+   or tuple with a bounded number of elements, or the value of a rule whose
+   action gives such a value. It combines them with `+`, `-`, `*`, `/`, `%`,
+   comparisons, `&&`, `||`, unary `-` and `!` and parentheses. The binding is
+   evaluated at every length of each operand up to its bound, at most 4096
+   combinations, and a value whose evaluation is an error, as a division by
+   zero, is not bound; a value beyond $2^{53}$ in magnitude leaves the
+   variable without finite values. The values that **reach** a binding are those of the
+   set after the earlier elements of the sequences around the binding, from
+   the outermost sequence that it is in through groups, options, choices,
+   captures, discards and atomic expressions only, and after the earlier
+   statements of its predicate block. A binding of the variable applies to the
+   values; a predicate that reads only the variable and literals keeps the
+   values on which it can succeed; a choice or an option joins the values of
+   its paths; a negative lookahead keeps the values before it, since it undoes
+   its bindings; a call keeps them, since bindings in a called rule are not
+   visible to its caller; and any other element that binds the variable, as a
+   repetition or a positive lookahead around a binding, can leave any value of
+   the set. So in `("0" {v := 64} / {v := 0}) {v := v + 2}` the second binding
+   reads only 64 and 0, and in `{v < 3} {v := v + 1} r` the binding reads only
+   values below 3, while a test after the call `r` filters nothing that the
+   binding reads. When every binding is a literal or binds a variable
    with finite values, a constant number of combinations of values occurs at a
    position. When another binding reads a capture or a variable, the cost is
    linear given an environment bound.

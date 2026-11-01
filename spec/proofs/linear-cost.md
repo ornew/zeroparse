@@ -287,29 +287,54 @@ value. Bindings made in a called rule are not visible to its caller, and
 backtracking undoes bindings, so every value that a lookup gives is the
 initial value or a value that an evaluation of a binding bound earlier.
 
-Let a binding of $v$ be evaluated, and let $x$ be the value of $v$ that it
-reads, which is in $S_v$ by the induction hypothesis. Each guard of the
-binding is an earlier element of a sequence around it in the same evaluation
-of the rule body, reached without a repetition in between, so it was
-evaluated on this path before the binding and succeeded, or the binding would
-not be evaluated. No binding of $v$ lies in the elements between them, and
-bindings in the rules that those elements call are not visible after the
-calls return, so the guard read the same value $x$. So $x$ passes every guard.
-The binding reads only $v$ and literals, so its value is determined by $x$ by
-the rules of [Operators and Functions](../language/actions.md#operators-and-functions):
-it is in $S_v$, which holds the value that each binding binds from each value
-of $S_v$ that passes its guards, or the evaluation is an error and binds
-nothing.
+Let a binding $b$ of $v$ be evaluated, and let $x$ be the value of $v$ that
+it reads. We show that $x$ is one of the values that reach $b$, computed from
+$S_v$. Let $F$ be the outermost sequence that $b$ is in through groups,
+options, choices, captures, discards and atomic expressions only. In the
+evaluation of the rule body that evaluates $b$, $F$ starts with a value $x_0$
+of $v$ that is in $S_v$ by the induction hypothesis, and the earlier elements
+of $F$ and of the sequences inside it that hold $b$, then the earlier
+statements of the block of $b$, have each been evaluated once on this path
+and succeeded, in order, or $b$ would not be evaluated. Each step maps a set
+that holds the value of $v$ before it to a set that holds the value after it:
+
+- a binding of $v$ binds a value that its evaluation gives from the value
+  before it, which the step computes as for $b$ below;
+- a predicate that reads only $v$ and literals succeeded, so the value passes
+  it; the step keeps every value on which its evaluation is true or not known;
+- a choice succeeds through one of its alternatives and an option through its
+  expression or by matching nothing, so the value after it is in the union of
+  the values after its paths;
+- a negative lookahead undoes its bindings, and a call returns with the
+  value before it, since bindings in a called rule are not visible to its
+  caller;
+- any other element that binds $v$ leaves a value that $v$ holds at some step
+  of the parse, which is in $S_v$ by the induction hypothesis; an element that
+  does not bind $v$ keeps it.
+
+So $x$ reaches $b$. The binding reads only $v$, literals and operands
+`len($c)`, and the length of the value of each capture $c$ is at most its
+bound, since the value is the text of an expression that matches at most that
+many characters, a list or tuple with at most that many elements, or the
+value of a rule whose action gives such a value. The value of $b$ is
+therefore determined by $x$ and lengths within the bounds, by the rules of
+[Operators and Functions](../language/actions.md#operators-and-functions),
+for ints within $2^{53}$ in magnitude, which every backend computes alike:
+it is in $S_v$, which holds the value that $b$ binds from each value that
+reaches it at each combination of lengths, or the evaluation is an error and
+binds nothing.
 
 The values of the variables that memoized rules read at a position are
 therefore drawn, for the variables with finite values, from the product of
 their sets, so they contribute at most the product of the $|S_v|$ to the
 number of combinations $K$. $\square$
 
-The bound of 4096 keeps $S_v$ cheap to compute; the proof needs only that it
-is finite. A variable whose bindings read a capture is outside the lemma even
-when the capture is bounded, since the lemma computes $S_v$ from the bindings
-alone.
+The bounds of 4096 values, of 256 for a length and of 4096 combinations of
+lengths keep $S_v$ cheap to compute; the proof needs only that they are
+finite. The values that reach a binding depend on the order of the elements
+before it: a test after the binding, or after a call that follows it, has not
+been evaluated when the binding reads $v$, so it filters nothing that the
+binding reads.
 
 ## Theorem (Linear Cost)
 
