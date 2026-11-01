@@ -18,8 +18,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ornew/nanosite/publish"
-	"github.com/ornew/nanosite/render"
+	"github.com/ornew/zerosite/publish"
+	"github.com/ornew/zerosite/render"
 )
 
 // Config configures a build.
@@ -337,7 +337,7 @@ type layoutData struct {
 	GitHub     string
 	Wasm       string // relative URL of the playground's WebAssembly binary
 	TinyGoWasm string // relative URL of the optional TinyGo binary
-	// ViewStyles and ViewScripts are the page-relative assets that the Nanosite view adds to the
+	// ViewStyles and ViewScripts are the page-relative assets that the ZeroSite view adds to the
 	// page, such as the math loader on a page with a formula.
 	ViewStyles, ViewScripts []string
 }

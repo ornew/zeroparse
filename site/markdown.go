@@ -1,12 +1,12 @@
 package main
 
 import (
-	"github.com/ornew/nanosite/render"
+	"github.com/ornew/zerosite/render"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 )
 
-// Project rendering policy and extension access to the shared Nanosite document.
+// Project rendering policy and extension access to the shared ZeroSite document.
 type markdown struct {
 	shared   *render.Document
 	md       goldmark.Markdown

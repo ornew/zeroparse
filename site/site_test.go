@@ -16,7 +16,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/nanosite/render"
+	"github.com/ornew/zerosite/render"
 )
 
 // siteTestOutput uses the actual temporary directory, since macOS can expose
@@ -125,7 +125,7 @@ func TestBuild(t *testing.T) {
 		t.Errorf("a vendored assets directory is published: %v", err)
 	}
 
-	// Formulas are rendered by Nanosite's built-in math support. Only pages with a formula link its
+	// Formulas are rendered by ZeroSite's built-in math support. Only pages with a formula link its
 	// loader and stylesheet, and the KaTeX files they name are published with the site.
 	withMath := 0
 	err = filepath.WalkDir(out, func(p string, d fs.DirEntry, err error) error {

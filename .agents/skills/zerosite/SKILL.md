@@ -1,11 +1,11 @@
 ---
-name: nanosite
-description: Update Markdown publication, front matter, navigation, assets and theme configuration for sites built with Nanosite or its Go extension APIs.
+name: zerosite
+description: Update Markdown publication, front matter, navigation, assets and theme configuration for sites built with ZeroSite or its Go extension APIs.
 ---
 
-# Nanosite
+# ZeroSite
 
-- Read `site/config.json`, `site/build.sh`, `site/nanosite.rev` and the site guide. Identify whether it uses the standard CLI or a project extension driver.
+- Read `site/config.json`, `site/build.sh`, `site/zerosite.rev` and the site guide. Identify whether it uses the standard CLI or a project extension driver.
 - Read [references/config.md](references/config.md) for configuration fields, front matter, publication and extension capabilities. Apply only the settings supported by the active driver.
 - For Go extension behavior, follow the [sitegen extension guide](../../../docs/guide/extensions.md) and use `sitegen.BuildWith` to keep project hooks inside the shared publication pipeline.
 - Keep Markdown the source of truth; do not edit generated output. Preserve published routes, fragments, theme assets, search and Playground integrations.

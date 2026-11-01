@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ornew/nanosite/sitegen"
+	"github.com/ornew/zerosite/sitegen"
 )
 
 func selectWasmMode(mode string) (string, error) {
@@ -24,7 +24,7 @@ func selectWasmMode(mode string) (string, error) {
 	return mode, nil
 }
 
-// Build uses Nanosite for document selection, Markdown, indexes, navigation,
+// Build uses ZeroSite for document selection, Markdown, indexes, navigation,
 // search and publication. Hooks supply only ZeroParse's product-specific pages.
 func Build(cfg Config) (Stats, error) {
 	if cfg.DeployURL != "" {

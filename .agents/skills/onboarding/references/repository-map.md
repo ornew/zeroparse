@@ -30,4 +30,4 @@ language contract. Fetch its present body and relevant comments before planning 
 updating an item; branch, worktree and integration status also need live checks.
 Use the [documentation](../../documentation/SKILL.md),
 [backlog](../../backlog/SKILL.md), [performance](../../performance/SKILL.md) or
-[nanosite](../../nanosite/SKILL.md) skill when that work is in scope.
+[zerosite](../../zerosite/SKILL.md) skill when that work is in scope.

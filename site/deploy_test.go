@@ -96,7 +96,7 @@ func TestNoNetlify(t *testing.T) {
 			if skip[d.Name()] {
 				return filepath.SkipDir
 			}
-			// Imported Nanosite documentation is not site configuration.
+			// Imported ZeroSite documentation is not site configuration.
 			if filepath.ToSlash(p) == "../.agents" {
 				return filepath.SkipDir
 			}

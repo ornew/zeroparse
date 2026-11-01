@@ -6,6 +6,11 @@
 <title>{{if eq .Page.Kind "landing"}}{{.Page.Title}}{{else}}{{.Page.Title}} · ZeroParse{{end}}</title>
 {{with .Page.Description}}<meta name="description" content="{{.}}">{{end}}
 <meta name="color-scheme" content="light dark">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ZeroParse">
+<meta property="og:title" content="{{.Page.Title}}">
+{{with .Page.Description}}<meta property="og:description" content="{{.}}">{{end}}
+<meta name="twitter:card" content="summary">
 <script src="{{.URL "assets/theme.js"}}"></script>
 <link rel="icon" href="{{.URL "assets/favicon.svg"}}" type="image/svg+xml">
 <link rel="stylesheet" href="{{.URL "assets/site.css"}}">

@@ -19,9 +19,9 @@ At the start of every development session, use the `onboarding` skill in
   site maintenance and performance method/status.
 - `docs/why-zeroparse.md`, `docs/strategy.md`: positioning, comparison and project
   strategy, including performance targets.
-- `site/`: Nanosite configuration and wrapper; `bench/`: benchmark sources.
+- `site/`: ZeroSite configuration and wrapper; `bench/`: benchmark sources.
 
-Use the `documentation`, `performance`, `backlog` and `nanosite` skills when
+Use the `documentation`, `performance`, `backlog` and `zerosite` skills when
 relevant.
 Keep reader-facing docs independent of chat history and backlog labels. Write
 repository docs and comments in English. Update affected contracts and guides
