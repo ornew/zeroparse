@@ -1876,27 +1876,54 @@ func trtOr(l any, r func() any) any {
 	return trtBool("||", r())
 }
 
-func trtEqual(a, b any) bool {
-	switch a.(type) {
-	case int, string, bool:
-		return a == b
-	case nil:
-		return b == nil
+// trtComparable reports whether v is nil, an int, a string or a bool, the values that == and !=
+// compare.
+func trtComparable(v any) bool {
+	switch v.(type) {
+	case nil, int, string, bool:
+		return true
 	}
-	an, ok := a.(TVal)
-	if !ok {
-		return false
+	return false
+}
+
+// trtInvalidOperands returns the message for applying op to l and r. A comparison of a node or
+// another structured value says why it fails.
+func trtInvalidOperands(op string, l, r any) string {
+	msg := fmt.Sprintf("invalid operands %s and %s for %s", ttypeName(l), ttypeName(r), op)
+	if (op == "==" || op == "!=") && (!trtComparable(l) || !trtComparable(r)) {
+		msg += ": " + comparisonHint
 	}
-	bn, ok := b.(TVal)
-	return ok && an == bn
+	return msg
+}
+
+// trtEqual applies == to a and b. It compares ints, strings and bools of one type, and any value
+// with nil; ok is false for every other pair, which has no equality.
+func trtEqual(a, b any) (eq, ok bool) {
+	if a == nil || b == nil {
+		return a == nil && b == nil, true
+	}
+	switch a := a.(type) {
+	case int:
+		b, ok := b.(int)
+		return a == b, ok
+	case string:
+		b, ok := b.(string)
+		return a == b, ok
+	case bool:
+		b, ok := b.(bool)
+		return a == b, ok
+	}
+	return false, false
 }
 
 func trtBinary(op string, l, r any) any {
 	switch op {
-	case "==":
-		return trtEqual(l, r)
-	case "!=":
-		return !trtEqual(l, r)
+	case "==", "!=":
+		eq, ok := trtEqual(l, r)
+		if !ok {
+			evalErrorf("%s", trtInvalidOperands(op, l, r))
+		}
+		return eq == (op == "==")
 	case "[]":
 		items := tlistItems("[]", l)
 		return items[rtIndex(nil, r, len(items), ttypeName)]
@@ -2511,10 +2538,12 @@ func trtBoolSpend(p *Parser, op string, v any) bool {
 
 func trtBinarySpend(p *Parser, op string, l, r any) any {
 	switch op {
-	case "==":
-		return trtEqual(l, r)
-	case "!=":
-		return !trtEqual(l, r)
+	case "==", "!=":
+		eq, ok := trtEqual(l, r)
+		if !ok {
+			p.evalErrorf("%s", trtInvalidOperands(op, l, r))
+		}
+		return eq == (op == "==")
 	case "[]":
 		items := tlistItemsSpend(p, "[]", l)
 		return items[rtIndex(p, r, len(items), ttypeName)]

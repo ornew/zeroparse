@@ -238,10 +238,12 @@ func (p *Parser) binaryOperation(op string, l, r any) (any, error) {
 	switch op {
 	case "[]":
 		return p.index(l, r)
-	case "==":
-		return equal(l, r), nil
-	case "!=":
-		return !equal(l, r), nil
+	case "==", "!=":
+		eq, ok := equal(l, r)
+		if !ok {
+			return nil, p.invalidOperands(op, l, r)
+		}
+		return eq == (op == "=="), nil
 	}
 	switch l := l.(type) {
 	case int:
@@ -287,29 +289,68 @@ func (p *Parser) binaryOperation(op string, l, r any) (any, error) {
 			}
 		}
 	}
-	if BudgetControlsEnabled && p != nil && p.Control != nil {
-		return nil, p.ActionError("invalid operands ", TypeName(l), " and ", TypeName(r), " for ", op)
-	}
-	return nil, fmt.Errorf("invalid operands %s and %s for %s", TypeName(l), TypeName(r), op)
+	return nil, p.invalidOperands(op, l, r)
 }
 
-func equal(a, b any) bool {
-	switch a := a.(type) {
-	case *value.Node:
-		if a == nil {
-			return b == nil
-		}
-		bn, ok := b.(*value.Node)
-		return ok && a == bn
-	case nil:
-		if bn, ok := b.(*value.Node); ok {
-			return bn == nil
-		}
-		return b == nil
-	case int, string, bool:
-		return a == b
+// comparisonHint is added to the error for comparing a node or another structured value, which
+// == and != do not compare (see Operators in the language specification).
+const comparisonHint = "nodes and other structured values cannot be compared; use text(x), or .Start and .End"
+
+// invalidOperands returns the error for applying op to the operands l and r.
+func (p *Parser) invalidOperands(op string, l, r any) error {
+	hint := ""
+	if (op == "==" || op == "!=") && (!comparableValue(l) || !comparableValue(r)) {
+		hint = ": " + comparisonHint
+	}
+	if BudgetControlsEnabled && p != nil && p.Control != nil {
+		return p.ActionError("invalid operands ", TypeName(l), " and ", TypeName(r), " for ", op, hint)
+	}
+	return fmt.Errorf("invalid operands %s and %s for %s%s", TypeName(l), TypeName(r), op, hint)
+}
+
+// comparableValue reports whether v is nil, an int, a string or a bool, the values that == and !=
+// compare.
+func comparableValue(v any) bool {
+	switch unboxed(v).(type) {
+	case nil, int, string, bool:
+		return true
 	}
 	return false
+}
+
+// unboxed returns the value that a node pointer stands for: nil for a nil pointer, the value of a
+// box, and otherwise v.
+func unboxed(v any) any {
+	if n, ok := v.(*value.Node); ok {
+		if n == nil {
+			return nil
+		}
+		if value.D(n).Kind == value.BoxKind {
+			return unboxed(value.D(n).Box)
+		}
+	}
+	return v
+}
+
+// equal applies == to a and b. It compares ints, strings and bools of one type, and any value with
+// nil; ok is false for every other pair, which has no equality.
+func equal(a, b any) (eq, ok bool) {
+	a, b = unboxed(a), unboxed(b)
+	if a == nil || b == nil {
+		return a == nil && b == nil, true
+	}
+	switch a := a.(type) {
+	case int:
+		b, ok := b.(int)
+		return a == b, ok
+	case string:
+		b, ok := b.(string)
+		return a == b, ok
+	case bool:
+		b, ok := b.(bool)
+		return a == b, ok
+	}
+	return false, false
 }
 
 // Builtin calls the built-in function fn with evaluated arguments.

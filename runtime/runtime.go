@@ -3624,31 +3624,58 @@ func rtOr(l any, r func() any) any {
 	return rtBool("||", r())
 }
 
-func rtEqual(a, b any) bool {
-	switch a := a.(type) {
-	case *Node:
-		if a == nil {
-			return b == nil
-		}
-		bn, ok := b.(*Node)
-		return ok && a == bn
-	case nil:
-		if bn, ok := b.(*Node); ok {
-			return bn == nil
-		}
-		return b == nil
-	case int, string, bool:
-		return a == b
+// comparisonHint is added to the error for comparing a node or another structured value, which
+// == and != do not compare (see Operators in the language specification).
+const comparisonHint = "nodes and other structured values cannot be compared; use text(x), or .Start and .End"
+
+// rtComparable reports whether v is nil, an int, a string or a bool, the values that == and != compare.
+func rtComparable(v any) bool {
+	switch UnboxValue(v).(type) {
+	case nil, int, string, bool:
+		return true
 	}
 	return false
 }
 
+// rtInvalidOperands returns the message for applying op to l and r. A comparison of a node or another
+// structured value says why it fails.
+func rtInvalidOperands(op string, l, r any) string {
+	msg := fmt.Sprintf("invalid operands %s and %s for %s", typeName(l), typeName(r), op)
+	if (op == "==" || op == "!=") && (!rtComparable(l) || !rtComparable(r)) {
+		msg += ": " + comparisonHint
+	}
+	return msg
+}
+
+// rtEqual applies == to a and b. It compares ints, strings and bools of one type, and any value with
+// nil; ok is false for every other pair, which has no equality.
+func rtEqual(a, b any) (eq, ok bool) {
+	a, b = UnboxValue(a), UnboxValue(b)
+	if a == nil || b == nil {
+		return a == nil && b == nil, true
+	}
+	switch a := a.(type) {
+	case int:
+		b, ok := b.(int)
+		return a == b, ok
+	case string:
+		b, ok := b.(string)
+		return a == b, ok
+	case bool:
+		b, ok := b.(bool)
+		return a == b, ok
+	}
+	return false, false
+}
+
 func rtBinary(op string, l, r any) any {
 	switch op {
-	case "==":
-		return rtEqual(l, r)
-	case "!=":
-		return !rtEqual(l, r)
+	case "==", "!=":
+		eq, ok := rtEqual(l, r)
+		if !ok {
+			evalErrorf("%s", rtInvalidOperands(op, l, r))
+		}
+		return eq == (op == "==")
 	case "[]":
 		items := listItems("[]", l)
 		return UnboxNode(items[rtIndex(nil, r, len(items), typeName)])
@@ -4179,10 +4206,12 @@ func rtBoolSpend(p *Parser, op string, v any) bool {
 
 func rtBinarySpend(p *Parser, op string, l, r any) any {
 	switch op {
-	case "==":
-		return rtEqual(l, r)
-	case "!=":
-		return !rtEqual(l, r)
+	case "==", "!=":
+		eq, ok := rtEqual(l, r)
+		if !ok {
+			p.evalErrorf("%s", rtInvalidOperands(op, l, r))
+		}
+		return eq == (op == "==")
 	case "[]":
 		items := listItemsSpend(p, "[]", l)
 		return UnboxNode(items[rtIndex(p, r, len(items), typeName)])

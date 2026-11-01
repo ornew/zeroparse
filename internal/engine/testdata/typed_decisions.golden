@@ -31941,19 +31941,19 @@ grammar	controlled	"testdata/typed/errlist.zp"
 term	0	-1	new(capture)
 grammar	lean,lean observable,controlled,lean boxed	"testdata/typed/errlist2.zp"
 grammar	lean,lean observable	"testdata/typed/fields.zp"
-term	0	-1	new-in-order(capture member(member(capture)) member(member(capture)) call:text(member(capture)) field-cmp(capture capture) field-cmp(capture const) field-cmp(capture const) field-cmp(capture const) field-cmp(capture const) member(capture))
+term	0	-1	new-in-order(capture member(member(capture)) member(member(capture)) call:text(member(capture)) field-cmp(member(capture) member(capture)) field-cmp(capture const) field-cmp(capture const) field-cmp(capture const) field-cmp(capture const) member(capture))
 term	1	-1	new-in-order(capture capture call:text(capture))
 term	2	-1	capture
 term	3	-1	new-in-order(capture)
 term	5	-1	new-in-order(capture)
 grammar	controlled	"testdata/typed/fields.zp"
-term	0	-1	new(capture member(member(capture)) member(member(capture)) call:text(member(capture)) field-cmp(capture capture) field-cmp(capture const) field-cmp(capture const) field-cmp(capture const) field-cmp(capture const) member(capture))
+term	0	-1	new(capture member(member(capture)) member(member(capture)) call:text(member(capture)) field-cmp(member(capture) member(capture)) field-cmp(capture const) field-cmp(capture const) field-cmp(capture const) field-cmp(capture const) member(capture))
 term	1	-1	new(capture capture call:text(capture))
 term	2	-1	capture
 term	3	-1	new(capture)
 term	5	-1	new(capture)
 grammar	lean boxed	"testdata/typed/fields.zp"
-term	0	-1	new-in-order(capture member(member(capture)) member(member(capture)) call:text(member(capture)) binary:==(member(capture) member(capture)) binary:==(member(capture) const) binary:==(member(capture) const) binary:==(member(capture) const) binary:==(member(capture) const) member(capture))
+term	0	-1	new-in-order(capture member(member(capture)) member(member(capture)) call:text(member(capture)) binary:==(member(member(capture)) member(member(capture))) binary:==(member(capture) const) binary:==(member(capture) const) binary:==(member(capture) const) binary:==(member(capture) const) member(capture))
 term	1	-1	new-in-order(capture capture call:text(capture))
 term	2	-1	capture
 term	3	-1	new-in-order(capture)

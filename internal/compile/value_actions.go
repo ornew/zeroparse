@@ -623,6 +623,7 @@ func (v *ValueInference) binary(t *grammar.Binary, env *valueEnv) Ty {
 	case "[]":
 		return v.index(l, r, t)
 	case "==", "!=":
+		v.checkComparison(t, l, r)
 		return TyBool
 	case "&&", "||":
 		if !both(TyBool) {
@@ -650,6 +651,75 @@ func (v *ValueInference) binary(t *grammar.Binary, env *valueEnv) Ty {
 		return bad()
 	}
 	return TyInt
+}
+
+// comparisonHint is added to the diagnostic about comparing a node or another structured value,
+// which == and != do not compare (see Operators in the language specification). The run-time
+// error has the same text.
+const comparisonHint = "nodes and other structured values cannot be compared; use text(x), or .Start and .End"
+
+// valueKinds is what a value of some type can be, for the operands of == and !=.
+type valueKinds struct {
+	scalars    map[BasicTy]bool // int, string and bool
+	nilOK      bool             // nil, also as an optional value
+	structured bool             // a node, struct, list or tuple
+	unknown    bool             // not known statically: checked at run time
+}
+
+// kindsOf adds to k the kinds that a value of type t can have.
+func (v *ValueInference) kindsOf(t Ty, k *valueKinds, depth int) {
+	if depth > 32 {
+		k.unknown = true
+		return
+	}
+	switch u := v.Expand(t).(type) {
+	case JoinTy:
+		for _, a := range u.Alts {
+			v.kindsOf(a, k, depth+1)
+		}
+	case OptTy:
+		k.nilOK = true
+		v.kindsOf(u.Elem, k, depth+1)
+	case BasicTy:
+		switch u {
+		case TyInt, TyString, TyBool:
+			k.scalars[u] = true
+		case TyNil:
+			k.nilOK = true
+		case TyNode:
+			k.structured = true
+		case TyBottom:
+		default: // unknown and _
+			k.unknown = true
+		}
+	default:
+		k.structured = true
+	}
+}
+
+// checkComparison reports the operands of == or != that can never be compared: == and != compare
+// ints, strings and bools of one type, and any value with nil. An operand whose type is not
+// known statically, or that may be nil, is checked at run time.
+func (v *ValueInference) checkComparison(t *grammar.Binary, l, r Ty) {
+	lk, rk := valueKinds{scalars: map[BasicTy]bool{}}, valueKinds{scalars: map[BasicTy]bool{}}
+	v.kindsOf(l, &lk, 0)
+	v.kindsOf(r, &rk, 0)
+	if lk.unknown || rk.unknown || lk.nilOK || rk.nilOK {
+		return
+	}
+	for s := range lk.scalars {
+		if rk.scalars[s] {
+			return
+		}
+	}
+	if len(lk.scalars) == 0 && !lk.structured || len(rk.scalars) == 0 && !rk.structured {
+		return // a side without values
+	}
+	hint := ""
+	if lk.structured || rk.structured {
+		hint = ": " + comparisonHint
+	}
+	v.errorf(t.Diagnostic(), "invalid operands %s and %s for %s%s", v.display(l), v.display(r), t.Op, hint)
 }
 
 // index returns the type of x[i]: an element of a list or of a tuple. A node is indexed through

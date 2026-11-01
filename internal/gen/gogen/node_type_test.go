@@ -143,7 +143,7 @@ type M = node[string]
 type T = node[(N, M)]
 type U ~ N | M
 type Out = { L []U; A _; B _; C node[_]; D _; Same bool }
-rule main Out = xs:u* "," t:pair $$ => Out{L: $xs.Value, A: $xs.Value[0], B: $t, C: $t, D: $xs, Same: $xs.Value[0] == $xs.Value[0]}
+rule main Out = xs:u* "," t:pair $$ => Out{L: $xs.Value, A: $xs.Value[0], B: $t, C: $t, D: $xs, Same: $xs.Value[0].Start == $xs.Value[0].Start}
 rule u U = n / m
 rule pair T = n m
 rule n N = "n"
@@ -207,7 +207,7 @@ rule main N = x:[a-z]+ #atomic => N{$x}`, Inputs: []string{"abc", "", "1"}},
 rule main Tree = "(" ts:main* ")" => Tree{$ts}`, Inputs: []string{"()", "(()(()))", "(()", ""}},
 		{Name: "named node memo", Src: `type N = node[string]
 type Out = { A N; B N; Same bool }
-rule main Out = &(x:n) y:n $$ => Out{A: $x, B: $y, Same: $x == $y}
+rule main Out = &(x:n) y:n $$ => Out{A: $x, B: $y, Same: $x.Start == $y.Start && $x.End == $y.End}
 rule n N = [a-z] #atomic`, Inputs: []string{"a", "", "ab"}},
 		{Name: "named node predicates", Src: `type N = node[string]
 type Out = { L []N; S int }
@@ -219,7 +219,7 @@ type M = node[string]
 type P = node[(M, M)]
 type R = node[(M, M)]
 type Out = { A N; B N; C N; Same bool; Copy bool; E _; K M; F _; G P }
-rule main Out = a:a "," b:mk "," z:conv "," e:(b "!" / b "?" / c) "," f:(rr "!" / rr "?" / pp) $$ => Out{A: $a, B: $b, C: $z, Same: N{$z} == $z, Copy: N{$b} == $b, E: $e, K: $e.(M), F: $f, G: $f.(P)}
+rule main Out = a:a "," b:mk "," z:conv "," e:(b "!" / b "?" / c) "," f:(rr "!" / rr "?" / pp) $$ => Out{A: $a, B: $b, C: $z, Same: N{$z}.End == $z.End, Copy: N{$b}.Start == $b.Start, E: $e, K: $e.(M), F: $f, G: $f.(P)}
 rule a N = b
 rule b N = c
 rule c M = letter
@@ -378,7 +378,7 @@ type A = node[string]
 type P = node[(A, A)]
 type Q = node[(A, A)]
 type Out = { T Tree; P P; Q Q; Any _; Same bool; Copy bool }
-rule main Out = t:tree p:p q:q $$ => Out{T: $t, P: $p, Q: $q, Any: $q, Same: Q{$q} == $q, Copy: P{$q} == $p}
+rule main Out = t:tree p:p q:q $$ => Out{T: $t, P: $p, Q: $q, Any: $q, Same: Q{$q}.End == $q.End, Copy: P{$q}.Start == $p.Start}
 rule tree Tree = "(" ts:tree* ")" => Tree{$ts}
 rule p P = l:a r:a
 rule q Q = p

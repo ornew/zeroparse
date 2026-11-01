@@ -11,7 +11,7 @@ func CastCases() []Case {
 		{Name: "optional", Src: "rule main = x:(n / w)? $$ => $x.(*Num)\n" + CastRules, Inputs: []string{"1", "", "ab"}},
 		{Name: "union", Src: "rule main = x:(n / w / pair) $$ => $x.(Num | P)\n" + CastRules, Inputs: []string{"1", "1=", "ab"}},
 		{Name: "field", Src: "rule main = x:(pair / w) $$ => $x.(P).N\n" + CastRules, Inputs: []string{"1=", "ab"}},
-		{Name: "predicate", Src: "rule main = x:(n / w) ({$x.(Num) == $x} \"!\" / \"?\") $$\n" + CastRules, Inputs: []string{"1!", "a?", "a!", "1?"}},
+		{Name: "predicate", Src: "rule main = x:(n / w) ({$x.(Num).Text != \"\"} \"!\" / \"?\") $$\n" + CastRules, Inputs: []string{"1!", "a?", "a!", "1?"}},
 		{Name: "constructor", Src: "rule main = x:(n / w) $$ => P{N: $x.(Num)}\n" + CastRules, Inputs: []string{"1", "a"}},
 		{Name: "top", Src: "rule main = x:(n / w) $$ => $x.(_)\n" + CastRules, Inputs: []string{"1", "a"}},
 		// The error names where the action started, after a newline, in code points and bytes.

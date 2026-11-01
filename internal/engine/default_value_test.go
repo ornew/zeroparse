@@ -176,3 +176,35 @@ func TestDefaultValueCompiledRoundTrip(t *testing.T) {
 		}
 	}
 }
+
+// A grammar whose predicates read fields, ranges and optional captures accepts the same inputs with
+// and without default values, on every backend: the predicates compare the same scalars.
+func TestDefaultValuePredicateFieldsAcceptSameInputs(t *testing.T) {
+	t.Parallel()
+	src := lines(
+		"type Name = { Text string; Len int }",
+		"rule main = a:name \"=\" b:name o:\"?\"? &{ $a.Text == $b.Text } &{ $a.Len != 0 && ($o == nil || len($o) == 1) } &{ ($o == nil) == ($a.Text != \"z\") || $o != nil } \"!\"",
+		"rule name Name = t:([a-z]+) #atomic => Name{Text: text($t), Len: len($t)}",
+	)
+	plain, dv := mustCompile(t, src), compileDefault(t, src)
+	for _, input := range []string{"a=a!", "ab=ab!", "a=b!", "a=a", "z=z?!", "z=z!", "a=a?!", "=a!", ""} {
+		for _, backend := range []Backend{Closure, Bytecode, BytecodeIterative} {
+			for _, unit := range []PositionUnit{CodePoints, Bytes} {
+				o := ParseOptions{Backend: backend, Unit: unit}
+				_, plainErr := plain.ParseWith("main", input, o)
+				_, dvErr := dv.ParseWith("main", input, o)
+				if (plainErr == nil) != (dvErr == nil) {
+					t.Errorf("%s/%s input %q: accepted %t without default values, %t with", backend, unit, input, plainErr == nil, dvErr == nil)
+				}
+			}
+		}
+	}
+	// The input that the predicates accept is accepted, and one they reject is not, so that the
+	// comparison is not vacuous.
+	if _, err := plain.ParseWith("main", "ab=ab!", ParseOptions{}); err != nil {
+		t.Errorf("ab=ab! rejected: %v", err)
+	}
+	if _, err := plain.ParseWith("main", "a=b!", ParseOptions{}); err == nil {
+		t.Error("a=b! accepted")
+	}
+}

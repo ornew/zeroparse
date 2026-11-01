@@ -127,18 +127,19 @@ func (p *Parser) ValueEqual(l, r any) bool {
 			}
 		}
 	}
-	return equal(l, r)
+	eq, _ := equal(l, r)
+	return eq
 }
 
 func (p *Parser) ValueBinary(op string, l, r any) (any, error) {
 	if !BudgetControlsEnabled || p.Control == nil {
 		return binaryOp(op, l, r)
 	}
-	if op == "==" || op == "!=" {
-		return p.ValueEqual(l, r) == (op == "=="), nil
-	}
 	ls, lok := l.(string)
 	rs, rok := r.(string)
+	if (op == "==" || op == "!=") && lok && rok {
+		return p.ValueEqual(l, r) == (op == "=="), nil
+	}
 	if lok && rok {
 		switch op {
 		case "+":

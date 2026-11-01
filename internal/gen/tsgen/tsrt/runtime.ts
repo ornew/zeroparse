@@ -3901,12 +3901,48 @@ export function rtOr(l: Value, r: () => Value): Value {
   return rtBool("||", r());
 }
 
+// comparisonHint is added to the error for comparing a node or another structured value, which
+// == and != do not compare (see Operators in the language specification).
+const comparisonHint = "nodes and other structured values cannot be compared; use text(x), or .Start and .End";
+
+// scalarOrNil reports whether v is nil, an int, a string or a bool, the values that == and != compare.
+function scalarOrNil(v: Value): boolean {
+  if (v instanceof Node && v.type === typeBox) {
+    return scalarOrNil(v.box as Value);
+  }
+  return v === null || v === undefined || typeof v === "number" || typeof v === "bigint" || typeof v === "string" || typeof v === "boolean";
+}
+
+// invalidOperands fails the action for applying op to l and r. A comparison of a node or another
+// structured value says why it fails.
+function invalidOperands(op: string, l: Value, r: Value): never {
+  const hint = (op === "==" || op === "!=") && !(scalarOrNil(l) && scalarOrNil(r)) ? `: ${comparisonHint}` : "";
+  return evalError(`invalid operands ${typeName(l)} and ${typeName(r)} for ${op}${hint}`);
+}
+
+// rtEqual applies == to l and r. It compares ints, strings and bools of one type, and any value with
+// nil; it fails for every other pair, which has no equality.
+function rtEqual(op: string, l: Value, r: Value): boolean {
+  const a = l instanceof Node && l.type === typeBox ? (l.box as Value) : l;
+  const b = r instanceof Node && r.type === typeBox ? (r.box as Value) : r;
+  if (a === null || a === undefined || b === null || b === undefined) {
+    return (a === null || a === undefined) && (b === null || b === undefined);
+  }
+  if (typeof a === typeof b && (typeof a === "string" || typeof a === "boolean")) {
+    return a === b;
+  }
+  if (isInt(a) && isInt(b)) {
+    return a === b;
+  }
+  return invalidOperands(op, l, r);
+}
+
 export function rtBinary(op: string, l: Value, r: Value): Value {
   switch (op) {
     case "==":
-      return l === r;
+      return rtEqual(op, l, r);
     case "!=":
-      return l !== r;
+      return !rtEqual(op, l, r);
     case "[]": {
       const items = listItems("[]", l);
       if (!isInt(r)) {
@@ -3978,7 +4014,7 @@ export function rtBinary(op: string, l: Value, r: Value): Value {
         return compareStrings(l, r) >= 0;
     }
   }
-  return evalError(`invalid operands ${typeName(l)} and ${typeName(r)} for ${op}`);
+  return invalidOperands(op, l, r);
 }
 
 // --- OperatorsRule expressions ---

@@ -43,7 +43,7 @@ func TestCastValues(t *testing.T) {
 		{"rule main = x:(n / w)? $$ => $x.(*Num)\n" + gentest.CastRules, "", "null"},
 		{"rule main = x:(pair / w) $$ => $x.(P).N\n" + gentest.CastRules, "1=", `"type":"Num","start":0,"end":1,"fields":{"Text":"1"}`},
 		{"rule main = \"\\n\" r\nrule r = x:(n / w) $$ => $x.(Num)\n" + gentest.CastRules, "\nab", "cannot cast node[[]_] to Num at input position 1 (line 2, column 1); cast at grammar position 2:29"},
-		{"rule main = x:(n / w) ({$x.(Num) == $x} \"!\" / \"?\") $$\n" + gentest.CastRules, "a?", `"value":"?"`},
+		{"rule main = x:(n / w) ({$x.(Num).Text != \"\"} \"!\" / \"?\") $$\n" + gentest.CastRules, "a?", `"value":"?"`},
 	} {
 		program := mustCompile(t, tc.src)
 		for _, backend := range []Backend{Closure, Bytecode, BytecodeIterative} {
