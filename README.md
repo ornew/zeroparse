@@ -191,6 +191,29 @@ Bug reports, ideas and pull requests are welcome. Run `go test ./...` before sen
 [commit message guidelines](docs/commit-messages.md). Report security vulnerabilities privately, as the
 [security policy](SECURITY.md) describes.
 
+## Sponsoring
+
+If ZeroParse saves you time, you can [buy the project a coffee through GitHub Sponsors](https://github.com/sponsors/zeroparse).
+
+## Citing ZeroParse
+
+If you use ZeroParse in research, cite it as below. GitHub's **Cite this repository** button gives the same entry from
+[CITATION.cff](CITATION.cff) in other formats.
+
+```bibtex
+@software{zeroparse,
+  author = {Furukawa, Arata},
+  title  = {{ZeroParse}},
+  url    = {https://github.com/zeroparse/zp},
+  year   = {2026}
+}
+```
+
+## Maintainer
+
+ZeroParse is maintained by Arata Furukawa ([@ornew](https://github.com/ornew), old.river.new@gmail.com). Report security
+vulnerabilities through the [security policy](SECURITY.md), not by email.
+
 ## License
 
 [Apache License 2.0](LICENCE)

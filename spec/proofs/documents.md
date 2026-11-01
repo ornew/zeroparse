@@ -1,5 +1,7 @@
 # Documents
 
+Arata Furukawa · Last revised 2026-11-01
+
 This proof shows that a parse of a [Document](../runtime/documents.md) after
 any sequence of edits returns what a parse of the current text from scratch
 returns ([Reuse](../runtime/documents.md#reuse)). A Document reuses two kinds

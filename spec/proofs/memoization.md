@@ -1,5 +1,7 @@
 # Memoization
 
+Arata Furukawa · Last revised 2026-11-01
+
 This proof shows that [memoization](../runtime/parsing.md#memoization) never
 changes the result of a parse. A parse that answers calls from the memo returns
 the value, the recovered errors and the syntax error of a parse that evaluates

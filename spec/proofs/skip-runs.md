@@ -1,5 +1,7 @@
 # Skip Runs
 
+Arata Furukawa · Last revised 2026-11-01
+
 This proof covers the records of [skip runs](../runtime/parsing.md#skip-runs):
 that a reused record gives what the rest of the walk would have given
 (Lemma 1), and that the walks of a site in a parse evaluate its element a

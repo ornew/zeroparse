@@ -1,5 +1,7 @@
 # Linear Cost
 
+Arata Furukawa · Last revised 2026-11-01
+
 This proof shows that the [Conditions for Linear Cost](../runtime/parsing.md#conditions-for-linear-cost)
 bound the [cost](../runtime/parsing.md#cost) of every parse, so that the
 classes Linear and Linear Given an Environment Bound of

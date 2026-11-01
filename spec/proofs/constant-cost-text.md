@@ -1,5 +1,7 @@
 # Constant-Cost Text
 
+Arata Furukawa · Last revised 2026-11-01
+
 This proof shows that the [Conditions for Linear Cost](../runtime/parsing.md#conditions-for-linear-cost)
 stay sufficient when taking the text of a node is not a copying operation,
 given the guarantee of [Cost](../runtime/parsing.md#cost) that `text` costs a

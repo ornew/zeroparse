@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: If you use ZeroParse in your work, please cite it as below.
+title: ZeroParse
+abstract: One grammar, every parser. A parser platform that turns one grammar into parsers for every engine and use.
+type: software
+authors:
+  - family-names: Furukawa
+    given-names: Arata
+    email: old.river.new@gmail.com
+repository-code: https://github.com/zeroparse/zp
+url: https://zeroparse.dev
+license: Apache-2.0

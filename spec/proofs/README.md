@@ -6,6 +6,11 @@ and a reuse is correct only if it gives the result that evaluating again would
 give. The proofs here show that, and the cost bounds that the mechanisms claim,
 as lemmas over the definitions of the specifications that they cite.
 
+Each proof names its author and the date of its last revision under its title.
+A change to a statement or a proof updates the date. From the first release
+on, each proof also lists the releases that changed it. To cite a proof, cite
+ZeroParse and name the proof.
+
 ## Contents
 
 | Proof | Shows |
