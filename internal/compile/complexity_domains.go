@@ -22,9 +22,9 @@ const (
 )
 
 // finiteVars returns the variables whose values in every parse lie in a set bounded by a constant
-// of the grammar: every bool variable, and every int variable whose initial value and bindings
-// reach a finite set (see finiteInt), when the product of the sizes of those sets is at most
-// maxFiniteValues. Past that product, no variable has finite values.
+// of the grammar: every bool variable (see finiteBool), and every int variable whose initial
+// value and bindings reach a finite set (see finiteInt), when the product of the sizes of those
+// sets is at most maxFiniteValues. Past that product, no variable has finite values.
 func (k *classifier) finiteVars() map[string]bool {
 	byVar := map[string][]*binding{}
 	for _, b := range k.binds {
@@ -36,7 +36,7 @@ func (k *classifier) finiteVars() map[string]bool {
 		n, ok := 0, false
 		switch k.varType[v.Name] {
 		case "bool":
-			n, ok = 2, true
+			n, ok = finiteBool(v, byVar[v.Name]), true
 		case "int":
 			n, ok = k.finiteInt(v, byVar[v.Name])
 		}
@@ -50,6 +50,38 @@ func (k *classifier) finiteVars() map[string]bool {
 		out[v.Name] = true
 	}
 	return out
+}
+
+// finiteBool returns the number of values of the bool variable v: one when no binding of v can
+// bind a value other than its initial value, and two otherwise. A binding counts by its value
+// when that is a constant, binds nothing when it fails to evaluate, and counts as both values
+// otherwise.
+func finiteBool(v *grammar.VarDef, binds []*binding) int {
+	set := map[bool]bool{}
+	init := any(false)
+	if v.Value != nil {
+		var res evalResult
+		if init, res = eval(v.Value, domainEnv{}); res != evalOK {
+			return 2
+		}
+	}
+	x, isBool := init.(bool)
+	if !isBool {
+		return 2
+	}
+	set[x] = true
+	for _, b := range binds {
+		r, res := eval(b.b.Value, domainEnv{})
+		y, isBool := r.(bool)
+		switch {
+		case res == evalFailed:
+		case res != evalOK || !isBool:
+			return 2
+		default:
+			set[y] = true
+		}
+	}
+	return len(set)
 }
 
 // valueSet is a set of values of an int variable.

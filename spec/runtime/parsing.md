@@ -749,9 +749,13 @@ necessary.
    condition: the `bool` variables and the `int` variables whose values form a
    finite set, the least set that holds the initial value and, for each of the
    variable's bindings, the values that the binding binds from the values that
-   can reach it, when the product of the value sets of all tracked variables
-   is at most 128, counting 2 for a `bool`; past that product, no variable has
-   finite values. Every binding of the variable must read only the variable
+   can reach it, when the product of the sizes of the value sets of all these
+   variables is at most 128; `string` variables and other `int` variables are
+   not counted. The value set of a `bool` holds its initial value and the
+   values that its bindings can bind: a constant binding adds its value, a
+   binding that fails to evaluate adds none, and any other adds both, so a
+   `bool` never bound, or bound only to its initial value, counts 1. Past that
+   product, no variable has finite values. Every binding of the variable must read only the variable
    itself, `int` and `bool` literals, and operands `len($c)` of a capture `c`
    whose value has a length of at most 256 that the classifier can see: the
    text of an expression that matches a bounded number of characters, a list

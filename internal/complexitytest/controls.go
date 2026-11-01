@@ -383,11 +383,17 @@ func Controls() []Control {
 			Sizes:  double(250), ShortSizes: double(100), Order: Linear, Class: ClassLinear, Positive: true,
 		},
 		// The product of the numbers of values of the variables with finite values is at most 128:
-		// seven flag bits are exempt; a counter with 130 values, or two with 12 each, are not,
-		// though they measure linear.
+		// seven flag bits, or seven bound Booleans beside one never bound, are exempt; a counter
+		// with 130 values, or two with 12 each, are not, though they measure linear.
 		{
 			Name: "Seven flag bits", Family: "bounded binding",
 			Source: "var ctx int\nrule main = (r / .)* $$\nrule r = \"a\" {ctx := ctx - ctx / 1 % 2 * 1 + 1} r / \"b\" {ctx := ctx - ctx / 2 % 2 * 2 + 2} r / \"c\" {ctx := ctx - ctx / 4 % 2 * 4 + 4} r / \"d\" {ctx := ctx - ctx / 8 % 2 * 8 + 8} r / \"e\" {ctx := ctx - ctx / 16 % 2 * 16 + 16} r / \"f\" {ctx := ctx - ctx / 32 % 2 * 32 + 32} r / \"g\" {ctx := ctx - ctx / 64 % 2 * 64 + 64} r / \"y\" {ctx >= 0}\n",
+			Input:  func(n int) string { return rep("abcdefg", n) },
+			Sizes:  double(100), ShortSizes: double(50), Order: Linear, Class: ClassLinear, Positive: true,
+		},
+		{
+			Name: "Seven bound Booleans and an unbound one", Family: "bounded binding",
+			Source: "var b1 bool\nvar b2 bool\nvar b3 bool\nvar b4 bool\nvar b5 bool\nvar b6 bool\nvar b7 bool\nvar b8 bool\nrule main = (r / .)* $$\nrule r = \"a\" {b1 := true} r / \"b\" {b2 := true} r / \"c\" {b3 := true} r / \"d\" {b4 := true} r / \"e\" {b5 := true} r / \"f\" {b6 := true} r / \"g\" {b7 := true} r / \"y\" {b1 || b2 || b3 || b4 || b5 || b6 || b7 || b8}\n",
 			Input:  func(n int) string { return rep("abcdefg", n) },
 			Sizes:  double(100), ShortSizes: double(50), Order: Linear, Class: ClassLinear, Positive: true,
 		},

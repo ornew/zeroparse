@@ -273,14 +273,22 @@ parameter once keeps the constant of the class proportional to $m$.
 
 Let $v$ be a variable with
 [finite values](../runtime/parsing.md#conditions-for-linear-cost) and $S_v$
-its set of values, of 2 values for a `bool`; the product of the value sets of
-all tracked variables is at most 128.
+its set of values. The variables with finite values are the `bool` variables
+and the `int` variables whose value sets are finite; `string` variables and
+other `int` variables are not among them. A `bool` has as its set its initial
+value and the values that its bindings can bind: a constant binding adds its
+value, a binding that fails to evaluate adds none, and any other adds both.
+The product of the sizes of the value sets of all variables with finite
+values is at most 128.
 Then $v$ holds a value of $S_v$ at every step of every parse, and the
 variables with finite values contribute at most the product of their $|S_v|$,
 a constant, to $K$.
 
-*Proof.* For a `bool`, $S_v$ is the set of both values, and the claim holds.
-For an `int`, by induction on the steps of the parse. By
+*Proof.* For a `bool`, the initial value is in $S_v$, and every binding of
+$v$ that succeeds binds its constant value, which is in $S_v$, or is one whose
+value is not constant, in which case $S_v$ holds both values; so every value
+that $v$ holds is in $S_v$. For an `int`, by induction on the steps of the
+parse. By
 [Variables](../language/predicates.md#variables), the parse starts with $v$
 bound to its initial value, which is in $S_v$, and afterwards a lookup of $v$
 gives the nearest binding of $v$ that has not been undone, or the initial

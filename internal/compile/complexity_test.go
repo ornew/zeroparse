@@ -191,6 +191,12 @@ func TestClassifyComplexity(t *testing.T) {
 		{"counter with 128 values", "var v int\nrule main = r $$\nrule r = \"#\" {v < 127} {v := v + 1} r / \"y\" {v >= 0}\n", ClassLinear, 0},
 		{"counter with 129 values", "var v int\nrule main = r $$\nrule r = \"#\" {v < 128} {v := v + 1} r / \"y\" {v >= 0}\n", ClassExp, 0},
 		{"two counters with 144 combinations", "var u int\nvar v int\nrule main = r $$\nrule r = \"#\" {u < 11} {u := u + 1} r / \"(\" {v < 11} {v := v + 1} r / \"y\" {u + v >= 0}\n", ClassExp, 0},
+		// A bool counts by the values its bindings can give it: one never bound, or bound only to
+		// its initial value, counts one.
+		{"counter with 64 values and two unbound Booleans", "var v int\nvar b bool\nvar c bool = true\nrule main = r $$\nrule r = \"#\" {v < 63} {v := v + 1} {c := true} r / \"y\" {v >= 0 && !b && c}\n", ClassLinear, 0},
+		{"counter with 64 values and a bound Boolean", "var v int\nvar b bool\nrule main = r $$\nrule r = \"#\" {v < 63} {v := v + 1} {b := true} r / \"y\" {v >= 0 && b}\n", ClassLinear, 0},
+		{"seven bound Booleans and an unbound one", "var b1 bool\nvar b2 bool\nvar b3 bool\nvar b4 bool\nvar b5 bool\nvar b6 bool\nvar b7 bool\nvar b8 bool\nrule main = (r / .)* $$\nrule r = \"a\" {b1 := true} r / \"b\" {b2 := true} r / \"c\" {b3 := true} r / \"d\" {b4 := true} r / \"e\" {b5 := true} r / \"f\" {b6 := true} r / \"g\" {b7 := true} r / \"y\" {b1 || b2 || b3 || b4 || b5 || b6 || b7 || b8}\n", ClassLinear, 0},
+		{"counter with 128 values and a bound Boolean", "var v int\nvar b bool\nrule main = r $$\nrule r = \"#\" {v < 127} {v := v + 1} {b := true} r / \"y\" {v >= 0 && b}\n", ClassExp, 0},
 		{"Boolean toggled before a call", "var b bool\nrule main = r $$\nrule r = x:\"#\" {b := !b && len($x) > 0} r / \"y\" {b}\n", ClassLinear, 0},
 		{"counter divided by zero", "var v int\nrule main = r $$\nrule r = \"#\" {v := v + 1 / v} r / \"y\" {v >= 0}\n", ClassLinear, 0},
 		{"rebinding after the left call", "var k int\nrule main = e $$\nrule e = e \"x\" {k := k + 1} / \"x\" {k >= 0}\n", ClassLinearEnv, 0},
