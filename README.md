@@ -9,8 +9,6 @@
 
 **One Grammar. Every Parser.**
 
-Never write a parser again.
-
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENCE) [![Go Reference](https://pkg.go.dev/badge/zeroparse.dev/zp.svg)](https://pkg.go.dev/zeroparse.dev/zp) [![Go](https://img.shields.io/badge/go-1.27.1+-00ADD8?logo=go&logoColor=white)](go.mod)
 
 [Website](https://zeroparse.dev/) · [Playground](https://zeroparse.dev/playground/) · [Quick start](docs/tutorial/getting-started.md) · [Guides](docs/guide/README.md) · [Specification](spec/README.md) · [Examples](examples/)
@@ -18,7 +16,7 @@ Never write a parser again.
 </div>
 
 ZeroParse turns one grammar into every parser you need: generated code or a VM, fast, safe on any input and ready for
-your editor.
+your editor. Never write a parser again.
 
 ```zp
 // calc.zp

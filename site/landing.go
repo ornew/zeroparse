@@ -22,7 +22,7 @@ import (
 type landingData struct {
 	Tagline     string
 	Phrases     []string // the sentences of the tagline, each kept on one line where it fits
-	Subtitle    string
+	Description string   // text of the first introduction paragraph, for the page description
 	Intro       []template.HTML
 	Features    []feature
 	Example     string // grammar of the live example
@@ -122,7 +122,7 @@ func (s *Site) renderLanding() error {
 		return err
 	}
 	p.Title = "ZeroParse: " + d.Tagline
-	p.Description = d.Subtitle
+	p.Description = d.Description
 	p.Body = template.HTML(b.String())
 	p.Scripts = []string{"assets/landing.js"}
 	return nil
@@ -140,9 +140,10 @@ func (s *Site) landingIntro(d *landingData, m *markdown, n ast.Node, snippets *s
 			d.Tagline = m.text(n)
 		case strings.Contains(html, "<img"), strings.Contains(html, " · "):
 			// Badges and quick links: the site has its own navigation.
-		case d.Subtitle == "":
-			d.Subtitle = m.text(n)
 		default:
+			if d.Description == "" {
+				d.Description = m.text(n)
+			}
 			d.Intro = append(d.Intro, template.HTML(html))
 		}
 	case *ast.FencedCodeBlock:
