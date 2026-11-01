@@ -16,6 +16,9 @@ func init() {
 	gogen.SetRuntimeSource(os.DirFS(filepath.Join(moduleRoot(), "runtime")))
 }
 
+// ModuleRoot returns the root directory of this module (see moduleRoot).
+func ModuleRoot() string { return moduleRoot() }
+
 // moduleRoot returns the root directory of this module, the nearest directory above the working
 // directory that has a go.mod; tests run in the directory of their package.
 var moduleRoot = sync.OnceValue(func() string {

@@ -38,7 +38,11 @@ done
 [ "$bad" = 0 ] || { echo "alpha-parsers: copy the grammars from this tree (testdata/grammars is the source of truth)" >&2; exit 1; }
 work=$(mktemp -d) || exit 1
 trap 'rm -rf "$work"' EXIT
-# A go.work file outside both trees joins the main module and the alpha-parsers module.
-printf 'go 1.27.1\n\nuse (\n\t%s\n\t%s\n)\n' "$root" "$dir" >"$work/go.work"
+# A go.work file outside both trees joins the main module, the runtime module and the alpha-parsers
+# module, with the replace directives of this tree's go.work (their directories made absolute).
+{
+	printf 'go 1.27.1\n\nuse (\n\t%s\n\t%s\n\t%s\n)\n' "$root" "$root/runtime" "$dir"
+	grep '^replace ' "$root/go.work" | sed "s#=> \./#=> $root/#"
+} >"$work/go.work" || exit 1
 cd "$dir" || exit 1
 GOWORK="$work/go.work" ./test.sh "$@"

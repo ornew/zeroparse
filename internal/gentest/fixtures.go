@@ -165,7 +165,7 @@ var (
 	runtimeCopyDir  string
 )
 
-// RuntimeCopy returns the root of a module that holds a copy of the runtime package with the
+// RuntimeCopy returns the directory of a runtime module that holds a copy of the runtime package with the
 // identifiers that testdata/export_names.txt lists renamed (see ExportNames).
 func RuntimeCopy() string {
 	runtimeCopyOnce.Do(func() {
@@ -194,9 +194,7 @@ func writeRuntimeCopy(dir string, patch func(name, src string) string, extra map
 			panic(err)
 		}
 	}
-	must(os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module zeroparse.dev/zp\n\ngo 1.27.1\n"), 0o644))
-	rt := filepath.Join(dir, "runtime")
-	must(os.MkdirAll(rt, 0o755))
+	must(os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module zeroparse.dev/zp/runtime\n\ngo 1.27.1\n"), 0o644))
 	src := filepath.Join(moduleRoot(), "runtime")
 	entries, err := os.ReadDir(src)
 	must(err)
@@ -209,11 +207,11 @@ func writeRuntimeCopy(dir string, patch func(name, src string) string, extra map
 		if patch != nil {
 			data = []byte(patch(e.Name(), string(data)))
 		}
-		must(os.WriteFile(filepath.Join(rt, e.Name()), ExportNames(data), 0o644))
+		must(os.WriteFile(filepath.Join(dir, e.Name()), ExportNames(data), 0o644))
 	}
-	must(os.WriteFile(filepath.Join(rt, "zz_testing.go"), ExportNames([]byte(runtimeTestingShim)), 0o644))
+	must(os.WriteFile(filepath.Join(dir, "zz_testing.go"), ExportNames([]byte(runtimeTestingShim)), 0o644))
 	for name, data := range extra {
-		must(os.WriteFile(filepath.Join(rt, name), ExportNames([]byte(data)), 0o644))
+		must(os.WriteFile(filepath.Join(dir, name), ExportNames([]byte(data)), 0o644))
 	}
 }
 
@@ -223,9 +221,10 @@ func GoMod(module string) string {
 	return GoModAt(module, RuntimeCopy())
 }
 
-// GoModAt returns the go.mod of a test module that imports the runtime from the module in dir.
+// GoModAt returns the go.mod of a test module that imports the runtime from the runtime module in
+// dir.
 func GoModAt(module, dir string) string {
-	return "module " + module + "\n\ngo 1.27.1\n\nrequire zeroparse.dev/zp v0.0.0\n\nreplace zeroparse.dev/zp => " + dir + "\n"
+	return "module " + module + "\n\ngo 1.27.1\n\nrequire zeroparse.dev/zp/runtime v0.0.0\n\nreplace zeroparse.dev/zp/runtime => " + dir + "\n"
 }
 
 // WriteGenerated writes the files of a generated package into dir. A go.mod for the module is

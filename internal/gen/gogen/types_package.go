@@ -102,7 +102,7 @@ func typesPackageFile(opts gen.GenOptions, body string) ([]byte, *typesPackage, 
 		return nil, nil, err
 	}
 	var file strings.Builder
-	file.WriteString(generatedHeader + "\n\n")
+	file.WriteString(gen.Header() + "\n\n")
 	if !opts.OmitPackageDoc {
 		fmt.Fprintf(&file, "// Package %s declares the Go types of the typed values of the parser in package %s.\n", typesPackageName, opts.Package)
 	}

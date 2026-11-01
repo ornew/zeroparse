@@ -13,7 +13,7 @@ since). Together they were a large part of the generated source.
 The runtime now has `Parser.Enter` (the depth count and the nesting check) and
 `Parser.Restore` (the position and the recovered errors), and the generator calls
 them. Both are inlinable, so the compiled code of a call site is what the statements
-were; `runtime/inline_test.go` fails if either stops being inlinable.
+were; `internal/runtimetest/inline_test.go` fails if either stops being inlinable.
 
 ## Results
 

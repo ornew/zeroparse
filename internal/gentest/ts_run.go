@@ -66,7 +66,7 @@ func bundleTS(files []gen.GeneratedFile) []byte {
 		contents[f.Path] = string(f.Content)
 	}
 	var b strings.Builder
-	b.WriteString(tsgen.TsGeneratedHeader)
+	b.WriteString(tsgen.TsGeneratedHeader())
 	b.WriteString("/* eslint-disable */\n\n")
 	for _, name := range []string{"runtime.ts", "types.ts", "parser.ts"} {
 		src, ok := contents[name]

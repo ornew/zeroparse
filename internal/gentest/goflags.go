@@ -34,6 +34,19 @@ func SetGoCache() (remove func()) {
 	return func() { os.RemoveAll(dir) }
 }
 
+// WorkspaceGoFlags returns flags without -mod=mod, which SetGoFlags adds for the temporary modules
+// but which the go command rejects in the workspace of the checkout (go.work), where a go command
+// of a test that builds packages of the checkout runs.
+func WorkspaceGoFlags(flags string) string {
+	var out []string
+	for _, f := range strings.Fields(flags) {
+		if f != "-mod=mod" {
+			out = append(out, f)
+		}
+	}
+	return strings.Join(out, " ")
+}
+
 // CheckRuntimeTag fails the test unless a go command that inherits the environment of the test
 // compiles the runtime with the printed compositions (runtime/call_exec.go) exactly when the Exec IR
 // switch is on in the test binary, so that a run with the switch does not test generated parsers
@@ -41,7 +54,7 @@ func SetGoCache() (remove func()) {
 func CheckRuntimeTag(t *testing.T) {
 	t.Helper()
 	cmd := exec.Command("go", "list", "-f", "{{join .GoFiles \" \"}}", "zeroparse.dev/zp/runtime")
-	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local")
+	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local", "GOFLAGS="+core.GoFlags(WorkspaceGoFlags(os.Getenv("GOFLAGS"))))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("go list: %v\n%s", err, out)

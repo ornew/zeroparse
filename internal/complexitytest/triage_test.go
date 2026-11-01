@@ -370,7 +370,7 @@ func generatedSteps(t, top *testing.T, name, path string, inputs []string, lenie
 		for _, f := range files {
 			write("p/"+f.Path, f.Content)
 		}
-		write("go.mod", []byte("module triage\n\ngo 1.27.1\n\nrequire zeroparse.dev/zp v0.0.0\n\nreplace zeroparse.dev/zp => "+root+"\n"))
+		write("go.mod", []byte("module triage\n\ngo 1.27.1\n\nrequire (\n\tzeroparse.dev/zp v0.0.0\n\tzeroparse.dev/zp/runtime v0.0.0\n)\n\nreplace (\n\tzeroparse.dev/zp => "+root+"\n\tzeroparse.dev/zp/runtime => "+filepath.Join(root, "runtime")+"\n)\n"))
 		write("main.go", []byte(generatedDriverMain))
 		out := filepath.Join(dir, "driver")
 		cmd := exec.Command("go", "build", "-o", out, ".")

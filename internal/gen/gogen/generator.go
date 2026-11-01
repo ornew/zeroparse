@@ -364,6 +364,11 @@ func ParseRule(name, input string, opts ...ParseOption) (*Node, error) {
 		// The one reference to the schema of the types package (see schemaName).
 		body += "\nconst _ = " + tp.schema + "\n"
 	}
+	if opts.Runtime == gen.RuntimeImport {
+		// The parser builds only against a runtime that implements the protocol it was generated
+		// for: another runtime does not declare the constant.
+		body += "\nconst _ = " + info.protocol + "\n"
+	}
 	if goGen.chunksInRuntime {
 		body = chunkNames.Replace(body)
 	}
@@ -372,7 +377,7 @@ func ParseRule(name, input string, opts ...ParseOption) (*Node, error) {
 		return nil, err
 	}
 	var file strings.Builder
-	file.WriteString(generatedHeader + "\n\n")
+	file.WriteString(gen.Header() + "\n\n")
 	if !opts.OmitPackageDoc {
 		fmt.Fprintf(&file, "// Package %s is a parser generated from a ZeroParse grammar.\n", opts.Package)
 	}

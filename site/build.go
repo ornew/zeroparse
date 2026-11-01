@@ -396,6 +396,17 @@ func readExamples(repo string) ([]example, error) {
 	return exs, nil
 }
 
+// repoEnv returns the environment of a go command that builds a package of the repository: the
+// workspace of the repository (its go.work, which holds the runtime module), whatever GOWORK the
+// site build runs with (build.sh turns the workspace off for the site module).
+func repoEnv(repo string) []string {
+	work, err := filepath.Abs(filepath.Join(repo, "go.work"))
+	if err != nil {
+		work = filepath.Join(repo, "go.work")
+	}
+	return append(os.Environ(), "GOWORK="+work)
+}
+
 type wasmBuildSpec struct {
 	command    string
 	args       []string
@@ -436,7 +447,7 @@ func buildWasm(repo, dir, toolchain string) (string, error) {
 	}
 	cmd := exec.Command(compiler, spec.args...)
 	cmd.Dir = repo
-	cmd.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm")
+	cmd.Env = append(repoEnv(repo), "GOOS=js", "GOARCH=wasm")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("building zp.wasm with %s: %v\n%s", spec.command, err, out)
 	}

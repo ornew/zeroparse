@@ -136,6 +136,7 @@ func zpHelp(repo string) (cliUsage, error) {
 	bin := filepath.Join(dir, "zp")
 	build := exec.Command("go", "build", "-o", bin, "./cmd/zp")
 	build.Dir = repo
+	build.Env = repoEnv(repo)
 	if out, err := build.CombinedOutput(); err != nil {
 		return cliUsage{}, fmt.Errorf("building the zp command: %v\n%s", err, out)
 	}

@@ -118,10 +118,55 @@ the stream runtime should keep it and the bounded-memory consumer in `TestGenera
 
 Generated Go typed-output cleanup is not implemented; the measured full-sweep and bounded candidates and their limits are in [design 034](design/records/034-typed-output-liveness.md) and [optimization record 094](optimizations/094-generated-typed-output-liveness.md).
 
+## Modules and the Workspace
+
+The repository holds three modules:
+
+| Module | Directory | Holds |
+|:--|:--|:--|
+| `zeroparse.dev/zp` | the root | The engine, the generators, the `zp` command and the public packages |
+| `zeroparse.dev/zp/runtime` | `runtime/` | The runtime that generated Go parsers import with `-runtime import`. It requires no other module. The tests that check it against packages of the root module are in `internal/runtimetest/` |
+| `zeroparse.dev/zp/site` | `site/` | The documentation site |
+
+The committed `go.work` joins them, so a go command run in the checkout builds the root module against the runtime of
+the same checkout. The root `go.mod` requires the runtime at a published version and has no `replace` directive,
+because `go install zeroparse.dev/zp/cmd/zp@version` refuses a module whose `go.mod` has one. The generated benchmark
+parsers (`internal/bench/gen/`) and the test helpers of `internal/gentest/` import the runtime, so `GOWORK=off go build
+./...` in the checkout builds them against that published version. A change to the runtime that the root module needs is
+therefore published in two commits: the change, then a commit that requires its pseudo-version (`GOWORK=off go get
+zeroparse.dev/zp/runtime@<commit> && GOWORK=off go mod tidy`, then `GOWORK=off go build ./...`). While `go.mod`
+requires the runtime at the placeholder `v0.0.0-00010101000000-000000000000`, `go get` cannot load the module graph, so
+the first bump away from it resolves the pseudo-version outside any module (`go list -m -f '{{.Version}}'
+zeroparse.dev/zp/runtime@<commit>` in an empty directory), sets it with `go mod edit -require`, and then runs
+`GOWORK=off go mod tidy`. A release tags the
+runtime first and makes the root module require that tag ([tagging a release](releasing.md#tagging-a-release)).
+
+- A pattern such as `./...` matches the packages of the module of the current directory only, so the root suite is
+  `go test ./... ./runtime/...`, and the site's is `cd site && go test ./...`.
+- The commands of this guide expect the workspace: `GOWORK` unset, or set to the checkout's `go.work`. With
+  `GOWORK=off`, a command in the checkout uses the runtime version that `go.mod` requires instead of `runtime/`.
+  `site/build.sh` builds the site module with `GOWORK=off`, to check the pinned version of its site generator, and gives
+  the go commands that it runs in the root module (the `zp` command, the playground) `GOWORK` set to the checkout's
+  `go.work`.
+- Tests that build generated programs write temporary modules outside the checkout, which the workspace does not
+  reach. Those modules `replace` `zeroparse.dev/zp/runtime` with a directory, a copy of the runtime module
+  (`gentest.GoModAt`) or the checkout's `runtime/`, and `zeroparse.dev/zp` with the checkout when they import other
+  packages of the root module. `internal/runtimetest` runs the runtime's conformance tests, which need packages of the
+  root module, in a copy of the runtime module that requires the checkout's root module.
+
+The protocol version of the runtime (`runtime/protocol.go`) names the interface between generated code and the runtime,
+which [the runtime protocol](releasing.md#the-runtime-protocol) describes. `TestProtocol` in `runtime/` compares the exported
+declarations of the runtime, with the exported fields and methods of the types they reach and the types that aliases
+stand for, with `runtime/testdata/protocol.golden` and fails when they changed under the same protocol version: replace
+`ProtocolN` with `ProtocolN+1`, then run `go test ./runtime -run TestProtocol -update-protocol`. A change of what the
+declarations mean or of how generated parsers encode their data needs the same bump, which no test detects.
+`gen/protocol_test.go` checks that a parser generated with `-runtime import` fails to build against a runtime of
+another protocol.
+
 ## Testing
 
 ```bash
-go test ./...
+go test ./... ./runtime/...
 ```
 
 `go test ./...` does not run benchmarks, so a change to the language rules can leave a benchmark's grammar invalid without failing the suite. After such a change, run every benchmark once (about 80 s):
@@ -215,7 +260,7 @@ The guides show how to test a grammar in an application. The repository uses the
 | Compiled grammars, Documents and backend equivalence | `internal/engine/` tests such as `compiled_test.go` and `document_test.go`, and the tests of `internal/engine/document/` |
 | Generated Go against the engine and regression freezes of what the engine cannot say (observation, Documents, budget, streams, lowering decisions) | `internal/gen/gogen/` tests such as `gogen_flow_*_test.go` with `internal/gen/gogen/testdata/*.golden`, and `internal/engine/` tests `core_*_test.go` with `internal/engine/testdata/*.golden`; a change of what a golden freezes is rewritten with `go test <package> -run <test> -update` and its diff reviewed |
 
-Root `go test ./...` covers the main module. Run `hack/test-alpha-parsers.sh` to vet and test the parsers of a neighboring alpha-parsers checkout against this tree; `cd site && go test ./...` covers the site module.
+Root `go test ./... ./runtime/...` covers the main module and the runtime module. Run `hack/test-alpha-parsers.sh` to vet and test the parsers of a neighboring alpha-parsers checkout against this tree; `cd site && go test ./...` covers the site module.
 
 ### Ready-Made Parsers and Their Corpora
 
@@ -223,7 +268,7 @@ The ready-made parsers are in the separate [alpha-parsers](https://github.com/ze
 (module `zeroparse.dev/alpha-parsers`), generated from `testdata/grammars/`. Its conformance suites use text from
 other projects, which it fetches and checks against pinned digests (see its README). To check a change of the generator
 or the engine against it, put a checkout next to this one and run `hack/test-alpha-parsers.sh`; the script joins both
-with a `go.work` file and skips with a message when there is no checkout (`$ZP_ALPHA_PARSERS` names another place).
+with a `go.work` file (the root module, the runtime module and the checkout) and skips with a message when there is no checkout (`$ZP_ALPHA_PARSERS` names another place).
 
 ## Language Feature Status
 

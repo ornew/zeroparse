@@ -89,7 +89,8 @@ func BenchmarkSource(b *testing.B) {
 }
 GO
 cd "$sourcebench_dir"
-GOWORK=off go mod edit -require zeroparse.dev/zp@v0.0.0 -replace "zeroparse.dev/zp=$sourcebench_repo"
+GOWORK=off go mod edit -require zeroparse.dev/zp@v0.0.0 -replace "zeroparse.dev/zp=$sourcebench_repo" \
+	-require zeroparse.dev/zp/runtime@v0.0.0 -replace "zeroparse.dev/zp/runtime=$sourcebench_repo/runtime"
 GOWORK=off go test -c -o sourcebaseline.test .
 ./sourcebaseline.test -test.run '^TestParityCounts$'
 sourcebench_round=0

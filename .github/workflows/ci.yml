@@ -61,9 +61,9 @@ jobs:
           ZP_TYPESCRIPT_TESTS: ${{ github.workspace }}/typescript-reference/tests/cases
         run: .github/scripts/write-provenance.sh "$RUNNER_TEMP/zp-ci-provenance.log"
       - name: Test root module
-        run: go test -v -timeout=45m ./... 2>&1 | tee "$RUNNER_TEMP/zp-root-test.log"
+        run: go test -v -timeout=45m ./... ./runtime/... 2>&1 | tee "$RUNNER_TEMP/zp-root-test.log"
       - name: Vet root module
-        run: go vet ./... 2>&1 | tee "$RUNNER_TEMP/zp-root-vet.log"
+        run: go vet ./... ./runtime/... 2>&1 | tee "$RUNNER_TEMP/zp-root-vet.log"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

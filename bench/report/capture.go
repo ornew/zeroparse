@@ -228,10 +228,16 @@ func buildBinary(root, work, name, genDir string) (int, error) {
 
 go 1.27.1
 
-require %[1]s v0.0.0
+require (
+	%[1]s v0.0.0
+	%[1]s/runtime v0.0.0
+)
 
-replace %[1]s => %[2]s
-`, "zeroparse.dev/zp", root)
+replace (
+	%[1]s => %[2]s
+	%[1]s/runtime => %[3]s
+)
+`, "zeroparse.dev/zp", root, filepath.Join(root, "runtime"))
 	src := `package main
 
 import (

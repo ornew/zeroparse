@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -84,9 +85,15 @@ func vanityPage(repo, dir string) []byte {
 `, html.EscapeString(importPath), prefix, gh, vanityBranch, doc))
 }
 
+// nestedModules lists the directories of the modules nested in the repository that are published
+// from it (the site module is not). The go-import prefix of the repository covers them: the go
+// command finds the module zeroparse.dev/zp/runtime in the directory runtime of the repository.
+var nestedModules = []string{"runtime"}
+
 // packageDirs returns the directories of the repository, relative to its root with forward
 // slashes ("" is the root), that an outside module can import: directories with a non-test Go
-// file, outside internal and testdata directories, hidden directories and nested modules.
+// file, outside internal and testdata directories, hidden directories and nested modules other than
+// those of nestedModules.
 func packageDirs(repo string) ([]string, error) {
 	var dirs []string
 	err := filepath.WalkDir(repo, func(p string, d fs.DirEntry, err error) error {
@@ -105,7 +112,7 @@ func packageDirs(repo string) ([]string, error) {
 			case name == "internal", name == "testdata", name == "vendor", strings.HasPrefix(name, "."), strings.HasPrefix(name, "_"):
 				return filepath.SkipDir
 			}
-			if _, err := os.Stat(filepath.Join(p, "go.mod")); err == nil {
+			if _, err := os.Stat(filepath.Join(p, "go.mod")); err == nil && !slices.Contains(nestedModules, filepath.ToSlash(rel)) {
 				return filepath.SkipDir
 			}
 		}

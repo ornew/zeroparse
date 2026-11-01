@@ -1,0 +1,471 @@
+protocol 1
+const BaseString untyped int = 0
+const Bytes PositionUnit = 1
+const CodePoints PositionUnit = 0
+const ExpFar ExpID = 536870912
+const IdAny ExpID = 0
+const IdBeginInput ExpID = 1
+const IdBeginLine ExpID = 3
+const IdEndInput ExpID = 2
+const IdEndLine ExpID = 4
+const KindError NodeKind = 3
+const KindList NodeKind = 2
+const KindListValue NodeKind = 6
+const KindString NodeKind = 0
+const KindStruct NodeKind = 4
+const KindTuple NodeKind = 1
+const KindTupleValue NodeKind = 5
+const KindValue NodeKind = 7
+const LimitBudget LimitKind = 0
+const LimitInput LimitKind = 1
+const MsgBit ExpID = 1073741824
+const RuleDocMemo uint8 = 8
+const RuleLeader uint8 = 2
+const RuleMemo uint8 = 1
+const RuleNovalue uint8 = 4
+const RuleRec uint8 = 32
+const RuleSplice uint8 = 16
+const TerminalChoice uint16 = 3
+const TerminalClass uint16 = 0
+const TerminalGuard uint16 = 6
+const TerminalGuardClass uint16 = 7
+const TerminalLiteral uint16 = 1
+const TerminalNoTable uint16 = 65535
+const TerminalNot uint16 = 5
+const TerminalOptional uint16 = 4
+const TerminalSeq uint16 = 2
+const TraceEnter TraceKind = 0
+const TraceExit TraceKind = 1
+const TraceSkipped TraceKind = 2
+const TypeListValue untyped string = "(list)"
+const TypeTupleValue untyped string = "(tuple)"
+const Unlimited untyped int = 18446744073709551615
+const WalkChild WalkEdgeKind = 1
+const WalkContinue WalkAction = 0
+const WalkField WalkEdgeKind = 2
+const WalkListElement WalkEdgeKind = 3
+const WalkRoot WalkEdgeKind = 0
+const WalkSkip WalkAction = 1
+const WalkStop WalkAction = 2
+func AllocSlice[T any](*Chunk[T], int) []T
+func Alloc[T any](*Chunk[T]) *T
+func AsTval(any) TVal
+func DocumentParseConverted[T any](*documentState, parseOptions, func(*Node, *BudgetControl, error) T) (T, error)
+func IterateStream[T any](*grammar, []ParseOption, func(func(T) error) error) (*StreamPull[T], error)
+func KindOf(string, string) *nodeKind
+func MakeDocument(*Rule, string, []ParseOption) (*Document, error)
+func NewBudgetClass([]BudgetRange, bool) *BudgetClass
+func NewGrammar(int) *grammar
+func NewNode(NodeKind, int, int, string, []*Node, string, Fields, any) *Node
+func NewNodeTypeKinds(string) *nodeTypeKinds
+func NewRules[S interface{~struct{Name string; Value *Shaper; Flags uint8; Seen int32; Scope uint16; Vars uint16}}, E interface{~struct{Id int; Where string; NodeType string; OpNodeType string; Cycle int32}}]([]S, [][]string, []E) []*Rule
+func NewStreamIterator(*StreamPull[*Node]) *StreamIterator
+func NewTError(int, int, string, string) *TError
+func NewTRules([]*Rule) []*TRule
+func RenamedExpected(*Parser, []ExpID, ExpID) []ExpID
+func ResolveOptions(*grammar, []ParseOption) (parseOptions, error)
+func RunParse(*Rule, string, []ParseOption) (*Node, error)
+func RunParseConverted[T any](*Rule, string, parseOptions, func(*Node, *BudgetControl, error) T) (T, error)
+func RunParseResolved(*Rule, string, parseOptions) (*Node, error)
+func RunParseStream(*Rule, io.Reader, func(*Node) error, []ParseOption) error
+func RunParseStreamWithBudget(*Rule, io.Reader, func(*Node, *BudgetControl) error, []ParseOption) error
+func SetNodeElems(*Node, []*Node)
+func SetNodeField(*Node, string, any)
+func SetNodeStart(*Node, int)
+func SetNodeText(*Node, string)
+func SliceIdentity([]any) nodeJSONSliceID
+func TAs[T any](any) T
+func TBack(*TPubHooks, any) any
+func TDeref[T any](*T) any
+func TFreshNode(any) any
+func TKid([]any, int) any
+func TListOf([]any) any
+func TMatchAs[N any](*TMatch) *N
+func TParseResolved[T any](*TRule, string, parseOptions, any, func(any) T) (T, error)
+func TParse[T any](*TRule, string, []ParseOption, any, func(any) T) (T, error)
+func TPtr[T any](*T) any
+func TPub(*TPubHooks, any) any
+func TPubError(any) *Error
+func TPubIn(*TPubHooks, any, any) any
+func TPubMatch(any) *TNode[string]
+func TPubNode(*TPubHooks, any) *TNode[any]
+func TPubNodeIn(*TPubHooks, any, any) *TNode[any]
+func TRegisterNodeType(string, func(any, TVal) any) uint16
+func TSetNodeType(any, uint16) any
+func TypedDocumentParse[T any](*Document, *TRule, parseOptions, budgetControlSetter, func(any) T) (T, error)
+func UnboxNode(*Node) any
+func UnboxValue(any) any
+func Walk(*Node, func(WalkVisit) (WalkAction, error)) error
+func WalkFields(*Node) Fields
+func WithContext(context.Context) ParseOption
+func WithDiagnosticCallback(func(*SyntaxError) error) ParseOption
+func WithDiagnosticLimit(int) ParseOption
+func WithExpectations() ParseOption
+func WithLimits(Limits) ParseOption
+func WithMaxDepth(int) ParseOption
+func WithProfile(*Profile) ParseOption
+func WithTrace(func(TraceEvent)) ParseOption
+func WithTraceFilter(...string) ParseOption
+func WithTraceMaxDepth(int) ParseOption
+func WithUnit(PositionUnit) ParseOption
+method (*ActCtx) And(any, func() any) any
+method (*ActCtx) Binary(string, any, any) any
+method (*ActCtx) Cap(int) any
+method (*ActCtx) Cast(any, *FieldType, int, int) any
+method (*ActCtx) Concat(...any) any
+method (*ActCtx) Convert(string, any) any
+method (*ActCtx) EndList(int) any
+method (*ActCtx) FilterList(any, func(any) any) any
+method (*ActCtx) Fold(string, bool, any, any, func(any, any) any) any
+method (*ActCtx) Length(any) any
+method (*ActCtx) List(...any) any
+method (*ActCtx) ListItems(string, any) []*Node
+method (*ActCtx) MapList(any, func(any) any) any
+method (*ActCtx) Member(any, string) any
+method (*ActCtx) NewList([]*Node) *Node
+method (*ActCtx) NewStruct(string, ...any) any
+method (*ActCtx) Or(any, func() any) any
+method (*ActCtx) PushItems(any)
+method (*ActCtx) PushList(...any)
+method (*ActCtx) PushMap(any, func(any) any)
+method (*ActCtx) Text(any) any
+method (*ActCtx) TextStr(any) string
+method (*ActCtx) Tuple(...any) any
+method (*ActCtx) Unary(string, any) any
+method (*ActCtx) Var(int) any
+method (*BudgetControl) Charge(uint64)
+method (*BudgetControl) Check()
+method (*BudgetControl) Take(uint64) bool
+method (*Class) Has(rune) bool
+method (*CycleError) Error() string
+method (*Document) BeginParse() error
+method (*Document) Edit(int, int, string) error
+method (*Document) EndParse()
+method (*Document) Parse(...ParseOption) (*Node, error)
+method (*Document) ResolveParseOptions([]ParseOption) (parseOptions, error)
+method (*Document) Stats() ParseStats
+method (*Document) Text() string
+method (*LimitError) Error() string
+method (*LimitError) Is(error) bool
+method (*Node) BaseNode() *Node
+method (*Node) Clone() *Node
+method (*Node) Elem(int) *Node
+method (*Node) Elems() iter.Seq2[int, *Node]
+method (*Node) End() int
+method (*Node) Field(string) any
+method (*Node) Fields() iter.Seq2[string, any]
+method (*Node) IsTerminal() bool
+method (*Node) Kind() NodeKind
+method (*Node) Len() int
+method (*Node) MarshalJSON() ([]byte, error)
+method (*Node) RawField(string) any
+method (*Node) Rule() string
+method (*Node) Start() int
+method (*Node) String() string
+method (*Node) Text() string
+method (*Node) Type() string
+method (*Node) Value() any
+method (*Node) WriteJSON(io.Writer) error
+method (*Parser) Anchor(bool, ExpID) (*Node, bool)
+method (*Parser) AtEnd() bool
+method (*Parser) AtEndBatch() bool
+method (*Parser) AtEndBatchOrdinary() bool
+method (*Parser) AtEndOrdinary() bool
+method (*Parser) AtLineEnd() bool
+method (*Parser) AtLineEndOrdinary() bool
+method (*Parser) AtLineStart() bool
+method (*Parser) AtLineStartBatch() bool
+method (*Parser) AtLineStartBatchOrdinary() bool
+method (*Parser) AtLineStartOrdinary() bool
+method (*Parser) AttachCaptures(*Node, []string, *CaptureFrame, int, int) *Node
+method (*Parser) Bind(int, func(*ActCtx) any) bool
+method (*Parser) Call(*Rule, int) (*Node, bool)
+method (*Parser) DiagnosticAttr(matcher, ExpID) (*Node, bool)
+method (*Parser) DropKids(int)
+method (*Parser) EmitStream(*Node, int)
+method (*Parser) Enter()
+method (*Parser) ErrorAttr(matcher, ExpID) (*Node, bool)
+method (*Parser) ExaminedBegin() int
+method (*Parser) ExaminedEnd(int) (int, bool)
+method (*Parser) Expect(int, ExpID)
+method (*Parser) ExpectBudget(int, ExpID)
+method (*Parser) ExpectOrdinary(int, ExpID)
+method (*Parser) Finish(*Rule, *CaptureFrame, *Node, int) *Node
+method (*Parser) FirstCall(*Rule) bool
+method (*Parser) InvokePlain(*Rule, int) (*Node, bool)
+method (*Parser) Isolate(int) ExpMark
+method (*Parser) Keep([]ExpID) []ExpID
+method (*Parser) Kids(int) []*Node
+method (*Parser) LiteralText(int, string) string
+method (*Parser) LookBegin(int)
+method (*Parser) LookEnd(bool)
+method (*Parser) MakeError(int, []ExpID) *SyntaxError
+method (*Parser) Mark() Mark
+method (*Parser) MatchAny(bool) (*Node, bool)
+method (*Parser) MatchAnyOrdinary(bool) (*Node, bool)
+method (*Parser) MatchLiteral([]rune, string, ExpID, bool) (*Node, bool)
+method (*Parser) MatchLiteralFold([]rune, ExpID, bool) (*Node, bool)
+method (*Parser) MatchLiteralFoldOrdinary([]rune, ExpID, bool) (*Node, bool)
+method (*Parser) MatchLiteralOrdinary([]rune, string, ExpID, bool) (*Node, bool)
+method (*Parser) MergeExpected(int, []ExpID)
+method (*Parser) NewBranch(*nodeKind, int, []*Node) *Node
+method (*Parser) NewBranchOrdinary(*nodeKind, int, []*Node) *Node
+method (*Parser) NewErrorNode(int, *SyntaxError) *Node
+method (*Parser) NewFrame(int) *CaptureFrame
+method (*Parser) NewNode(Node) *Node
+method (*Parser) NewNodeOrdinary(Node) *Node
+method (*Parser) NewTerminal(int, string) *Node
+method (*Parser) NewTerminalOrdinary(int, string) *Node
+method (*Parser) NextOrdinary() (rune, int, bool)
+method (*Parser) Nodes(int) []*Node
+method (*Parser) OperatorsRuleParse(*Rule, int) (*Node, bool)
+method (*Parser) Peek() (rune, int, bool)
+method (*Parser) PeekOrdinary() (rune, int, bool)
+method (*Parser) Predicate(func(*ActCtx) any) bool
+method (*Parser) RecoverAttr(matcher, matcher, bool) (*Node, bool)
+method (*Parser) RecoveryErrorText(*SyntaxError) string
+method (*Parser) RejectBudgetClass(rune, *BudgetClass) bool
+method (*Parser) Reset(Mark)
+method (*Parser) Restore(int, int)
+method (*Parser) ScopeValue(Shaper, *Node, int) *Node
+method (*Parser) SetCapture(int, *Node)
+method (*Parser) SetCaptureOrdinary(int, *Node)
+method (*Parser) ShapeCapture(Shaper, *Node, int) *Node
+method (*Parser) ShapeSingle(Shaper, *Node, int) (*Node, bool)
+method (*Parser) Single(int, bool) (*Node, bool)
+method (*Parser) SkipBegin(int)
+method (*Parser) SkipEnd()
+method (*Parser) SkipHit() bool
+method (*Parser) SkipVisit()
+method (*Parser) Spend()
+method (*Parser) SpendRead(uint64)
+method (*Parser) StreamStart()
+method (*Parser) StreamsIn(int, bool) bool
+method (*Parser) Text(int, int) string
+method (*Parser) TextEqual(string, string) bool
+method (*Parser) TooDeep()
+method (*Parser) Unisolate(ExpMark) (int, []ExpID)
+method (*Profile) Snapshot() ProfileSnapshot
+method (*Span) TSetSpan(int, int)
+method (*Span) TSpan() (int, int)
+method (*StreamIterator) Close()
+method (*StreamIterator) Next() (*Node, bool, error)
+method (*StreamPull) Close()
+method (*StreamPull) Next() (T, bool, error)
+method (*SyntaxError) Error() string
+method (*SyntaxError) Message() string
+method (*TActCtx) And(any, func() any) any
+method (*TActCtx) Binary(string, any, any) any
+method (*TActCtx) Cap(int) any
+method (*TActCtx) Cast(any, *FieldType, int, int) any
+method (*TActCtx) Compare(string, TOperand, TOperand) any
+method (*TActCtx) Concat(...any) any
+method (*TActCtx) Convert(uint16, any) any
+method (*TActCtx) EndList(int) any
+method (*TActCtx) FieldOperand(any, string) TOperand
+method (*TActCtx) FilterList(any, func(any) any) any
+method (*TActCtx) Finish(any) any
+method (*TActCtx) Fold(string, bool, any, any, func(any, any) any) any
+method (*TActCtx) Length(any) any
+method (*TActCtx) List(...any) any
+method (*TActCtx) ListItems(string, any) []any
+method (*TActCtx) MadeOf(TVal, ...any) any
+method (*TActCtx) MapList(any, func(any) any) any
+method (*TActCtx) Member(any, string) any
+method (*TActCtx) NewList([]any) any
+method (*TActCtx) Or(any, func() any) any
+method (*TActCtx) PushItems(any)
+method (*TActCtx) PushList(...any)
+method (*TActCtx) PushMap(any, func(any) any)
+method (*TActCtx) Result(func(*TActCtx) any, string) any
+method (*TActCtx) Text(any) any
+method (*TActCtx) TextStr(any) string
+method (*TActCtx) Tuple(...any) any
+method (*TActCtx) Unary(string, any) any
+method (*TActCtx) Var(int) any
+method (*TError) TField(string) (any, bool)
+method (*TError) TFresh() bool
+method (*TError) TKids() []any
+method (*TError) TName() string
+method (*TError) TSetFresh(bool)
+method (*TError) TStruct() bool
+method (*TError) TText() (string, bool)
+method (*TMatch) TField(string) (any, bool)
+method (*TMatch) TFresh() bool
+method (*TMatch) TKids() []any
+method (*TMatch) TName() string
+method (*TMatch) TSetFresh(bool)
+method (*TMatch) TStruct() bool
+method (*TMatch) TText() (string, bool)
+method (*TParser) Anchor(bool, ExpID) (any, bool)
+method (*TParser) AttachCaptures(any, []string, []any, int, int) any
+method (*TParser) Bind(int, func(*TActCtx) any) bool
+method (*TParser) Call(*TRule, int) (any, bool)
+method (*TParser) CallMemo(*TRule, func(*TParser) (any, bool)) (any, bool)
+method (*TParser) ClassFast(*Class) bool
+method (*TParser) ClassSkip(*Class, ExpID) bool
+method (*TParser) ClassesSkip([]ClassStep) bool
+method (*TParser) DiagnosticAttr(tmatcher, ExpID) (any, bool)
+method (*TParser) DocumentCall(*TRule, int, func(*TParser) (any, bool)) (any, bool)
+method (*TParser) DropCreated(int)
+method (*TParser) DropKids(int)
+method (*TParser) DropTrail(int)
+method (*TParser) ErrorAttr(tmatcher, ExpID) (any, bool)
+method (*TParser) Finish(*TRule, *TCaptureFrame, any, int) any
+method (*TParser) FreeFrame(*TCaptureFrame)
+method (*TParser) InvokePlain(*TRule, int) (any, bool)
+method (*TParser) Kids(int) []any
+method (*TParser) ListField([]any) any
+method (*TParser) Mark() Mark
+method (*TParser) MatchAny(bool) (any, bool)
+method (*TParser) MatchAnyOrdinary(bool) (any, bool)
+method (*TParser) MatchLiteral([]rune, string, ExpID, bool) (any, bool)
+method (*TParser) MatchLiteralFold([]rune, ExpID, bool) (any, bool)
+method (*TParser) MatchLiteralOrdinary([]rune, string, ExpID, bool) (any, bool)
+method (*TParser) NewFrame(int) *TCaptureFrame
+method (*TParser) NewMatch(int, int, string, bool) *TMatch
+method (*TParser) NewMatchOrdinary(int, int, string, bool) *TMatch
+method (*TParser) NewNode(string, int, int, []any) *TSeq
+method (*TParser) NewNodeOrdinary(string, int, int, []any) *TSeq
+method (*TParser) NewVals(int) []any
+method (*TParser) OperatorsRuleParse(*TRule, int) (any, bool)
+method (*TParser) Predicate(func(*TActCtx) any) bool
+method (*TParser) PushKid(any)
+method (*TParser) RecoverAttr(tmatcher, tmatcher, bool) (any, bool)
+method (*TParser) Reset(Mark)
+method (*TParser) ScopeValue(Shaper, any, int) any
+method (*TParser) SetCapture(int, any)
+method (*TParser) SetCaptureOrdinary(int, any)
+method (*TParser) ShapeCapture(Shaper, any, int) any
+method (*TParser) ShapeSingle(Shaper, any, int) (any, bool)
+method (*TParser) Single(int, bool) (any, bool)
+method (*TParser) SkipTerminal(*TerminalProgram) bool
+method (*TParser) TConvertResult(*TRule, any) any
+method (*TParser) TConvertResultOwned(*TRule, any, any) any
+method (*TParser) UseCtx(TActCtx) *TActCtx
+method (*TSeq) TField(string) (any, bool)
+method (*TSeq) TFresh() bool
+method (*TSeq) TKids() []any
+method (*TSeq) TName() string
+method (*TSeq) TSetFresh(bool)
+method (*TSeq) TStruct() bool
+method (*TSeq) TText() (string, bool)
+method (*TerminalProgram) Prepare() *TerminalProgram
+method (*TruncatedSyntaxErrors) Error() string
+method (*TruncatedSyntaxErrors) Unwrap() error
+method (*TypedDocumentCloneBase) Begin(*BudgetControl)
+method (*TypedDocumentCloneBase) ReleaseBase()
+method (*TypedDocumentCloneBase) Remember(any, any)
+method (*TypedDocumentCloneBase) Step(uint64)
+method (*grammar) SetRules([]*Rule, int)
+method (*grammar) SetVars([]string, []any)
+method (*grammar) Share(*grammar)
+method (*grammar) StartError(string) error
+method (*grammar) StartRule(string) (*Rule, error)
+method (*nodeKind) NodeType() bool
+method (*observation) Enter(string, int, int)
+method (*observation) Evaluated()
+method (*observation) Exit(bool, int, int, bool)
+method (*observation) Skipped(string, int, int)
+method (Cursor) At(int32, func(WalkVisit) (WalkAction, error)) error
+method (Cursor) Range(int32, int32, func(WalkVisit) (WalkAction, error)) error
+method (Fields) Get(string) (any, bool)
+method (Fields) MarshalJSON() ([]byte, error)
+method (NodeKind) String() string
+method (Span) Range() (int, int)
+method (SyntaxErrors) Error() string
+type ActCtx struct{P *Parser; Lhs any; Rhs any; Op any; Value any}
+type BudgetClass struct{}
+type BudgetControl struct{}
+type BudgetRange struct{Lo rune; Hi rune}
+type CaptureFrame struct{Vals []*Node}
+type Chunk[T any] struct{}
+type Class struct{ASCII [2]uint64; Wide []rune; Neg bool}
+type ClassStep struct{C *Class; ID ExpID}
+type Cursor struct{Root *Node; Unit PositionUnit}
+type CycleError struct{Path []WalkEdge}
+type Document struct{State *documentState}
+type DocumentSliceKey struct{First any; Length int; Capacity int}
+type Env struct{}
+type Error struct{Span; Text string; Message string}
+type ExpID int32
+type ExpMark struct{}
+type FieldType struct{Kind byte; Name string; Elem *FieldType; Alts []*FieldType; Text string}
+type Fields []NodeField
+type LimitError struct{Kind LimitKind; Limit uint64; Used uint64; Requested uint64}
+type LimitKind uint8
+type Limits struct{Budget uint64; MaxInput uint64}
+type Mark struct{Pos int; Trail int}
+type Node struct{RawKind *nodeKind; RawStart int32; RawEnd int32; RawText string; RawChildren []*Node; RawFields Fields; RawFresh bool; RawTerminal bool}
+type NodeField struct{Name string; Value any}
+type NodeKind uint8
+type OperatorsRule struct{Skip matcher; Operands []*OperatorsRuleLine; Prefix []*OperatorsRuleOp; Led []*OperatorsRuleOp}
+type OperatorsRuleLine struct{Scope []string; M matcher; Action func(*ActCtx) any; Value Shaper}
+type OperatorsRuleOp struct{Id int; Kind string; Assoc string; Level int; Line *OperatorsRuleLine}
+type ParseOption func(*parseOptions)
+type ParseStats struct{Evaluated int; Reused int}
+type Parser struct{Control *BudgetControl; Observation *observation; Document *documentState; In []rune; Pos int; MaxDepth int; Depth int; Env *Env; Frame *CaptureFrame; Trail []undo; Cut bool; Silent int; Expectations bool; Recovered []*SyntaxError; KidStack []*Node; Stream *streamInput}
+type PositionUnit int
+type Profile struct{}
+type ProfileLocation struct{Pos int; Level int}
+type ProfileSnapshot struct{Parses int; Entered int; Calls int; Evals int; MemoHits int; Skipped int; Time time.Duration; Rules []RuleProfile}
+type Rule struct{Id int; Name string; Scope []string; Body func(*Parser, int) (*Node, bool); Action func(*ActCtx) any; Value Shaper; NodeType string; OpNodeType string; Memo bool; Leader bool; Rec bool; Cycle int32; DocMemo bool; Seen int; OperatorsRule *OperatorsRule; Novalue bool; Splice bool; Where string; Vars []string}
+type RuleExtra struct{Id int; Where string; NodeType string; OpNodeType string; Cycle int32}
+type RuleProfile struct{Rule string; Entered int; Calls int; Evals int; MemoHits int; Matched int; Failed int; Consumed int; Skipped int; SkipReasons []SkipReasonCount; Repeats int; MaxEvals int; MaxEvalsAt ProfileLocation; Examined int; ExaminedKnown bool; Wasted int; WastedKnown bool; Time time.Duration; SelfTime time.Duration}
+type RuleSpec struct{Name string; Value *Shaper; Flags uint8; Seen int32; Scope uint16; Vars uint16}
+type Shaper struct{Elems bool; K int; Mode singleMode; Tuple bool; Shared bool}
+type SkipReasonCount struct{Reason string; Count int}
+type Span struct{Start int; End int}
+type StreamIterator struct{}
+type StreamPull[T any] struct{}
+type SyntaxError struct{Pos int; Line int; Col int; Expected []string; Messages []string}
+type SyntaxErrors []*SyntaxError
+type TActCtx struct{P *TParser; F *TCaptureFrame; Start int; End int; Cbase int; Lhs any; Rhs any; Op any; Value any}
+type TCaptureFrame struct{Vals []any}
+type TError struct{Error}
+type TMatch struct{TNode[string]; Nt uint16}
+type TNode[T any] struct{Span; Value T}
+type TOperand struct{V any; Str string; IsStr bool}
+type TOperatorsRule struct{Skip tmatcher; Operands []*TOperatorsRuleLine; Prefix []*TOperatorsRuleOp; Led []*TOperatorsRuleOp}
+type TOperatorsRuleLine struct{Scope []string; M tmatcher; Action func(*TActCtx) any; Value Shaper}
+type TOperatorsRuleOp struct{Id int; Kind string; Assoc string; Level int; Line *TOperatorsRuleLine}
+type TParser struct{*Parser; Ext any; Where string; Frame *TCaptureFrame; Trail []tundo; Created []TVal; KidStack []any; TypedDocument *typedDocumentState}
+type TPubHooks struct{Match func(*TNode[string]) any; Error func(*Error) any; Node func(*TNode[any]) any; Back func(any) any}
+type TRule struct{*Rule; Body func(*TParser, int) (any, bool); Action func(*TActCtx) any; OperatorsRule *TOperatorsRule; Entry func(*TParser) (any, bool); Nt uint16; OpNt uint16}
+type TSeq struct{Span; Typ string; Kids []any}
+type TVal interface{TField(string) (any, bool); TFresh() bool; TKids() []any; TName() string; TSetFresh(bool); TSetSpan(int, int); TSpan() (int, int); TStruct() bool; TText() (string, bool)}
+type TerminalProgram struct{Code []uint16; Classes []*Class; Literals []TerminalText}
+type TerminalText struct{Runes []rune; Text string}
+type TraceEvent struct{Kind TraceKind; Rule string; Level int; Depth int; Pos int; Matched bool; End int; Memo bool; Evals int; Examined int; ExaminedKnown bool; SkipReason string}
+type TraceKind uint8
+type TruncatedSyntaxErrors struct{Errors SyntaxErrors; Total uint64; Dropped uint64; CountsSaturated bool}
+type TypedDocumentCloneBase struct{Control *BudgetControl; Values map[any]any; Slices map[DocumentSliceKey]any; Tasks []TypedDocumentCloneTask}
+type TypedDocumentCloneTask struct{Source any; Target any}
+type WalkAction uint8
+type WalkEdge struct{Kind WalkEdgeKind; ChildIndex int; FieldName string; ListIndex int}
+type WalkEdgeKind uint8
+type WalkTask struct{Visit WalkVisit; Exit bool; Identity any}
+type WalkVisit struct{Value any; Node *Node; Parent *Node; Depth int; Edge WalkEdge}
+type budgetControlSetter interface{SetBudgetControl(*BudgetControl)}
+type documentState struct{}
+type grammar struct{Starts []string; DefaultStart string; Descs []string; Expectations bool; StructFields map[string]map[string]bool; TypeKinds map[string]*nodeKind; NodeTypes map[string]*nodeTypeKinds; SourceInfo bool; Observable bool; NoBudgetControls bool}
+type matcher = func(*Parser) (*Node, bool)
+type nodeJSONSliceID struct{}
+type nodeKind struct{Base int}
+type nodeTypeKinds [3]*nodeKind
+type observation struct{}
+type parseOptions struct{}
+type singleMode uint8
+type streamInput struct{Emit func(*Node, *BudgetControl) error}
+type tmatcher = func(*TParser) (any, bool)
+type tundo struct{}
+type typedDocumentState struct{}
+type undo struct{}
+var DocumentBusy error
+var EmptyFrame *CaptureFrame
+var EmptyTFrame *TCaptureFrame
+var ErrLimit error
+var ErrStreamClosed error
+var RawKindList *nodeKind
+var RawKindMatch *nodeKind
+var RawKindSeq *nodeKind

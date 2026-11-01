@@ -6,12 +6,13 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	igen "zeroparse.dev/zp/internal/gen"
 
 	"zeroparse.dev/zp/gen"
 )
 
 func generatedFile(path string) gen.File {
-	return gen.File{Path: path, Content: []byte(generatedHeader + " DO NOT EDIT.\n\npackage p\n")}
+	return gen.File{Path: path, Content: []byte(igen.Header() + "\n\npackage p\n")}
 }
 
 // TestWriteGeneratedSymlink checks that nothing is written through a symbolic link at an owned
@@ -24,7 +25,7 @@ func TestWriteGeneratedSymlink(t *testing.T) {
 	t.Run("file", func(t *testing.T) {
 		dir, outside := t.TempDir(), t.TempDir()
 		target := filepath.Join(outside, "target.go")
-		if err := os.WriteFile(target, []byte(generatedHeader+" old\n"), 0o644); err != nil {
+		if err := os.WriteFile(target, []byte(igen.HeaderFor("v0.1.0")+"\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		link := filepath.Join(dir, "parser.go")
@@ -35,7 +36,7 @@ func TestWriteGeneratedSymlink(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), link) || !strings.Contains(err.Error(), "symbolic link") {
 			t.Fatalf("error %v, want one naming the symbolic link %s", err, link)
 		}
-		if data, _ := os.ReadFile(target); string(data) != generatedHeader+" old\n" {
+		if data, _ := os.ReadFile(target); string(data) != igen.HeaderFor("v0.1.0")+"\n" {
 			t.Errorf("the target of the link was written: %q", data)
 		}
 		if _, err := os.Lstat(filepath.Join(dir, "types")); err == nil {
@@ -73,10 +74,10 @@ func TestWriteGeneratedChecksBeforeWriting(t *testing.T) {
 		t.Fatal(err)
 	}
 	unreadable := filepath.Join(rt, "stale.go")
-	if err := os.WriteFile(unreadable, []byte(generatedHeader+" old\n"), 0o000); err != nil {
+	if err := os.WriteFile(unreadable, []byte(igen.HeaderFor("v0.1.0")+"\n"), 0o000); err != nil {
 		t.Fatal(err)
 	}
-	old := []byte(generatedHeader + " old parser\n")
+	old := []byte(igen.HeaderFor("v0.1.0") + "\npackage old\n")
 	parser := filepath.Join(dir, "parser.go")
 	if err := os.WriteFile(parser, old, 0o644); err != nil {
 		t.Fatal(err)

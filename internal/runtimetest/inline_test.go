@@ -1,11 +1,13 @@
-package runtime
+package runtimetest
 
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"testing"
 
+	"zeroparse.dev/zp/internal/gentest"
 	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
@@ -48,6 +50,7 @@ func TestHotPathHooksInline(t *testing.T) {
 		t.Skip("runs the compiler")
 	}
 	cmd := exec.Command("go", "build", "-gcflags=-m=2", ".")
+	cmd.Dir = filepath.Join(gentest.ModuleRoot(), "runtime")
 	cmd.Env = append(os.Environ(), "GOFLAGS="+core.GoFlags(os.Getenv("GOFLAGS")))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
