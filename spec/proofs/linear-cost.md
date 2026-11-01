@@ -113,6 +113,12 @@ of that section is accounted for elsewhere:
 with the activations of their scanning sources, is at most a constant times
 $K(L + 1)\hat{n}$.
 
+For the walks of a [skip-run site](../runtime/parsing.md#skip-runs) in the
+skip expression of a `#recover`, the [Skip Runs proof](skip-runs.md#lemma-2-cost)
+bounds the evaluations of the element by $2(n + 1)$ plus a constant for each
+walk, and each walk is one activation of the skip expression. That lemma is
+the case of this one for skip-run sites.
+
 The proof charges each step of a scanning source to a slot of the input that
 it examines, or to the iteration or operator that makes it, and shows that
 each slot is charged a constant number of times for each combination of the

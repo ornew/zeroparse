@@ -84,7 +84,11 @@ whether a parse reaches the nesting limit can depend on memoization, as
 [Memoization](../runtime/parsing.md#memoization) states. It covers parses
 without insertion of [`#missing`](../language/pragmas.md#missing) tokens,
 since an insertion depends on the path to it and on a budget for the whole
-parse.
+parse. A walk of a [skip-run site](../runtime/parsing.md#skip-runs) that
+reuses a record ends where evaluating the rest of the walk would end, with
+the same farthest failure, expectations and examined range, as the
+[Skip Runs proof](skip-runs.md#lemma-1-exactness) shows, so the proof treats
+each walk as evaluated in full in both parses.
 
 ## Assumptions
 

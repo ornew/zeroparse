@@ -11,3 +11,6 @@ as lemmas over the definitions of the specifications that they cite.
 | Proof | Shows |
 |:--|:--|
 | [Skip Runs](skip-runs.md) | A reused record of a [skip run](../runtime/parsing.md#skip-runs) gives what the rest of the walk would, and the walks of a site evaluate its element a linear number of times |
+| [Memoization](memoization.md) | Answering a call from a memo entry, including the members of a left-recursion cycle and results that depend on the order of evaluation, gives the outcome that evaluating it again would give |
+| [Documents](documents.md) | A parse of a [Document](../runtime/documents.md) after edits, reusing carried memo entries and recorded runs, gives the result of a fresh parse of its text |
+| [Linear Cost](linear-cost.md) | An outline of how the [Conditions for Linear Cost](../runtime/parsing.md#conditions-for-linear-cost) bound the cost of a parse, with its lemmas and the steps still open |
