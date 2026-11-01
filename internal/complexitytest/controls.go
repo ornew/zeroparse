@@ -1,6 +1,10 @@
 package complexitytest
 
-import "zeroparse.dev/zp/internal/engine"
+import (
+	"strings"
+
+	"zeroparse.dev/zp/internal/engine"
+)
 
 // The classes that the complexity classifier assigns to a start rule.
 const (
@@ -251,6 +255,37 @@ func Controls() []Control {
 			Source: "rule main = xs:\"x\"* => len(foldl(\"a\", $xs, (acc, x) => acc + acc))\n",
 			Input:  func(n int) string { return rep("x", n) },
 			Sizes:  double(4), ShortSizes: double(3), Order: Exp, Capped: true, Class: ClassExp,
+		},
+		// The memo evaluates a rule at most twice at a position, but it does not share the scan of
+		// a memoized rule between positions. In both controls every rule that scans is memoized, and
+		// a continuation that consumes one character evaluates the scan again one position later:
+		// through a repetition, and through a memoized recursion in which the unit that is not
+		// committing is nested in itself.
+		{
+			Name: "Memoized scan restarted by a repetition", Family: "memo bound",
+			Source: "rule main = (a \"y\" / \"q\" a / .)* $$\nrule a = x+\nrule x = \"x\"\n",
+			Input:  func(n int) string { return rep("x", n) },
+			Sizes:  double(250), ShortSizes: double(100), Order: Poly(2), Class: ClassPoly,
+		},
+		{
+			Name: "Memoized scan restarted through a memoized recursion", Family: "memo bound",
+			Source: "rule main = t a? $$\nrule t = a t \"!\" / . t / \"\"\nrule a = x+\nrule x = \"x\"\n",
+			Input:  func(n int) string { return rep("x", n) },
+			Sizes:  double(250), ShortSizes: double(100), Order: Poly(2), Class: ClassUnknown,
+		},
+		// The rule that starts the right recursion comes before the rule whose action copies the
+		// tail, so the classifier needs the captures of a rule that it walks later.
+		{
+			Name: "Tail copied along a right recursion", Family: "memo bound",
+			Source: "rule main = s $$\nrule s []string = \"\\\"\" t:r => concat(list(\"q\"), $t)\nrule r []string = m / l\nrule m []string = e:i \",\" t:r => concat(list($e), $t)\nrule l []string = e:i \"\\\"\" => list($e)\nrule i string = x:(\"(\" s \")\" / [a-z]+) => text($x)\n",
+			Input: func(n int) string {
+				items := make([]string, n)
+				for i := range items {
+					items[i] = "a"
+				}
+				return "\"" + strings.Join(items, ",") + "\""
+			},
+			Sizes: double(250), ShortSizes: double(100), Order: Poly(2), Class: ClassPoly,
 		},
 	}
 	for i := range cs {
