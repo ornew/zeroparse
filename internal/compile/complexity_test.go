@@ -169,6 +169,23 @@ func TestClassifyComplexity(t *testing.T) {
 		{"fold that measures its first element for every element", "rule main = a:\"x\"* b:\"y\"* => foldl(concat(list(text($a)), map($a, (z) => text(z))), $b, (acc, y) => filter(acc, (e) => len(acc[0]) > 0))\n", ClassPoly, 3},
 		{"fold that measures every element", "rule main = a:\"x\"* b:\"y\"* => foldl(concat(list(text($a)), map($a, (z) => text(z))), $b, (acc, y) => filter(acc, (e) => len(e) > 0))\n", ClassPoly, 2},
 		{"fold that measures its length for every element", "rule main = a:\"x\"* b:\"y\"* => foldl(concat(list(text($a)), map($a, (z) => text(z))), $b, (acc, y) => filter(acc, (e) => len(acc) > 0))\n", ClassPoly, 2},
+		// A fold that copies its accumulator runs once for each evaluation of the lambdas around it
+		// over lists that are not bounded, unless it runs over an element of the innermost one,
+		// whose sizes add up to the input.
+		{"fold inside a map over the same list", "rule main = b:\"y\"* => map($b, (y) => foldl(\"\", $b, (s, l) => s + text(l)))\n", ClassPoly, 3},
+		{"fold inside a filter over the same list", "rule main = b:\"y\"* => filter($b, (y) => len(foldl(\"\", $b, (s, l) => s + text(l))) > 0)\n", ClassPoly, 3},
+		{"fold inside two maps", "rule main = b:\"y\"* => map($b, (y) => map($b, (z) => foldl(\"\", $b, (s, l) => s + text(l))))\n", ClassPoly, 4},
+		// Elements whose values hold more than the input they consume, through a capture in a
+		// lookahead or an action, need not add up to the input.
+		{"fold over a capture in a lookahead of the elements of a map", "rule main = items:item* => map($items, (it) => foldl(\"\", it.$c, (s, l) => s + text(l)))\nrule item = &(c:\"x\"*) \"x\"\n", ClassPoly, 3},
+		{"fold over elements built by an action", "rule main = items:item* => map($items, (it) => foldl(\"\", it, (s, l) => s + text(l)))\nrule item = &(c:\"x\"*) \"x\" => $c\n", ClassPoly, 3},
+		{"fold over a capture in a lookahead inside a fold step", "rule main = items:item* => foldl(0, $items, (acc, it) => len(foldl(\"\", it.$c, (s, l) => s + text(l))))\nrule item = &(c:\"x\"*) \"x\"\n", ClassPoly, 3},
+		{"fold over the captures of elements of a rule", "rule main = items:item* => map($items, (it) => foldl(\"\", it.$c, (s, l) => s + text(l)))\nrule item = c:\"x\"+\n", ClassPoly, 2},
+		{"fold over the elements of a map over copies of a list", "rule main = b:\"y\"* => map(map($b, (q) => $b), (y) => foldl(\"\", y, (s, l) => s + text(l)))\n", ClassPoly, 3},
+		{"fold adding an outside value inside a map", "rule main = a:\"x\"* b:\"y\"* => map($b, (z) => foldl(text($a), $b, (acc, y) => acc + text($a)))\n", ClassPoly, 4},
+		{"fold that measures its first element for every element inside a map", "rule main = a:\"x\"* b:\"y\"* => map($b, (z) => foldl(concat(list(text($a)), map($a, (q) => text(q))), $b, (acc, y) => filter(acc, (e) => len(acc[0]) > 0)))\n", ClassPoly, 4},
+		{"fold that appends its first element inside a map", "rule main = a:\"x\"* b:\"y\"* => map($b, (z) => foldl(list(text($a)), $b, (acc, y) => concat(list(acc[0]), acc)))\n", ClassPoly, 3},
+		{"fold over the elements of a map", "rule main = b:(c:\"y\"*)* => map($b, (y) => foldl(\"\", y.$c, (s, l) => s + text(l)))\n", ClassPoly, 2},
 		{"fold that appends its first element", "rule main = a:\"x\"* b:\"y\"* => foldl(list(text($a)), $b, (acc, y) => concat(list(acc[0]), acc))\n", ClassPoly, 2},
 		{"bounded fold that appends its first element", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(list(text($a)), $b, (acc, y) => concat(list(acc[0]), acc))\n", ClassLinear, 0},
 		{"fold that filters its accumulator into a copy", "rule main = a:\"x\"* b:\"y\"* => foldl(list(text($a)), $b, (acc, y) => concat(acc, filter(acc, (e) => e != \"\")))\n", ClassExp, 0},

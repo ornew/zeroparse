@@ -444,8 +444,10 @@ The groups are addressed by these mechanisms:
   outside to be at most linear in the input; a rule whose value grows faster, as one that joins its whole text once
   for each of its elements, makes them too low. The matrix is an upper
   bound: a term it does not follow, such as a block, counts as many copies of what it reads, and an exponential class
-  may over-approximate. Copies inside a lambda nested in a `map` or `filter` that is not inside the step of a fold
-  are reported with degree 2, without the elements of the lambdas around them. The accumulator of a bounded fold is taken to hold what any number of steps can add, not at most the bound:
+  may over-approximate. A fold inside lambdas over lists that are not bounded runs once for each of their elements,
+  so each of them adds one to its degrees, except the innermost when the fold runs over its elements and those are
+  captures of a repetition whose values hold only the input they consume, with no action and no capture in a
+  positive lookahead, so that their sizes add up to the input. The accumulator of a bounded fold is taken to hold what any number of steps can add, not at most the bound:
   a fold over `#repeat(,1)` that adds the value of the rule's own recursion on each step is reported exponential,
   though it runs at most once and holds that value once, which condition 4 classes polynomial.
 - **Recovery-skip refinement of the classifier.** A `#recover` skip is not a scanning source once repetition-run reuse

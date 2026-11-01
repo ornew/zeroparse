@@ -316,6 +316,29 @@ without a witness, so that the class is not linear. When the step matrix fails t
 condition, no bound is claimed: the classifier reports the fold exponential,
 which over-approximates it.
 
+A fold inside the lambda of a call over a list that is not bounded runs once
+for each element of that list, at most $n$ times, so each such lambda around
+it multiplies its cost, and the cost of each copy of its first parameter, by
+$n$: the classifier adds one to both degrees for each of them. When the list
+of the fold reads only elements of the innermost of them, those are the
+captures of a repetition, and the value of each holds only the input it
+consumes, the lists of its runs have sizes $\ell_i$ with
+$\sum_i \ell_i \le c \, n$, since the captures are distinct parts of the
+input. The value of an element holds only the input it consumes when no
+action or Operators Rule builds a value in it and no capture in a positive
+lookahead is part of it, through the bodies of the rules it calls: a capture
+in `&(...)` stays in effect over input that the element does not consume, so
+the elements can overlap, and an action can build a value of any size, such as
+that of a string variable that the caller binds, the same for every element. A run takes at most $\ell_i$ steps, and every term of its cost sums
+over the steps, so the run costs at most a constant times $\ell_i n^{d - 1}$:
+a term with $b = 0$ sums over at most $\ell_i$ steps, and one with $b \ge 1$
+to at most $(\sum_j Y_j)^b \le \ell_i n^{b - 1}$. Summed over the runs, the
+cost is at most a constant times $n^d$, so the innermost lambda adds nothing.
+For the elements of any other list, as one that holds a capture once for
+each element of another, or one whose elements capture in a lookahead or are
+built by an action, the sizes need not add up to the input, and the lambda
+adds one.
+
 The copies of such a call are therefore those of a constant number of copies,
 in the context of the call, of the initial value, the list and the values from
 outside the lambda. This is how condition 4 checks them: they repeat once for

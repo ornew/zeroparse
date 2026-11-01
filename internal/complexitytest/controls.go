@@ -355,6 +355,22 @@ func Controls() []Control {
 			Input:  func(n int) string { return rep("x", n) + rep("y", n) },
 			Sizes:  double(40), ShortSizes: double(25), Order: Poly(3), Class: ClassPoly,
 		},
+		// A fold that copies its accumulator inside a map over a list as large as its own runs once
+		// for each element of the map.
+		{
+			Name: "Fold inside a map over the same list", Family: "bounded lambda",
+			Source: "rule main = b:\"y\"* => map($b, (y) => foldl(\"\", $b, (s, l) => s + text(l)))\n",
+			Input:  func(n int) string { return rep("y", n) },
+			Sizes:  double(40), ShortSizes: double(25), Order: Poly(3), Class: ClassPoly,
+		},
+		// Elements that capture the rest of the input in a lookahead overlap, so a fold over the
+		// capture of each element runs over up to n elements for each of n elements.
+		{
+			Name: "Fold over a capture in a lookahead of each element", Family: "bounded lambda",
+			Source: "rule main = items:item* => map($items, (it) => foldl(\"\", it.$c, (s, l) => s + text(l)))\nrule item = &(c:\"x\"*) \"x\"\n",
+			Input:  func(n int) string { return rep("x", n) },
+			Sizes:  double(90), ShortSizes: double(80), Order: Poly(3), Class: ClassPoly,
+		},
 		// A map that extends every element of an accumulator of n elements on each of n steps
 		// costs n per step for each element.
 		{

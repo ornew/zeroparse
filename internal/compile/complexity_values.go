@@ -22,10 +22,18 @@ type termCtx struct {
 	// repeat reports a lambda that runs once for each element of a list whose number of elements
 	// is not bounded by a constant, or such a lambda around it.
 	repeat bool
+	// depth is the number of such lambdas around the term, and elems the parameters of the
+	// innermost lambda around it that are elements of a list that is not bounded, when they are
+	// distinct parts of the input.
+	depth int
+	elems []string
 }
 
 type param struct {
-	acc  bool    // the accumulator of foldl or foldr
+	acc bool // the accumulator of foldl or foldr
+	// runs is the number of lambdas around a fold, each over a list that is not bounded, whose
+	// evaluations can each run the fold over a list as large as the input (see foldRuns).
+	runs int
 	int  bool    // known to hold an int
 	elem content // what an element of the list can hold
 	// elems are the expressions whose values are the elements of the list, when they are known.
@@ -316,10 +324,12 @@ func (k *classifier) lambdaCtx(call *grammar.Call, i int, lam *grammar.Lambda, t
 	if fold && bounded && len(call.Args) > 0 {
 		init = k.sizeOf(call.Args[0], tc, textSize).join(k.sizeOf(call.Args[0], tc, listSize)).atMostTwo()
 	}
+	runs := k.foldRuns(listArg, tc)
 	for j, n := range lam.Params {
 		p := param{}
 		if fold && j == 0 {
 			p.acc = !bounded
+			p.runs = runs
 			p.elem = init
 			p.int = len(call.Args) > 0 && k.isInt(call.Args[0], tc)
 		} else {
@@ -329,6 +339,19 @@ func (k *classifier) lambdaCtx(call *grammar.Call, i int, lam *grammar.Lambda, t
 	}
 	tc.params, tc.lambda = params, true
 	tc.repeat = tc.repeat || !bounded
+	tc.elems = nil
+	if !bounded {
+		tc.depth++
+		// The elements of a list of the captures of a repetition are distinct parts of the input
+		// when their values are the input they consume; those of any other list, as one that holds
+		// a capture once for each element of another, need not be.
+		if len(elems) > 0 && k.ownText(elems) {
+			tc.elems = lam.Params
+			if fold && len(lam.Params) > 0 {
+				tc.elems = lam.Params[1:]
+			}
+		}
+	}
 	if fold && bounded && len(lam.Params) > 0 {
 		// The accumulator also holds what the body builds from it and from the other parameters,
 		// after any number of steps: the parts and their counts, capped at 2, only grow, so
@@ -353,6 +376,69 @@ func (k *classifier) lambdaCtx(call *grammar.Call, i int, lam *grammar.Lambda, t
 		}
 	}
 	return tc
+}
+
+// ownText reports whether the value of a match of each of exprs holds only the input it consumes:
+// no action or Operators Rule builds a value in it, and no capture in a positive lookahead, whose
+// input the match does not consume, is part of it, through the bodies of the rules it calls.
+func (k *classifier) ownText(exprs []grammar.Expr) bool {
+	ok, seen := true, map[string]bool{}
+	var visit func(e grammar.Expr, look bool)
+	visit = func(e grammar.Expr, look bool) {
+		WalkExpr(e, func(x grammar.Expr) {
+			switch x := x.(type) {
+			case *grammar.InlineAction:
+				ok = ok && (x.Action == nil || x.DefaultAction)
+			case *grammar.OperatorsRule:
+				ok = false
+			case *grammar.Capture:
+				ok = ok && !look
+			case *grammar.And:
+				if !look {
+					visit(x.Expr, true)
+				}
+			case *grammar.Ref:
+				r := k.byName[x.Name]
+				// A lookahead discards the node of a rule it calls, so a capture in the body of the
+				// rule never reaches the element, and the body is visited outside the lookahead.
+				if r == nil || seen[x.Name] {
+					return
+				}
+				seen[x.Name] = true
+				ok = ok && (r.Action == nil || r.DefaultAction)
+				visit(r.Expr, false)
+			}
+		})
+	}
+	for _, e := range exprs {
+		visit(e, false)
+	}
+	return ok
+}
+
+// foldRuns returns the number of evaluations, as a power of the size of the input, of a fold over
+// list in the context tc: one for each lambda around it over a list that is not bounded, but one
+// fewer when list reads only elements of the innermost of them, since the sizes of those elements
+// add up to at most the input over its evaluations.
+func (k *classifier) foldRuns(list grammar.Term, tc termCtx) int {
+	if tc.depth == 0 || list == nil {
+		return tc.depth
+	}
+	own := len(tc.elems) > 0
+	WalkTerm(list, func(x grammar.Term) {
+		switch x := x.(type) {
+		case *grammar.CaptureRef:
+			if !slices.Contains(tc.elems, x.Name) {
+				own = false
+			}
+		case *grammar.VarRef, *grammar.IndexRef:
+			own = false
+		}
+	})
+	if own {
+		return tc.depth - 1
+	}
+	return tc.depth
 }
 
 // elemSize describes what the size of an element of the list t can depend on: anything that the
@@ -758,7 +844,9 @@ func (k *classifier) copied(t grammar.Term, pos grammar.Pos, tc termCtx, all con
 		return best, count
 	}
 	if n, count := worst(all.acc); count > 0 {
-		class, degree := ClassPoly, 2
+		// The fold copies its accumulator on each of its steps, and runs once for each evaluation
+		// of the lambdas around it.
+		class, degree := ClassPoly, 2+tc.params[n].runs
 		if count > 1 {
 			class, degree = ClassExp, 0
 		}

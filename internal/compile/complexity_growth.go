@@ -783,7 +783,7 @@ func (k *classifier) doubles(call *grammar.Call, lam *grammar.Lambda, tc termCtx
 // checkFoldGrowth reports a fold whose accumulator can grow exponentially with its steps, though no
 // single copying operation copies it twice, as by duplicating the elements of a list and joining
 // them, and a fold over a list that is not bounded whose steps cost a polynomial of degree 3 or more
-// in all.
+// in all, times the evaluations of the lambdas around it.
 func (k *classifier) checkFoldGrowth(call *grammar.Call, lam *grammar.Lambda, tc termCtx) {
 	rows, cost, ok := k.stepForms(call, lam, tc)
 	if !ok {
@@ -800,6 +800,8 @@ func (k *classifier) checkFoldGrowth(call *grammar.Call, lam *grammar.Lambda, tc
 	if d < 3 || len(call.Args) < 2 || k.sizeOf(call.Args[1], tc, listSize).bounded() {
 		return
 	}
+	// The fold runs once for each evaluation of the lambdas around it.
+	d += k.foldRuns(call.Args[1], tc)
 	k.cause(ClassPoly, d, tc.rule, pos, "%s: the steps of %s at %s build values that grow with the steps, the input and its accumulator %s",
 		degreeText(ClassPoly, d), k.showTerm(call), at(tc.rule, pos), lam.Params[0])
 }

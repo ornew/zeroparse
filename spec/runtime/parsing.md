@@ -879,7 +879,17 @@ necessary.
    that value on each step. The classifier bounds the cost of one step by such
    terms as well, where a term may multiply quantities: a comparison of values
    that are not ints and `len` of a string examine their operands, and a fold
-   inside the lambda copies its own first parameter on each of its steps. The
+   inside the lambda copies its own first parameter on each of its steps. A
+   fold inside the lambda of a call over a list that is not bounded runs once
+   for each element of that list, so the degree of its cost and of each copy
+   of its first parameter gains one for each such lambda around it, but one
+   fewer when its list reads only elements of the innermost of them and those
+   are the captures of a repetition whose values hold only the input they
+   consume, distinct parts of the input whose sizes add up to at most the
+   input. The value of an element holds only the input it consumes when no
+   action or Operators Rule builds a value in it and no capture in a positive
+   lookahead, which stays in effect over input that the element does not
+   consume, is part of it, through the bodies of the rules it calls. The
    degrees take the initial value, the list and the values read from outside
    to be at most linear in the size of the input; a value of a rule that grows
    faster makes them too low. A copying
@@ -963,7 +973,9 @@ reason:
   of the input of the cost of all its steps, which the step matrix of
   condition 4 bounds, when that is 3 or more: a term of the cost adds the
   degrees of the quantities that it multiplies, and one more for the sum over
-  the steps.
+  the steps. A fold inside lambdas over lists that are not bounded adds one to
+  either degree for each of them, as condition 4 describes, so that
+  `map($b, (y) => foldl("", $b, (s, l) => s + text(l)))` gives 3.
 - **Exponential.** A binding that makes a variable depend on its own earlier
   value, or a copying operation that copies a value of its own recursion, or a
   fold accumulator, more than once, as `s + s` does, or a fold whose step
