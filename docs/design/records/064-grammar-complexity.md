@@ -162,8 +162,12 @@ A start rule is `Linear` when every rule reachable from it satisfies these four 
   - a lookahead body;
   - the base of a `#recover`.
 
-  The context of a construct is the chain of such contexts from it up to the nearest memoized boundary, including the
-  callers of its rule. A context is safe if it is committing:
+  The context of a construct is the chain of such contexts from it through the callers of its rule, memoized or not.
+  A memoized call does not end the context: the memo shares the result of a rule at one position, not its scan between
+  positions. In `main = (a "y" / "q" a / .)*` with `a = x+` and `x = "x"`, every rule that scans is memoized, yet
+  after `a "y"` fails, `.` consumes one character and the next iteration calls `a` one position later, which scans the
+  rest of the input again: n x's cost about n²/2 steps. A memoized recursion brings the scan back in the same way, as
+  in `t = a t "!" / . t / ""`. A context is safe if it is committing:
   - the alternatives that follow have first terminals disjoint from the construct's continuation;
   - or a cut follows the first terminal of the alternative;
   - or what can fail after the construct cannot fail after the construct has consumed input.
@@ -392,9 +396,15 @@ The groups are addressed by these mechanisms:
 - **Token-scan refinement of the classifier.** Token alternatives that scan the same prefix again, and whitespace,
   comment or name scans that a failed alternative gives back to a continuation starting with the same characters,
   cost a bounded amount per position. They measure linear.
-- **Memo-bound refinement of the classifier.** Units that are not committing, nested through a memoized recursion,
-  are bounded by the memo, because a memoized call is evaluated at most twice per position. The same bound covers a
-  source reached again at one position through memoized calls. They measure linear.
+- **Units nested through a memoized recursion (open).** Units that are not committing, nested through a memoized
+  recursion, and a source reached again at one position through memoized calls, measure linear in the bundled
+  grammars, but the memo does not bound them: in `t = a t "!" / . t / ""` with `a = x+` and `x = "x"`, the unit
+  `a t "!"` is nested in itself through the memoized `t`, every rule that scans is memoized, and the cost is
+  quadratic, since each restart calls `a` one position later. Re-evaluating the same calls at the same position
+  (shared literals, continuation paths split at a shared call) removes few of these causes. Their linearity depends
+  on how much input a failing unit examines, as in CEL, where a failing `member` examines only a constant amount at
+  `-` before `neg_unary` calls `member` one position later; no condition captures this yet, and the causes stay
+  reasons for the class Unknown.
 - **Bounded-binding refinement of the classifier.** A binding that reads its own earlier value is not exponential when
   its values at a position come from a bounded set, or when the recursive call follows consumed input. TypeScript's
   context flags stay within seven bits, since every capture that a binding measures is bounded (`"*"`, `"async"`,
@@ -409,7 +419,8 @@ The groups are addressed by these mechanisms:
   whole-input parse and a Document, and that a string comparison costs at most its shorter operand, so the classifier
   does not count a text as a copy. The text of a recursive capture, as in Python's f-string replacement fields, is
   then linear, and a scan under a text (the body of a CUE string, a CUE name, a comment in the XML prolog, a DuckDB
-  dollar-quote tag) is reported as the scan itself, which belongs to the token-scan or memo-bound groups.
+  dollar-quote tag) is reported as the scan itself, which belongs to the token-scan groups or to the open groups of
+  nested units.
 - **Repetition-run reuse.** duckdb's operator lookahead reads the run of `+` and `-` after an operator character, and a
   prefix operator at each character of the run reads the rest again: `SELECT ` + `+`^n + `1` costs 282k, 1.04M and
   4.01M steps for 210, 410 and 810 bytes. The later stages of run reuse make this linear.
@@ -432,36 +443,36 @@ The groups are addressed by these mechanisms:
 | Grammar | Group | Causes | Addressed by | Families | Worst exponent | Order |
 |:--|:--|--:|:--|--:|--:|:--|
 | csv | quoted-field | 1 | token-scan refinement | 2 | 1.00 | n |
-| xml | nested | 4 | memo-bound refinement | 3 | 1.02 | n |
-| xml | prolog-misc | 1 | memo-bound refinement | 4 | 1.00 | n |
+| xml | nested | 4 | open | 3 | 1.02 | n |
+| xml | prolog-misc | 1 | open | 4 | 1.00 | n |
 | xml | mixed | 1 | token-scan refinement | 1 | 1.00 | n |
 | xml | name-scan | 4 | token-scan refinement | 3 | 1.00 | n |
 | xml | ws-option | 4 | token-scan refinement | 2 | 1.00 | n |
-| cel | nested | 12 | memo-bound refinement | 6 | 1.00 | n |
+| cel | nested | 12 | open | 6 | 1.00 | n |
 | cel | names-and-space | 3 | token-scan refinement | 3 | 1.00 | n |
 | cel | number-tokens | 3 | token-scan refinement | 2 | 1.00 | n |
 | cel | string-tokens | 2 | token-scan refinement | 1 | 1.04 | n |
-| outline | nested | 2 | memo-bound refinement | 1 | 0.97 | n |
+| outline | nested | 2 | open | 1 | 0.97 | n |
 | outline | blank-lines | 2 | token-scan refinement | 2 | 1.00 | n |
 | minilang | recover | 2 | recovery-skip refinement | 3 | 1.01 | n |
-| golang | nested | 166 | memo-bound refinement | 12 | 1.01 | n |
+| golang | nested | 166 | open | 12 | 1.01 | n |
 | golang | comments | 16 | token-scan refinement | 7 | 1.01 | n |
 | golang | identifiers | 1 | token-scan refinement | 2 | 1.00 | n |
 | golang | line-directives | 4 | token-scan refinement | 2 | 1.01 | n |
 | golang | numbers | 3 | token-scan refinement | 2 | 1.00 | n |
-| duckdb | nested | 675 | memo-bound refinement | 16 | 1.01 | n |
+| duckdb | nested | 675 | open | 16 | 1.01 | n |
 | duckdb | operator-tails | 15 | repetition-run reuse | 5 | 2.00 | n² |
 | duckdb | strings | 4 | token-scan refinement | 5 | 1.00 | n |
 | python | bounded-variables | 42 | bounded-binding refinement | 5 | 1.01 | n |
 | python | except-star-handlers | 3 | grammar rewrite | 2 | 1.91 | n² |
 | python | fold-copies | 16 | in-place fold accumulators | 4 | 2.00 | n² |
-| python | nested | 183 | memo-bound refinement | 10 | 1.03 | n |
+| python | nested | 183 | open | 10 | 1.03 | n |
 | python | bounded-lambda-copies | 8 | single-element fold refinement | 3 | 0.98 | n |
 | python | module-whitespace | 4 | token-scan refinement | 1 | 1.00 | n |
 | python | tokens | 20 | token-scan refinement | 6 | 1.00 | n |
 | python | whitespace | 70 | token-scan refinement | 5 | 1.00 | n |
 | typescript | ctx-bindings | 38 | bounded-binding refinement | 19 | 1.01 | n |
-| typescript | nested | 266 | memo-bound refinement | 4 | 1.00 | n |
+| typescript | nested | 266 | open | 4 | 1.00 | n |
 | typescript | identifiers | 239 | token-scan refinement | 5 | 1.00 | n |
 | typescript | whitespace-and-templates | 3 | token-scan refinement | 3 | 1.00 | n |
 | cue | hash-count | 1 | bounded-binding refinement | 2 | 1.00 | n |
@@ -469,14 +480,14 @@ The groups are addressed by these mechanisms:
 | cue | string-bodies | 6 | token-scan refinement | 5 | 1.00 | n |
 | cue | interpolation-lists | 4 | grammar rewrite | 3 | 1.88 | n² |
 | cue | interpolation-copies | 10 | grammar rewrite | 0 | – | n² |
-| cue | file-clauses | 2 | memo-bound refinement | 2 | 0.99 | n |
-| cue | nested | 52 | memo-bound refinement | 8 | 1.01 | n |
+| cue | file-clauses | 2 | open | 2 | 0.99 | n |
+| cue | nested | 52 | open | 8 | 1.01 | n |
 | cue | definitions | 5 | token-scan refinement | 3 | 1.00 | n |
 | cue | numbers | 7 | token-scan refinement | 6 | 1.00 | n |
 | cue | raw-strings | 10 | token-scan refinement | 5 | 1.00 | n |
 | cue | whitespace | 13 | token-scan refinement | 5 | 1.00 | n |
 | yaml | indentation-bindings | 2 | bounded-binding refinement | 3 | 0.99 | n |
-| yaml | nested | 38 | memo-bound refinement | 5 | 1.00 | n |
+| yaml | nested | 38 | open | 5 | 1.00 | n |
 | yaml | block-scalars | 3 | token-scan refinement | 3 | 1.00 | n |
 | yaml | directives-and-tags | 3 | token-scan refinement | 3 | 1.00 | n |
 | yaml | scalars | 4 | token-scan refinement | 4 | 1.00 | n |
