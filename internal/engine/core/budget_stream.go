@@ -85,5 +85,13 @@ func (p *Parser) PruneStreamMemo(pos int) {
 		ClearSpend(p, t.Slots[n:])
 		t.Slots = t.Slots[:n]
 	}
+	// The indexes of pruned positions go with their entries, as in MemoTable.Prune: one unit for
+	// each index that the table holds, a count that does not depend on the order of the walk.
+	for at := range t.Index {
+		p.Spend()
+		if at < pos {
+			delete(t.Index, at)
+		}
+	}
 	t.Base = pos
 }

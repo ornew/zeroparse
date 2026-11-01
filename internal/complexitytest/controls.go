@@ -399,12 +399,15 @@ func Controls() []Control {
 		},
 		// A binding that reads its own earlier value before a recursive call that follows consumed
 		// input still reaches each position with a different value from every start, so the
-		// number of combinations of values at a position grows with the input.
+		// number of combinations of values at a position grows with the input. The memo finds the
+		// entry of a combination through a hash index, so the cost is the number of (position,
+		// value) pairs, quadratic; walking the entries of a position would make it cubic. The
+		// sizes start at 100 because a chain is walked until it passes 32 entries.
 		{
 			Name: "Counter bound before a call after consumed input", Family: "bounded binding",
 			Source: "var v int\nrule main = (r / .)* $$\nrule r = \"#\" {v := v + 1} r / \"y\" {v >= 0}\n",
 			Input:  func(n int) string { return rep("#", n) },
-			Sizes:  double(50), ShortSizes: double(25), Order: Poly(3), Class: ClassExp,
+			Sizes:  double(100), ShortSizes: double(100), Order: Poly(2), Class: ClassExp,
 		},
 		// A guard that reads only the variable keeps its values in a set bounded by a constant.
 		{
@@ -428,7 +431,7 @@ func Controls() []Control {
 			Name: "Counter guarded after a call after consumed input", Family: "bounded binding",
 			Source: "var v int\nrule main = (r / .)* $$\nrule r = \"#\" {v := v + 1} r {v < 3} / \"y\" {v >= 0}\n",
 			Input:  func(n int) string { return rep("#", n) },
-			Sizes:  double(50), ShortSizes: double(25), Order: Poly(3), Class: ClassExp,
+			Sizes:  double(100), ShortSizes: double(100), Order: Poly(2), Class: ClassExp,
 		},
 		// A plain group of a sequence splices its elements into the tuple around it: len($x) is 3
 		// here, so the binding adds 1 on every call, while dividing by 4 adds nothing.
@@ -436,7 +439,7 @@ func Controls() []Control {
 			Name: "Counter adding the length of a spliced tuple", Family: "bounded binding",
 			Source: "var v int\nrule main = (r / .)* $$\nrule r = x:(\"#\" (\"a\" \"b\")) {v := v + len($x) / 3} r / \"y\" {v >= 0}\n",
 			Input:  func(n int) string { return rep("#ab", n) },
-			Sizes:  double(50), ShortSizes: double(25), Order: Poly(3), Class: ClassExp,
+			Sizes:  double(100), ShortSizes: double(100), Order: Poly(2), Class: ClassExp,
 		},
 		{
 			Name: "Counter adding a spliced tuple length below its step", Family: "bounded binding",

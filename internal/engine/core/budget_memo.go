@@ -52,13 +52,48 @@ func (p *Parser) MemoGet(k MemoKey) (*MemoEntry, bool) {
 	if i < 0 || i >= len(t.Slots) {
 		return nil, false
 	}
-	for e := t.Slots[i]; e != nil; e = e.Next {
+	e, n := t.Slots[i], 0
+	for ; e != nil && n < memoScan; e, n = e.Next, n+1 {
 		p.Spend()
 		if e.Rule == int32(k.Rule) && e.Min == int32(k.Min) && e.missingSilent == k.MissingSilent && p.memoKeyEqual(e.Env, k.Env) {
 			return e, true
 		}
 	}
-	return nil, false
+	if e == nil {
+		return nil, false
+	}
+	ix := t.indexAt(k.Pos, t.Slots[i], p.chargeMemoHash)
+	h := p.hashMemoKey(int32(k.Rule), int32(k.Min), k.MissingSilent, k.Env)
+	_, x := ix.probe(h, func(x *MemoEntry) bool {
+		return x.Rule == int32(k.Rule) && x.Min == int32(k.Min) && x.missingSilent == k.MissingSilent && p.memoKeyEqual(x.Env, k.Env)
+	})
+	return x, x != nil
+}
+
+// hashMemoKey hashes a memo key for the index of a long chain. The hash costs
+// one step plus one per variable of the key, and the bytes of string values
+// as a value comparison would, so a lookup through the index costs the size of
+// the key, not the length of the chain.
+func (p *Parser) hashMemoKey(rule, min int32, silent bool, env []any) uint64 {
+	h, bytes := memoKeyHash(rule, min, silent, env)
+	for range 1 + len(env) {
+		p.Spend()
+	}
+	if bytes > 0 {
+		p.SpendValue(bytes)
+	}
+	return h
+}
+
+// chargeMemoHash is the cost of hashing e while its position's index is built.
+func (p *Parser) chargeMemoHash(e *MemoEntry) {
+	_, bytes := memoKeyHash(e.Rule, e.Min, e.missingSilent, e.Env)
+	for range 1 + len(e.Env) {
+		p.Spend()
+	}
+	if bytes > 0 {
+		p.SpendValue(bytes)
+	}
 }
 
 func (p *Parser) MemoPut(k MemoKey, e *MemoEntry) {
@@ -88,11 +123,38 @@ func (p *Parser) MemoPut(k MemoKey, e *MemoEntry) {
 	}
 	link := &slots[i]
 	var replaced *MemoEntry
-	for x := *link; x != nil; link, x = &x.Next, x.Next {
+	same := func(x *MemoEntry) bool {
+		return x.Rule == int32(k.Rule) && x.Min == int32(k.Min) && x.missingSilent == k.MissingSilent && p.memoKeyEqual(x.Env, k.Env)
+	}
+	n := 0
+	for x := *link; x != nil && n < memoScan; link, x, n = &x.Next, x.Next, n+1 {
 		p.Spend()
-		if x.Rule == int32(k.Rule) && x.Min == int32(k.Min) && x.missingSilent == k.MissingSilent && p.memoKeyEqual(x.Env, k.Env) {
+		if same(x) {
 			replaced = x
 			break
+		}
+	}
+	var ixSlot uint64
+	var ix memoIndex
+	if replaced == nil && *link != nil {
+		// A long chain: the index finds the entry to replace.
+		ix = t.indexAt(k.Pos, slots[i], p.chargeMemoHash)
+		h := p.hashMemoKey(int32(k.Rule), int32(k.Min), k.MissingSilent, k.Env)
+		ixSlot, replaced = ix.probe(h, same)
+		if replaced != nil {
+			// Walk to the link of the entry; the walk is charged like any chain walk.
+			link = &slots[i]
+			for *link != replaced {
+				p.Spend()
+				link = &(*link).Next
+			}
+		}
+	}
+	if replaced != nil && ix == nil {
+		// The entry replaced among the first of a long chain is indexed too.
+		if ix = t.Index[k.Pos]; ix != nil {
+			h := p.hashMemoKey(replaced.Rule, replaced.Min, replaced.missingSilent, replaced.Env)
+			ixSlot, _ = ix.probe(h, func(y *MemoEntry) bool { return y == replaced })
 		}
 	}
 	p.Spend()
@@ -101,6 +163,9 @@ func (p *Parser) MemoPut(k MemoKey, e *MemoEntry) {
 	t.Slots = slots
 	e.Rule, e.Min, e.Pos, e.Env = int32(k.Rule), int32(k.Min), k.Pos, k.Env
 	e.missingSilent = k.MissingSilent
+	if ix != nil {
+		ix[ixSlot] = e
+	}
 	if replaced != nil {
 		e.Next = replaced.Next
 		*link = e

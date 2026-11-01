@@ -31,6 +31,9 @@ type MemoTable struct {
 	// Calls counts, per rule number, the calls and the repeated calls at a position; once repeats
 	// are frequent, the rule is memoized on the first call (eager).
 	Calls []SeenCalls
+	// Index holds the hash index of each position whose chain has more entries
+	// than a lookup walks (memoScan), by position. Splice drops all of them.
+	Index map[int]memoIndex
 }
 
 // SeenRulePages caches the last visited page beside its directory. Most calls
@@ -171,12 +174,21 @@ func (t *MemoTable) Get(k MemoKey) (*MemoEntry, bool) {
 	if i < 0 || i >= len(t.Slots) {
 		return nil, false
 	}
-	for e := t.Slots[i]; e != nil; e = e.Next {
+	e, n := t.Slots[i], 0
+	for ; e != nil && n < memoScan; e, n = e.Next, n+1 {
 		if e.Rule == int32(k.Rule) && e.Min == int32(k.Min) && e.missingSilent == k.MissingSilent && slices.Equal(e.Env, k.Env) {
 			return e, true
 		}
 	}
-	return nil, false
+	if e == nil {
+		return nil, false
+	}
+	ix := t.indexAt(k.Pos, t.Slots[i], nil)
+	h, _ := memoKeyHash(int32(k.Rule), int32(k.Min), k.MissingSilent, k.Env)
+	_, x := ix.probe(h, func(x *MemoEntry) bool {
+		return x.Rule == int32(k.Rule) && x.Min == int32(k.Min) && x.missingSilent == k.MissingSilent && slices.Equal(x.Env, k.Env)
+	})
+	return x, x != nil
 }
 
 // Put sets the entry for key k to e (replacing any existing entry for the same key).
@@ -200,13 +212,36 @@ func (t *MemoTable) Put(k MemoKey, e *MemoEntry) {
 	e.Rule, e.Min, e.Pos, e.Env = int32(k.Rule), int32(k.Min), k.Pos, k.Env
 	e.missingSilent = k.MissingSilent
 	link := &t.Slots[i]
-	for x := *link; x != nil; link, x = &x.Next, x.Next {
-		if x.Rule == e.Rule && x.Min == e.Min && x.missingSilent == e.missingSilent && slices.Equal(x.Env, e.Env) {
+	same := func(x *MemoEntry) bool {
+		return x.Rule == e.Rule && x.Min == e.Min && x.missingSilent == e.missingSilent && slices.Equal(x.Env, e.Env)
+	}
+	for n := 0; *link != nil && n < memoScan; link, n = &(*link).Next, n+1 {
+		if x := *link; same(x) {
+			t.reindex(k.Pos, x, e, nil)
 			e.Next = x.Next
 			*link = e
 			if x != e {
 				// A replaced growth seed is no longer GrowState.best: the
 				// caller installs its new best before replacing the key.
+				t.Retire(x)
+			}
+			return
+		}
+	}
+	if *link != nil {
+		// A long chain: the index finds the entry to replace, and a walk finds its link.
+		ix := t.indexAt(k.Pos, t.Slots[i], nil)
+		h, _ := memoKeyHash(e.Rule, e.Min, e.missingSilent, e.Env)
+		slot, x := ix.probe(h, same)
+		ix[slot] = e
+		if x != nil {
+			link = &t.Slots[i]
+			for *link != x {
+				link = &(*link).Next
+			}
+			e.Next = x.Next
+			*link = e
+			if x != e {
 				t.Retire(x)
 			}
 			return
@@ -309,6 +344,11 @@ func (t *MemoTable) Prune(pos int) {
 		clear(t.Slots[n:])
 		t.Slots = t.Slots[:n]
 	}
+	for p := range t.Index {
+		if p < pos {
+			delete(t.Index, p)
+		}
+	}
 	t.Base = pos
 }
 
@@ -318,6 +358,7 @@ func (t *MemoTable) Prune(pos int) {
 // advance reports whether each is still valid (one at start kept as it was, or one at end shifted
 // by delta). Only tables without pruning (base 0) are spliced.
 func (t *MemoTable) Splice(start, end, delta int, advance func(e *MemoEntry) bool) {
+	t.Index = nil // entries move to other positions
 	// Detach the entries at [start, end] and keep the valid ones.
 	var stay *MemoEntry
 	for pos := start; pos <= end; pos++ {
