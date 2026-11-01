@@ -102,12 +102,14 @@ of that section is accounted for elsewhere:
 
 - a rule that is not memoized is evaluated once for each of its calls, which
   open step 7 bounds;
-- a member of a cycle evaluated again in each step of a growth, and the other
-  calls of the cycle at the position of a growth, are a constant number per
-  growth step, which Lemma 5 counts;
-- a result that is not stored because it read an open growth is evaluated
-  again with the steps of that growth, which Lemma 5 counts;
-- a leader that grows again at its position is excluded by condition 5.
+- a call of a rule of a cycle in the context of growths at its position that
+  finds no result computed with the same growing results and the same outcomes
+  of the lookaheads it observed is evaluated again; such calls are a constant
+  number per growth step, which Lemma 5 counts;
+- a result that read the growing result of an open growth is evaluated again
+  in the steps whose growing results differ, which Lemma 5 counts;
+- a leader that grows again at its position, inside another growth there, is
+  counted by Lemma 5, under condition 5.
 
 ## Lemma 4 (Scanned Cost)
 
@@ -168,6 +170,18 @@ result is the failure of a growing unit after a scanning source, which
 condition 2 checks. A growth is itself a scanning source at each call of a
 rule of its cycle other than a left call, so its repetition at another
 position is counted by Lemma 4.
+
+A leader R called at $p$ in a step of the growth of another leader S of its
+cycle grows there in the context of that growth. A step of R from a result
+that read no growing result of S, or the same one, is the step that an earlier
+growth of R took from it: equal results of a step share their identity, the
+steps are reused, and a run of steps that read only R's own result is taken at
+once, so these steps cost a constant for each step of S beyond their first
+evaluation. A growth of R from a result that includes the growing result of S
+is new in each step of S. By condition 5 either the step of S keeps the result
+of R, and the input that R examines past the end of the seed of S is the input
+that this step consumes, or R grows past that end only where the growth of S
+stops, which happens once per growth.
 
 ## Lemma 6 (Values and Copies)
 
@@ -308,10 +322,13 @@ The outlines leave these steps to be made precise.
    alternative that is not growing.
 4. **Operators Rules.** The units of an Operators Rule, its `skip`, and right
    operands that apply operators themselves, in Lemmas 4 and 5.
-5. **Lemma 3 and left recursion.** Once the rules for storing the results of
-   growths are final in [Evaluations of Rules](../runtime/parsing.md#evaluations-of-rules),
-   the cost of evaluating again the results that read an open growth must be
-   bounded in Lemma 5, and the role of condition 5 restated.
+5. **Lemma 3 and left recursion.** The proof must bound, in Lemma 5, the
+   evaluations that a context of growths repeats: the calls that find no result
+   with the same growing results and lookahead outcomes, and the growths of
+   leaders inside other growths at their position, whose steps are shared only
+   through equal results. It must show that the comparison of results by
+   structure, which is bounded, loses only reuse, and that condition 5 covers
+   every growth that is new in each step.
 6. **Variables in Lemma 6.** The bound $L = O(n)$ that
    [Classification](../runtime/parsing.md#classification) states, and the
    comparisons of memo keys that hold strings, which cost up to $L$ per lookup.

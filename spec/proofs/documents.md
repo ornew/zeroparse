@@ -61,7 +61,8 @@ chapter states the guarantee and not this mechanism.
   together with its key position and its range, if $l \ge b$ and its call was
   position-free; otherwise it is dropped. Edits are applied to an entry in
   order, either at once or when it is next looked up.
-- **(P) Parses.** Entries are stored under the conditions of $\mathcal{M}$. A
+- **(P) Parses.** Entries are stored under the conditions of $\mathcal{M}$;
+  what (D) keeps is dropped within the parse and never reaches a later one. A
   parse that does not complete, because it is interrupted
   ([Interruption](../runtime/documents.md#interruption)) or aborted by a
   run-time error of an action, the nesting limit or another fatal error,
@@ -75,10 +76,9 @@ chapter states the guarantee and not this mechanism.
     recovered error remains at the end of the run. During the run no call
     read the current result of a growth, directly or through an entry stored
     by a call that did, even of a growth that started and ended within the
-    run. This condition is taken from the intended mechanism: the reference
-    implementation refuses a run whose calls read the current result of a
-    growth open at its start, but does not yet refuse one that read the
-    current result of a growth that started and ended within the run.
+    run, nor reused a result that (D) of the memoization proof keeps. The
+    reference implementation counts these reads and reuses and refuses a run
+    during which the count changed.
   - *Resuming.* A repetition resumes a record only outside a lookahead and a
     `skip`. It resumes in one of two ways. **Whole**: the record of the same
     repetition at the same position, stored earlier in the same parse, or by

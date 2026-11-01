@@ -184,11 +184,12 @@ retain, shift, drop or recompute any intermediate result, provided that every
 parse returns what a parse of the current text from scratch returns. Reuse is
 observable only through the statistics.
 
-A result can depend on the order in which one parse evaluated the calls: a
-left-recursive rule that grew inside the growth of another one and read its
-growing result, or a result that read such a result. A later parse does not
-evaluate the calls in that order, so it evaluates such a result again instead
-of reusing it, even when the text is unchanged.
+A result that read the growing result of a left recursion in progress when it
+started depends on that growth, not only on the text. A parse keeps it only
+while the growth at its position lasts (see
+[Evaluations of Rules](parsing.md#evaluations-of-rules)), so a later parse
+evaluates it again, even when the text is unchanged. A result that a later
+parse reuses read no such growing result.
 
 ## Change Notifications
 

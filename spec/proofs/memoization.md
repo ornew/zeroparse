@@ -51,7 +51,11 @@ growth of $L$ at $p$ is **open** from the start of that call to its end, and
 while it is open it has a **current result**. A call of $L$ at $p$ while the
 growth is open is answered with the current result, whatever its $\eta$. A
 call **reads** an open growth when it, or a call evaluated within it, is
-answered with that growth's current result.
+answered with that growth's current result. The **context** of a call at $p$
+is $\Gamma$, the sequence of the growths open at $p$ when it starts, each with
+its leader and its current result, and its **present set** $P$ is the set of
+those leaders. A lookahead at $p$ in a context **observes** its outcome: whether
+its expression matched, and its examined range.
 
 **The two parses.** The **reference parse** $\mathcal{R}$ evaluates every call
 as the language chapters define it: the body of the rule is evaluated, except
@@ -63,21 +67,36 @@ that it evaluated, and it may answer a later call from an entry instead of
 evaluating it, under these conditions:
 
 - **(S) Storing.** A call that reads a growth that was open when the call
-  started is not stored. This applies to every rule, including a leader that
-  grew inside the growth of another leader.
+  started is not stored in the table. This applies to every rule, including a
+  leader that grew inside the growth of another leader. An entry records the
+  present set $P$ of the call that stored it.
 - **(L) Lookahead state.** An entry stored in state $\lambda$ answers a call in
   state $\lambda'$ only if $\lambda' = \lambda$, or if $\lambda = 0$,
   $\lambda' = 1$ and its $\varepsilon$ is empty.
-- **(C) Cycles.** While the growth of a leader $L$ is open at $p$, a call at
-  $p$ of a rule of the cycle of $L$ other than $L$, another leader of the
-  cycle included, is evaluated, not answered from an entry.
+- **(C) Contexts.** A call of a rule of a left-recursion cycle with the present
+  set $P'$ is answered from an entry with the present set $P$ only if
+  $P' \subseteq P$.
+- **(D) Dependent results.** While a growth is open at $p$, $\mathcal{M}$ may
+  also keep, apart from the table, the outcome and range of a call at $p$ that
+  read open growths, with its key, state and present set $P$, the current
+  results that it read, and the observations of the lookaheads at $p$ within
+  it that read one. It answers a call with the same key and state and the
+  present set $P$ from it only if each growth that it read is open with an
+  equal current result and each observed lookahead has the same observation,
+  as a result kept in the same way gives it. It treats a step of a growth, the
+  evaluation of the body of a leader from a current result, in the same way.
+  It drops what it keeps when the first growth open at $p$ ends.
 
-(S) is the third item of
-[Evaluations of Rules](../runtime/parsing.md#evaluations-of-rules); (L) and
-(C) are assumptions (A2) and (A4) below. Which outcomes $\mathcal{M}$ stores, and when it uses
+(S) is the last item of
+[Evaluations of Rules](../runtime/parsing.md#evaluations-of-rules) that
+concerns the table, and (C) and (D) state the item on contexts; (L) is
+assumption (A2) below. Which outcomes $\mathcal{M}$ stores, and when it uses
 them, is otherwise free. Storing none, storing from the second call at a
 position, or not storing the results of some rules are all instances of
-$\mathcal{M}$.
+$\mathcal{M}$. The reference implementation decides that two current results
+are equal by their identities: a step result gets the identity of an earlier
+equal result of the same growth key at the same position, compared by a
+bounded structural comparison of the nodes, and a new identity otherwise.
 
 **Scope.** The proof covers a parse that no limit stops: no
 [nesting limit](../runtime/parsing.md#limits), cancellation, budget limit or
@@ -94,8 +113,8 @@ each walk as evaluated in full in both parses.
 
 ## Assumptions
 
-The proof relies on the following. The specification does not state (A1), (A2) and
-(A4); it states (A3), which is cited here.
+The proof relies on the following. The specification does not state (A1) and
+(A2); it states (A3), which is cited here.
 
 - **(A1) Recording in a lookahead.** Inside a lookahead or the `skip` of an
   Operators Rule, an evaluation records neither expected items nor its
@@ -113,11 +132,6 @@ The proof relies on the following. The specification does not state (A1), (A2) a
   on whether a value is `nil`, which is part of the value. By (I1) of the
   theorem a comparison therefore decides alike in both parses. An error is
   raised for the same operands in both, so it is the run-time error of $s$.
-- **(A4) Cycles.** Condition (C), the revision of the second item of
-  [Evaluations of Rules](../runtime/parsing.md#evaluations-of-rules) that
-  covers every rule of the cycle other than the growing leader. That item
-  excludes all the leaders of the cycle, and the reference implementation
-  does not yet apply the revision.
 
 ## Lemma 1 (Context)
 
@@ -198,10 +212,17 @@ answered from a sound entry reads no growth open at its start, and recording
 the entry gives the outcome that the call has in $\mathcal{R}$, and a range
 that contains the range of the call in $\mathcal{R}$.
 
-*Proof.* If the call read a growth open at its start, by Lemma 2 it would be a
-call, at the position of an open growth of a leader $L$, of a rule of the cycle
-of $L$. If that rule is $L$, the call is answered with the current result and
-never from an entry; otherwise (C) excludes it. So by Lemma 1 its outcome in
+*Proof.* Suppose that the call reads a growth open at its start. By Lemma 2
+it is a call, at the position $p$ of an open growth, of a rule of its cycle, so
+by (C) its present set $P'$ is a subset of the present set $P$ of the call
+that stored the entry, which read no growth open at its start. Compare the
+two evaluations in $\mathcal{R}$ from their start: they take the same steps
+until one of them is answered with a current result. A growth that started
+within one started within the other too, so the first difference is a call of
+a leader $L \in P'$ at $p$ answered with the current result of a growth open
+at the start. Since $L \in P$, the corresponding call in the evaluation that
+stored the entry is answered with a current result too, which it never is. So
+the call reads no growth open at its start, and by Lemma 1 its outcome in
 $\mathcal{R}$ is $F(\kappa, \lambda')$, with the range that Lemma 1 gives for
 $\kappa$, which $\rho$ contains.
 
@@ -210,6 +231,30 @@ $\lambda' = 1$, and $\varepsilon$ is empty by (L). By Lemma 1,
 $F(\kappa, 1)$ has the $s$, $q$ and $v$ of $\omega$ and an empty
 $\varepsilon$, and by (A1) recording it in state $1$ records no $o$, as
 recording $\omega$ there does not. $\square$
+
+## Lemma 4 (Answering From a Dependent Result)
+
+Let a call $x$ in $\mathcal{R}$, of key $\kappa$ in state $\lambda$ at $p$
+in a context $\Gamma_1$ with the present set $P$, have the outcome $\omega$
+and the range $\rho$, and let a call $y$ of the same key and state in a
+context $\Gamma_2$ with the present set $P$ find each growth that $x$ read open
+with an equal current result, and each lookahead at $p$ that $x$ observed with
+the same observation. Then $y$ has the outcome $\omega$ and the range
+$\rho$.
+
+*Proof.* Compare the evaluations of $x$ and $y$ from their start. They take
+the same steps as long as each step reads the same state, and, as in Lemma 1,
+the state that a step reads differs between them only in the current results
+of the growths open at $p$ at their start. A call of a leader at $p$ is
+answered with a current result in both or in neither, since the present sets
+are equal; when it is, the result is equal, since $x$ read it. A lookahead at
+$p$ that reads such a growth has the same outcome and range in both, since $x$
+observed it, and by (A1) its expression records nothing outside it. A call at
+$p$ within $x$ that grows a leader of the cycle grows it in both, from the same
+failing seed; its steps read the growths open at the start of $x$ only in the
+ways above, so by induction on the steps they have the same outcomes, and so
+does the growth. A call at a later position reads no growth open at the start
+of $x$ (Lemma 2). $\square$
 
 ## Theorem (Memoization Never Changes the Result)
 
@@ -249,7 +294,13 @@ following.
    evaluation of the growth (item 5), or the failing seed, so it is the same in
    both parses.
 4. *A call answered from an entry.* By (I3) the entry is sound, so by Lemma 3
-   (I1) and (I2) hold for $x$.
+   (I1) and (I2) hold for $x$. A call answered from a result that (D) keeps
+   was answered under the conditions of Lemma 4, and that result was the
+   outcome and range of an evaluation of $\mathcal{M}$ that completed before,
+   which satisfies (I1) and (I2); so by Lemma 4 they hold for $x$. Equal
+   current results read in both parses are equal by (I1). A step of a growth
+   answered in the same way, or a run of steps, has by Lemma 4 the outcomes
+   that evaluating the steps gives.
 5. *A call that evaluates the body of a rule, or grows a leader.* A body
    evaluation is nested in $x$ and satisfies (I1) and (I2). A growth evaluates
    the body with the current result fixed, compares the end of its outcome with
@@ -284,13 +335,12 @@ kinds, ranges, children and fields. Whether two calls return the same node
 is not part of the outcome, and no action can observe it, by (A3)
 ([Memoization](../runtime/parsing.md#memoization)).
 
-**Leaders and members.** A rule of a cycle that the growth of a leader reaches
-at its position is evaluated again at each step by (C), and its result is not
-stored by (S), because it read the current result. This holds for another
-leader of the cycle too. Its result is not stored even after the growth that
-it read ends, so a later call of it at that position grows it again. The result
-of a call therefore never depends on which calls the parse evaluated before
-it.
+**Leaders and members.** A result of a rule of a cycle that read the current
+result of a growth open at its start is not stored in the table by (S), and
+what (D) keeps of it is dropped with the first growth at its position. This
+holds for another leader of the cycle too: a later call of it at that position
+grows it again. The result of a call therefore never depends on which calls
+the parse evaluated before it.
 
 **Variables.** A call is answered from an entry only with an equal $\eta$, so a
 rule that reads variables is memoized per combination of their values. The

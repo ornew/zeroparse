@@ -364,36 +364,34 @@ exceptions.
   ordinary parse. It is evaluated as often as its calls are evaluated. A
   call with a level restriction, `level(e, name)`, is a call of `e`; the
   parse of a right operand inside an Operators Rule is not a call.
-- While a rule grows at a position, a call there of a rule of a
-  left-recursion cycle other than its leaders, the rules that grow (see
-  [Conditions for Linear Cost](#conditions-for-linear-cost)), evaluates the
-  rule's body instead of reusing a memoized result, which may have read an
-  earlier result of the growing rule. The growth that started last decides:
-  the calls inside it are at its position or later.
-- A result that read the growing result of a growth already in progress when
-  the call started is not memoized, because it depends on the step of that
-  growth. The results of growths that started and ended within the call are
-  final, and reading them does not prevent memoization.
-- A growing rule can grow again at its position in one parse, and then have
-  another result, when its growth read the growing result of an enclosing
-  growth and its result was computed inside a lookahead or recovered errors,
-  so that a call in the other kind of context, outside or inside a lookahead,
-  does not reuse it. A result that read such a result, directly or through the
-  rules it called, is not memoized either, at any position; a call of the
-  growing rule reads its result when the growth ends, as when it reuses it.
+- While rules grow at a position, a call there of a rule of their
+  left-recursion cycle, a leader (see
+  [Conditions for Linear Cost](#conditions-for-linear-cost)) or another rule,
+  is in the context of those growths. Its result is the result of evaluating
+  its body with the growing results that they have reached. The call reuses a
+  memoized result only if that result read no growing result, observed no
+  lookahead that read one, and was computed while at least the growths now in
+  progress there were in progress. Otherwise it reuses a result computed in a
+  context of the same growths only if every growing result that it read is
+  equal to the one there now and every such lookahead has the same outcome and
+  examined range. A result that read a growing result is kept only until the
+  first growth at its position ends, and never enters the memo of a later parse.
 - A growing rule evaluates its body once for each step of the growth, and the
   number of steps is at most two more than the length of the input it
-  consumes.
+  consumes. A leader that grows at a position where another growth is in
+  progress grows again in each context in which it is called there. A step of
+  such a growth reuses the step that an earlier growth of the leader took from
+  the same growing result under the same condition, and a run of steps that
+  read no other growing result is taken at once.
 
 Every other result of a rule of a left-recursion cycle is memoized like that of
-any rule. Within one step of a growth at a position, the calls of the rules of
-the cycle at that position are evaluated again, and their number depends only
-on the grammar. Calls at a later position finish their own growth, outside the
-growth at the earlier position, and are memoized. A result that is not
-memoized because it read the result of a rule that can grow again is evaluated
-again at each call, together with the calls that enclose it; condition 5 of
-[Conditions for Linear Cost](#conditions-for-linear-cost) excludes such
-results.
+any rule. Calls at a later position finish their own growth, outside the
+growth at the earlier position, and are memoized. A growth that begins from a
+result that includes the growing result of another growth at its position is
+new in each step of that growth, since each step reads another growing result;
+when the steps drop its result and it goes on over the input that later steps
+cover, it covers that input again in each step. Condition 5 of
+[Conditions for Linear Cost](#conditions-for-linear-cost) excludes it.
 
 ### Expressions That Repeat Cost
 
@@ -517,6 +515,8 @@ The following grammars have the class shown on the inputs shown.
 | `main = (X / "a")* $$; X = (Y #recover(skip=[a]+)) "c"; Y = "b"` | `a` n times | Linear | The skip consumes the rest of the input, `"c"` then fails, and the recovery is abandoned, but `[a]+` is a [skip run](#skip-runs): the walk from each later position takes the rest of the walk from its record |
 | `main = (X / "a")* $$; X = (Y #recover(skip=S)) "c"; Y = "b"; S = [a]+` | `a` n times | Degree 2 | As above, but the repetition is in a rule that the skip calls, so it is not a skip run, and each skip walks to the end of the input again |
 | `main = (A / "a")* $$; A = (B / "a")* "c"; B = "a"* "d"` | `a` n times | Degree 3 | A repetition that can restart inside another one that can restart |
+| `main = S $$; S = &R S "q" / "y"; R = R "q" / S` | `y`, then `q` n times | Degree 2 | In each step of the growth of `S`, the lookahead grows `R` from the growing result of `S` over the rest of the input, and drops it |
+| `main = S $$; S = &R S "q" / "y"; R = R ("q" / "r") / S "t" / "y"` | `y`, then `q` n times | Linear | `R` grows from the growing result of `S` only after a `"t"`, where `S` cannot grow; its growth from `"y"` is the same in every step and is reused |
 | `main = C $$; A = C "+" / "n"; C = "(" C ")" "y" / "(" C ")" "z" / A` | `(` n times, `n`, `)z` n times | Linear | `A` and `C` form a left-recursion cycle grown at `A`. The result of `C` at a position outside the growth of `A` there is memoized, so the two calls of `C` at the next position share it |
 | `var v string`; `R = "(" {v := v + "0"} R ")" "y" / "(" {v := v + "1"} R ")" "z" / "n" {len(v) >= 0}` | As above | Exponential | The two calls of `R` at a position see different values of `v`, so neither reuses the other's result |
 | `main = xs:"x"* => len(foldl("a", $xs, (acc, x) => acc + acc))` | `x` n times | Linear evaluations, exponential value size | The accumulator doubles for each element |
@@ -789,9 +789,20 @@ necessary.
    `list(acc[0] + acc[0])` and `map(acc, (e) => e + e)` do, doubles it on each step, by a factor exponential in the bound, and it
    is checked as a fold over a list that is not bounded. A copying operation that copies
    the value of a variable is linear given an environment bound.
-5. **Left recursion in lookaheads and recoveries.** No rule grows inside a
-   lookahead, or recovers an error while it grows, at a position where another
-   rule grows and while its growth reads the growing result of that rule.
+5. **Carried growth.** No leader R grows, at the position where another leader
+   S of its cycle grows, from a result that includes the growing result of S,
+   where the step of S that calls R can drop the result of R and still grow,
+   and the growth of R can go on over input with which the growth of S goes on.
+   Each step of S reads another growing result, so no two steps share the
+   growth of R, which covers again the input that later steps cover. The step
+   can drop the result when the call is in a lookahead, an option, a
+   repetition or the base of a `#recover`, in an alternative followed by an
+   alternative that begins with a left call, or in a rule of the cycle that is
+   not a leader. The growth of R can go on with the growth of S when what
+   follows the left calls of S in the body of R, followed by what follows R,
+   and what follows the reads of the growing results of the cycle outside the
+   body of R can begin with the same character. Otherwise R grows past the
+   result of S only where the growth of S stops.
 
 ### Classification
 
@@ -866,7 +877,11 @@ reason:
 ### Memory
 
 - **Memo table.** It holds at most one entry per memoized rule, position,
-  binding level and combination of variable values.
+  binding level and combination of variable values. While growths are in
+  progress at a position, the results there that read their growing results
+  are kept apart, one for each combination of the growing results and
+  lookahead outcomes that they read, and dropped when the first of those
+  growths ends; each is built by counted cost.
 - **Values.** A parse keeps the value of its start rule. Values built by
   abandoned alternatives are not kept, but their construction is cost.
 - **Call stack.** It holds at most as many calls as the [nesting limit](#limits)
