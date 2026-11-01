@@ -39,7 +39,7 @@ var (
 	autolinkRe     = regexp.MustCompile(`<([a-zA-Z][a-zA-Z0-9+.-]*:[^<>\s]+)>`)
 	htmlHrefRe     = regexp.MustCompile(`(?i)\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>` + "`" + `]+))`)
 	fenceOpenRe    = regexp.MustCompile("^\\s*(`{3,}|~{3,})")
-	githubBlobRe   = regexp.MustCompile(`(?i)^https://github\.com/ornew/zeroparse/(?:blob|tree)/[^/]+/(.*)$`)
+	githubBlobRe   = regexp.MustCompile(`(?i)^https://github\.com/zeroparse/zp/(?:blob|tree)/[^/]+/(.*)$`)
 	siteURLRe      = regexp.MustCompile(`(?i)^https?://zeroparse\.dev(/[^?#]*)?`)
 	urlSchemeRe    = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9+.-]*:`)
 	opaqueSchemeRe = regexp.MustCompile(`(?i)^(?:mailto|tel|sms|data|javascript|urn):`)
@@ -431,7 +431,7 @@ func TestLinkAllowed(t *testing.T) {
 	for _, c := range []struct{ rel, dest, want string }{
 		{"spec/a.md", "../docs/guide/x.md#y", "docs/guide/x.md"},
 		{"docs/guide/a.md", "/spec/language/types.md", "spec/language/types.md"},
-		{"docs/guide/a.md", "https://github.com/ornew/zeroparse/blob/main/docs/guide/editor-support.md", "docs/guide/editor-support.md"},
+		{"docs/guide/a.md", "https://github.com/zeroparse/zp/blob/main/docs/guide/editor-support.md", "docs/guide/editor-support.md"},
 		{"docs/guide/a.md", "b%20c.md", "docs/guide/b c.md"},
 		{"docs/guide/a.md", "../tutorial/", "docs/tutorial"},
 		{"docs/guide/a.md", "../cookbook", "docs/cookbook"},
@@ -456,7 +456,7 @@ func TestLinkAllowed(t *testing.T) {
 			t.Errorf("%q: want external and allowed", dest)
 		}
 	}
-	if _, ok := linkTarget("spec/a.md", "HTTPS://GITHUB.COM/ornew/zeroparse/blob/main/zp.go"); !ok {
+	if _, ok := linkTarget("spec/a.md", "HTTPS://GITHUB.COM/zeroparse/zp/blob/main/zp.go"); !ok {
 		t.Error("an upper-case GitHub URL did not resolve to a repository path")
 	}
 }
@@ -492,7 +492,7 @@ func TestDirectoryAndSiteLinkKinds(t *testing.T) {
 			t.Errorf("%s may link to a directory link of the tutorial", from)
 		}
 	}
-	rp, _ := linkTarget("spec/a.md", "https://github.com/ornew/zeroparse/blob/main/zp.zp")
+	rp, _ := linkTarget("spec/a.md", "https://github.com/zeroparse/zp/blob/main/zp.zp")
 	if linkAllowed(kindSpec, docKind(rp)) {
 		t.Error("the specification may link to a source file on GitHub")
 	}

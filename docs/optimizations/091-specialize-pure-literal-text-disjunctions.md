@@ -79,6 +79,6 @@ ZP_LITERAL_DISPATCH_DIR=/tmp/zp-literal-dispatch \
 The measured revision was based on `7f20034` with the literal-dispatch change.
 Full generated plain-Go, typed-Go and TypeScript corpus validation and all
 parser-module suites pass. The clean 131-case, three-sample full snapshot at
-[f8c2399](https://github.com/ornew/zeroparse/commit/f8c2399e4679af46e98dca39d1bd7ccc9c2a4b49)
+[c85db9e](https://github.com/zeroparse/zp/commit/c85db9e5e6fa2d2b84e0327e5ba4ffbc4b010dc8)
 is recorded in [the full results](../benchmarks.md), without attributing it to
 this optimization.

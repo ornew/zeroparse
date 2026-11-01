@@ -94,7 +94,7 @@ alternatives and measurement gates below.
 Correctness/resource safety and fresh-vs-incremental equivalence gate these capabilities. Keep regression fixes
 separate from new public APIs. The [development guide](../../development.md#language-feature-status) summarizes
 implemented language features; the backlog and execution order live in
-[Issue #1](https://github.com/ornew/zeroparse/issues/1).
+[Issue #1](https://github.com/zeroparse/zp/issues/1).
 
 | Stage | Work and prerequisite | Acceptance evidence |
 |:--|:--|:--|

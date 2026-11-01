@@ -56,7 +56,7 @@ with implementation changes; regenerate generated files.
 
 ## Backlog, commits and branches
 
-- Issue #1 is the living backlog: https://github.com/ornew/zeroparse/issues/1.
+- Issue #1 is the living backlog: https://github.com/zeroparse/zp/issues/1.
   Categories are two-digit B, O, F, Q, I, D, plus M for ready-made parsers.
   Keep incomplete parent items; mark completion only after verified
   integration, in the recent-completions list with a commit link and outcome

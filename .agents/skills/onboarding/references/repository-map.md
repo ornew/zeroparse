@@ -25,7 +25,7 @@ for user-facing workflows. For optimization mechanisms and applicability, use th
 [catalog](../../../../docs/optimizations/README.md) and
 [performance method](../../../../docs/performance.md).
 
-The live [Issue #1](https://github.com/ornew/zeroparse/issues/1) is the backlog, not a
+The live [Issue #1](https://github.com/zeroparse/zp/issues/1) is the backlog, not a
 language contract. Fetch its present body and relevant comments before planning or
 updating an item; branch, worktree and integration status also need live checks.
 Use the [documentation](../../documentation/SKILL.md),

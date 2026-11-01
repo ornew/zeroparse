@@ -31,7 +31,7 @@ and validation are handled by ZeroSite. The project-specific flags are:
 | `-previous-site` | Empty locally; `https://zeroparse.dev` in Workers Builds of `main` | Import the published current WASM/runtime pair to retain it for one deploy; requires `-wasm` |
 | `-deploy-url` | Empty | Record this immutable deploy root for the next build's asset downloads |
 | `-serve` | | After building, serve the output at this address |
-| `-github`, `-ref` | `https://github.com/ornew/zeroparse`, `main` | Where links to source files point |
+| `-github`, `-ref` | `https://github.com/zeroparse/zp`, `main` | Where links to source files point |
 
 The output is plain static files. Any static server works, as long as it serves the files over HTTP (the playground
 cannot run from `file://` URLs, because browsers do not load WebAssembly or workers from them):
@@ -142,7 +142,7 @@ Settings, Builds) with these values:
 
 | Setting | Value |
 |:--|:--|
-| Git repository | `ornew/zeroparse` |
+| Git repository | `zeroparse/zp` |
 | Production branch | `main` |
 | Build command | `sh site/build.sh` |
 | Deploy command | `npx wrangler deploy` |

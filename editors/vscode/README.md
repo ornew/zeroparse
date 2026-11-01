@@ -1,13 +1,13 @@
 # ZeroParse for Visual Studio Code
 
-Support for [ZeroParse](https://github.com/ornew/zeroparse) grammar files (`.zp`):
+Support for [ZeroParse](https://github.com/zeroparse/zp) grammar files (`.zp`):
 
 - syntax highlighting (a TextMate grammar, which works on its own);
 - comment toggling, bracket matching and auto-closing pairs;
 - through the ZeroParse language server, `zp lsp`: errors as you type, formatting, go to definition, find references,
   the outline, hover with the type of each rule, rename, completion and semantic highlighting.
 
-See the [editor support guide](https://github.com/ornew/zeroparse/blob/main/docs/guide/editor-support.md) for what the
+See the [editor support guide](https://github.com/zeroparse/zp/blob/main/docs/guide/editor-support.md) for what the
 language server does.
 
 ## Requirements

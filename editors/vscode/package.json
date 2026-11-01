@@ -7,7 +7,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ornew/zeroparse",
+    "url": "https://github.com/zeroparse/zp",
     "directory": "editors/vscode"
   },
   "engines": {

@@ -1,6 +1,6 @@
 # Development
 
-This document describes the repository layout and architecture, how to run tests, and the implementation status of language features. The living backlog is maintained in [Issue #1](https://github.com/ornew/zeroparse/issues/1).
+This document describes the repository layout and architecture, how to run tests, and the implementation status of language features. The living backlog is maintained in [Issue #1](https://github.com/zeroparse/zp/issues/1).
 
 ## Directory Layout
 
@@ -275,4 +275,4 @@ with a `go.work` file and skips with a message when there is no checkout (`$ZP_A
 
 ## Roadmap
 
-[Issue #1](https://github.com/ornew/zeroparse/issues/1)
+[Issue #1](https://github.com/zeroparse/zp/issues/1)

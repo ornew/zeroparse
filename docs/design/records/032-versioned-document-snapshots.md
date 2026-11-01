@@ -488,7 +488,7 @@ unmeasured, so no general performance benefit is claimed.
 The stage-1 implementation of version tokens and atomic edit batches has
 preliminary measurements against the
 source-equivalent baseline
-[`69af68e`](https://github.com/ornew/zeroparse/commit/69af68ecdec1dea942db89158c36a21ad18ae505).
+[`c7668f1`](https://github.com/zeroparse/zp/commit/c7668f1ac1bbbc83fc33d4b77ffc5271f4a809bc).
 Those measurements cover edit and batch behavior only.
 
 Existing Edit and Document-creation measurements used three alternating

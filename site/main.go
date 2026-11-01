@@ -25,7 +25,7 @@ func main() {
 	flag.BoolVar(&cfg.Wasm, "wasm", true, "build the playground's WebAssembly binary")
 	flag.StringVar(&cfg.WasmMode, "wasm-mode", "go", "playground WASM binaries: go or dual (Go and TinyGo)")
 	flag.BoolVar(&cfg.Check, "check", true, "fail if a generated page links to a missing page or anchor")
-	flag.StringVar(&cfg.GitHub, "github", "https://github.com/ornew/zeroparse", "repository URL for links to source files")
+	flag.StringVar(&cfg.GitHub, "github", "https://github.com/zeroparse/zp", "repository URL for links to source files")
 	flag.StringVar(&cfg.Ref, "ref", "main", "branch or tag for links to source files")
 	flag.StringVar(&cfg.PreviousSite, "previous-site", previous, "retain the current WASM/runtime pair from this published site URL (automatic for Workers Builds of the production branch)")
 	flag.StringVar(&cfg.DeployURL, "deploy-url", deploy, "immutable URL of this deploy, for fetching its assets on the next production build")

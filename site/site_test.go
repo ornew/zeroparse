@@ -38,7 +38,7 @@ func TestBuild(t *testing.T) {
 		t.Skip("the go command is not available")
 	}
 	out := siteTestOutput(t)
-	cfg := Config{Repo: "..", Out: out, Wasm: !testing.Short(), Check: true, GitHub: "https://github.com/ornew/zeroparse", Ref: "main"}
+	cfg := Config{Repo: "..", Out: out, Wasm: !testing.Short(), Check: true, GitHub: "https://github.com/zeroparse/zp", Ref: "main"}
 	st, err := Build(cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -494,7 +494,7 @@ func TestCheckLinks(t *testing.T) {
 }
 
 func TestResolveLink(t *testing.T) {
-	s := &Site{cfg: Config{Repo: "..", GitHub: "https://github.com/ornew/zeroparse", Ref: "main"}, bySrc: map[string]*Page{}, byDir: map[string]*Page{}}
+	s := &Site{cfg: Config{Repo: "..", GitHub: "https://github.com/zeroparse/zp", Ref: "main"}, bySrc: map[string]*Page{}, byDir: map[string]*Page{}}
 	from := &Page{Src: "docs/guide/runtime.md", URL: "docs/guide/runtime/"}
 	s.add(from)
 	s.add(&Page{Src: "spec/README.md", URL: "spec/"})
@@ -507,11 +507,11 @@ func TestResolveLink(t *testing.T) {
 		{"../../spec/", "../../../spec/"},
 		{"../../spec/README.md", "../../../spec/"},
 		{"../../README.md", "../../../"},
-		{"../../examples/calculator/calc.zp", "https://github.com/ornew/zeroparse/blob/main/examples/calculator/calc.zp"},
-		{"../../examples/calculator/", "https://github.com/ornew/zeroparse/tree/main/examples/calculator"},
+		{"../../examples/calculator/calc.zp", "https://github.com/zeroparse/zp/blob/main/examples/calculator/calc.zp"},
+		{"../../examples/calculator/", "https://github.com/zeroparse/zp/tree/main/examples/calculator"},
 		// Links relative to the repository root and percent-encoded paths work on GitHub too.
 		{"/spec/language/operators-rule.md#levels", "../../../spec/language/operators-rule/#levels"},
-		{"/examples/calculator/calc.zp", "https://github.com/ornew/zeroparse/blob/main/examples/calculator/calc.zp"},
+		{"/examples/calculator/calc.zp", "https://github.com/zeroparse/zp/blob/main/examples/calculator/calc.zp"},
 		{"/", "../../../"},
 		{"%2E%2E/%2E%2E/spec/language/operators-rule.md", "../../../spec/language/operators-rule/"},
 		{"../../spec/language/operators-rule.md#caf%C3%A9", "../../../spec/language/operators-rule/#caf%C3%A9"},
@@ -534,7 +534,7 @@ func TestResolveLink(t *testing.T) {
 // TestNonASCIIAnchors renders headings and links with non-ASCII text, which goldmark percent-encodes
 // in link destinations, and checks that the links resolve.
 func TestNonASCIIAnchors(t *testing.T) {
-	s := &Site{cfg: Config{Repo: "..", GitHub: "https://github.com/ornew/zeroparse", Ref: "main"}, bySrc: map[string]*Page{}, byDir: map[string]*Page{}}
+	s := &Site{cfg: Config{Repo: "..", GitHub: "https://github.com/zeroparse/zp", Ref: "main"}, bySrc: map[string]*Page{}, byDir: map[string]*Page{}}
 	p := &Page{Src: "docs/x.md", URL: "docs/x/"}
 	s.add(p)
 	m := s.parseMarkdown(p, []byte("# Title\n\n## Café au lait\n\n## 日本語の見出し\n\n[a](#café-au-lait) [b](#日本語の見出し) [c](#caf%C3%A9-au-lait)\n"))
@@ -553,7 +553,7 @@ func TestNonASCIIAnchors(t *testing.T) {
 // TestHeadingText checks that heading anchors and the table of contents use the text of a heading as
 // displayed, after entities and escapes, as GitHub does.
 func TestHeadingText(t *testing.T) {
-	s := &Site{cfg: Config{Repo: "..", GitHub: "https://github.com/ornew/zeroparse", Ref: "main"}, bySrc: map[string]*Page{}, byDir: map[string]*Page{}}
+	s := &Site{cfg: Config{Repo: "..", GitHub: "https://github.com/zeroparse/zp", Ref: "main"}, bySrc: map[string]*Page{}, byDir: map[string]*Page{}}
 	p := &Page{Src: "docs/x.md", URL: "docs/x/"}
 	s.add(p)
 	m := s.parseMarkdown(p, []byte("# Title\n\n## A &amp; B\n\n## Escaped \\*star\\*\n\n## The `#recover` pragma & <b>more</b>\n\nSoft\nbreak\n----\n\n## Compiled grammars (`.zpc`)\n"))
@@ -659,7 +659,7 @@ func readSidebar(t *testing.T, page string) []sidebarSection {
 // TestNavigation checks the navigation of the documentation, including the nested numbered design records.
 func TestNavigation(t *testing.T) {
 	out := siteTestOutput(t)
-	if _, err := Build(Config{Repo: "..", Out: out, Check: true, GitHub: "https://github.com/ornew/zeroparse", Ref: "main"}); err != nil {
+	if _, err := Build(Config{Repo: "..", Out: out, Check: true, GitHub: "https://github.com/zeroparse/zp", Ref: "main"}); err != nil {
 		t.Fatal(err)
 	}
 	// The links of the navigation are relative to the page; this strips the "../" that leads to the root.
