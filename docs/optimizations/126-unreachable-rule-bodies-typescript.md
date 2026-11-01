@@ -11,9 +11,9 @@ that only it calls. It printed every rule of the Node and recognizer tables anyw
 
 The reachability of [record 120](120-unreachable-rule-bodies.md) now comes from one pass on the Core IR that both
 generators use (`core.Module.Reach`, `internal/ir/core/reach.go`). The call graph of the IR (`Module.Calls`) holds the
-calls of every rule body, so no call is recorded while printing, and the pass takes the two things that differ by
-target: the roots and how a call of a rule is entered, through the rule constant (`p.call`, `p.invokePlain`) or through
-the plain function of a rule without captures (`r<N>(p)`).
+calls of every rule body, and the pass takes the two things that differ by target: the roots and how a call of a rule
+is entered, through the rule constant (`p.call`, `p.invokePlain`) or through the plain function of a rule without
+captures (`r<N>(p)`).
 
 For TypeScript (`internal/gen/tsgen/reach.go`):
 
@@ -25,6 +25,10 @@ For TypeScript (`internal/gen/tsgen/reach.go`):
   only through its plain function has no `body` assignment; one that also has no value has no constant, because its
   plain function never finishes a value with it. Rule IDs and the numbering of memoized rules are those of the compiled
   program, so the remaining rules keep their values; the expectation table is numbered without the rules left out.
+- The IR also holds calls that the lowered code never makes: in `r4 = !"c"? r3 / "b"` the lookahead `!("c"?)` never
+  matches, so the printed body of `r4` does not call `r3`. The printer records the calls it prints, by caller, and
+  when they reach fewer rules than the IR it generates the parser again with only those rules, so that no function or
+  constant is left that nothing uses and the parser compiles with `--noUnusedLocals`.
 - Generation fails if a printed call reaches a rule left out.
 
 `startIn` told "rule X is not defined" from "rule X is not a start rule" by looking the name up in the rule table. The

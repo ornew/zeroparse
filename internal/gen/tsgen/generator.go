@@ -109,34 +109,48 @@ func GenerateParser(g *grammar.Grammar, c gen.Compiler, opts gen.GenOptions, h *
 	if err != nil {
 		return nil, err
 	}
-	tsg := &Generator{Generator: gen.Generator{Prog: prog, Table: "rules", Observability: opts.Observability, DisableMethodSharing: opts.DisableMethodSharing, DisableLiteralSharing: opts.DisableLiteralSharing || !opts.EnableTSLiteralSharing, DisableLiteralTextDispatch: opts.DisableLiteralTextDispatch}, plainUsed: map[*compile.Rule]bool{}, live: live}
-	tsg.NoBudget = !opts.BudgetControls
-	tsg.execHook = h.ExecRoute
-	if h.Generator != nil {
-		defer h.Generator(tsg)
-	}
-	tsg.optionsType = "ParseOptions"
-	if !opts.BudgetControls {
-		tsg.optionsType = "PlainParseOptions"
-	}
-	tsg.Desc(compile.FixedDescs[0]) // the fixed expectations come first
-	tsg.rules()
-	if tsg.FlowErr != nil {
-		return nil, tsg.FlowErr
-	}
-	if tsg.reachErr != nil {
-		return nil, tsg.reachErr
-	}
-	if rec != nil {
-		tsg.Prog, tsg.Table = rec, "recRules"
+	newGen := func(live *tsLive) (*Generator, error) {
+		tsg := &Generator{Generator: gen.Generator{Prog: prog, Table: "rules", Observability: opts.Observability, DisableMethodSharing: opts.DisableMethodSharing, DisableLiteralSharing: opts.DisableLiteralSharing || !opts.EnableTSLiteralSharing, DisableLiteralTextDispatch: opts.DisableLiteralTextDispatch}, plainUsed: map[*compile.Rule]bool{}, live: live, printed: map[string]map[int][]int{}}
+		tsg.NoBudget = !opts.BudgetControls
+		tsg.execHook = h.ExecRoute
+		tsg.optionsType = "ParseOptions"
+		if !opts.BudgetControls {
+			tsg.optionsType = "PlainParseOptions"
+		}
+		tsg.Desc(compile.FixedDescs[0]) // the fixed expectations come first
 		tsg.rules()
-		tsg.Prog, tsg.Table = prog, "rules"
 		if tsg.FlowErr != nil {
 			return nil, tsg.FlowErr
 		}
 		if tsg.reachErr != nil {
 			return nil, tsg.reachErr
 		}
+		if rec != nil {
+			tsg.Prog, tsg.Table = rec, "recRules"
+			tsg.rules()
+			tsg.Prog, tsg.Table = prog, "rules"
+			if tsg.FlowErr != nil {
+				return nil, tsg.FlowErr
+			}
+			if tsg.reachErr != nil {
+				return nil, tsg.reachErr
+			}
+		}
+		return tsg, nil
+	}
+	tsg, err := newGen(live)
+	if err != nil {
+		return nil, err
+	}
+	// The printed code can call fewer rules than the Core IR does (a call after an expression that
+	// cannot match is not printed): the rules that only such calls reach are generated again without.
+	if printed := tsg.printedReach(prog, rec, start); !printed.equal(live) {
+		if tsg, err = newGen(printed); err != nil {
+			return nil, err
+		}
+	}
+	if h.Generator != nil {
+		defer h.Generator(tsg)
 	}
 
 	var out strings.Builder
@@ -425,6 +439,8 @@ type Generator struct {
 	// live holds the rules that a parse can enter (reach.go).
 	live     *tsLive
 	reachErr error
+	// printed holds, for each table, the rules that the printed code of each rule calls (by ID).
+	printed map[string]map[int][]int
 	// execHook routes the functions of execRoute through Exec IR with the switch off (Hooks).
 	execHook bool
 	// ExecFuncs counts the functions printed from Exec IR (execRoute).
