@@ -262,6 +262,10 @@ decoding excludes compression/encoding, browser DOM, worker and WebAssembly cost
   remain available through the Optimizations index and search, not the sidebar.
 - **An example** for the playground is a line in [`cmd/playground/examples.txt`](../cmd/playground/examples.txt): a name, a
   grammar, an input and a description. The smoke test then checks it too.
+- **Icons.** `site/static/assets/favicon.svg` is the icon browsers show, light or dark with the color scheme. Search
+  engines and phone bookmarks take raster icons from the site root: `favicon.ico` (16, 32 and 48 px) and
+  `apple-touch-icon.png` (180 px, with a margin for the rounded corners). Both draw the mark in white on `#0a0a0a` and
+  are rendered from it with `rsvg-convert` and ImageMagick `magick`; render them again when the mark changes.
 - **Templates, styles and scripts** are in `site/templates/` and `site/static/`. They are plain HTML, CSS and JavaScript
   modules; there is no build step and no npm dependency.
   The client-side code highlighter is in `site/static/assets/highlight.js`; fenced code language aliases are mapped in

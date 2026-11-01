@@ -12,7 +12,9 @@
 {{with .Page.Description}}<meta property="og:description" content="{{.}}">{{end}}
 <meta name="twitter:card" content="summary">
 <script src="{{.URL "assets/theme.js"}}"></script>
+<link rel="icon" href="{{.URL "favicon.ico"}}" sizes="48x48">
 <link rel="icon" href="{{.URL "assets/favicon.svg"}}" type="image/svg+xml">
+<link rel="apple-touch-icon" href="{{.URL "apple-touch-icon.png"}}">
 <link rel="stylesheet" href="{{.URL "assets/site.css"}}">
 {{range .Page.Styles}}<link rel="stylesheet" href="{{$.URL .}}">
 {{end}}{{range .ViewStyles}}<link rel="stylesheet" href="{{.}}">
