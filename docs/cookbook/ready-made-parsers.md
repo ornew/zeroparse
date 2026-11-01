@@ -8,12 +8,12 @@ that depends only on the standard library. Use `yaml.Load` for the syntax and th
 `yaml.ParseAST` for your own checks, which gives every node its position.
 
 ```bash
-# In your module, with checkouts of ZeroParse at ~/src/zeroparse and of alpha-parsers at ~/src/alpha-parsers:
+# In your module, with a checkout of alpha-parsers at ~/src/alpha-parsers:
 go work init .
-go work use ~/src/zeroparse ~/src/alpha-parsers
+go work use ~/src/alpha-parsers
 ```
 
-Until ZeroParse publishes a release, the alpha-parsers module is used from a checkout, joined with the `zeroparse.dev/zp` module by `go.work` or `replace`, so `go get` cannot fetch it. The [install notes](../guide/ready-made-parsers.md#install) show the `replace` form too.
+The alpha-parsers module is not published yet, so `go get` cannot fetch it; use it from a checkout. The [install notes](../guide/ready-made-parsers.md#install) show the `replace` form too.
 
 ```go
 // main.go

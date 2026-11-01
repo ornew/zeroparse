@@ -19,31 +19,31 @@ it differs from the reference implementation; this guide covers what they have i
 
 ## Install
 
-The parsers are packages of the one Go module `zeroparse.dev/alpha-parsers`. They depend only on the standard library and the ZeroParse runtime package (`zeroparse.dev/zp/runtime`, which itself needs
-nothing else), not on the ZeroParse engine and not on the language's own implementation (DuckDB's parser does not need DuckDB):
+The parsers are packages of the one Go module `zeroparse.dev/alpha-parsers`. They depend only on the standard library
+and the ZeroParse runtime package (`zeroparse.dev/zp/runtime`, which itself needs nothing else), not on the ZeroParse
+engine and not on the language's own implementation (DuckDB's parser does not need DuckDB).
 
-Until ZeroParse publishes a release, the alpha-parsers module is used from a checkout and joined with the
-`zeroparse.dev/zp` and `zeroparse.dev/zp/runtime` modules by a `go.work` file or `replace` directives, so `go get zeroparse.dev/alpha-parsers/json`
-does not work from another module yet. Use a parser from a checkout of the alpha-parsers repository, in one of two ways.
+The alpha-parsers module is not published yet, so `go get zeroparse.dev/alpha-parsers/json` does not work from another
+module. It requires published versions of the ZeroParse modules, so a checkout of the alpha-parsers repository is all
+a parser needs. Use it in one of two ways.
 
 With a `go.work` file next to your module's `go.mod`:
 
 ```bash
 go work init .
-go work use ~/src/zeroparse ~/src/zeroparse/runtime ~/src/alpha-parsers
+go work use ~/src/alpha-parsers
 ```
 
-or with `replace` directives in your own `go.mod`, which the `go.mod` of alpha-parsers cannot supply for you:
+or with a `replace` directive in your own `go.mod`:
 
 ```text
-require zeroparse.dev/alpha-parsers/json v0.0.0
+require zeroparse.dev/alpha-parsers v0.0.0
 
 replace zeroparse.dev/alpha-parsers => /path/to/alpha-parsers
-replace zeroparse.dev/zp => /path/to/zp
-replace zeroparse.dev/zp/runtime => /path/to/zp/runtime
 ```
 
-(`/path/to/zp` is the full path of your checkout; `go.mod` does not expand `~`.) Run `go mod tidy` afterwards to record the requirements of the `zeroparse.dev/zp` and `zeroparse.dev/zp/runtime` modules. Then import the parser:
+(`/path/to/alpha-parsers` is the full path of your checkout; `go.mod` does not expand `~`.) Run `go mod tidy`
+afterwards to record the requirements of the module. Then import the parser:
 
 ```go
 import "zeroparse.dev/alpha-parsers/json"
