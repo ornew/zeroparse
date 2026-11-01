@@ -111,6 +111,10 @@ func TestClassifyComplexity(t *testing.T) {
 		// A list built from the elements of a repetition costs its number of elements.
 		{"list of a repetition", "rule main = l $$\nrule l = \"[\" ms:m? \"]\" => concat($ms)\nrule m = f:v rs:(\",\" x:v)* => concat(list($f), map($rs, (r) => r.$x))\nrule v = \"x\" / l\n", ClassLinear, 0},
 		{"list built by right recursion", "rule main = l $$\nrule l = x:\"a\" t:l? => concat(list($x), $t)\n", ClassPoly, 2},
+		// The rule that starts the recursion of r is walked before m, whose captures decide that
+		// the value of r includes the value of its own recursion.
+		{"list built by right recursion after its user", "rule main = s $$\nrule s []string = \"\\\"\" t:r => concat(list(\"q\"), $t)\nrule r []string = m / l\nrule m []string = e:i \",\" t:r => concat(list($e), $t)\nrule l []string = e:i \"\\\"\" => list($e)\nrule i string = x:(\"(\" s \")\" / [a-z]+) => text($x)\n", ClassPoly, 2},
+		{"tail passed on by right recursion after its user", "rule main = s $$\nrule s []string = \"\\\"\" t:r => $t\nrule r []string = m / l\nrule m []string = i \",\" t:r => $t\nrule l []string = e:i \"\\\"\" => list($e)\nrule i string = x:(\"(\" s \")\" / [a-z]+) => text($x)\n", ClassLinear, 0},
 		// Comparing two strings examines the shorter one: against a literal it is bounded, between
 		// two values of the recursion it is not.
 		{"comparison with a literal", "rule main = l $$\nrule l string = (\"(\" x:l \")\" {$x != \"\"} => $x) / a\nrule a string = \"a\" => \"a\"\n", ClassLinear, 0},

@@ -360,6 +360,13 @@ func (k *classifier) classify() *Complexity {
 func (k *classifier) collect() {
 	k.computeBounded()
 	k.computeFirst()
+	// The size of a value can depend on the captures of a rule that the walk reaches later, so
+	// every rule's captures are known before the walk.
+	for _, r := range k.rules {
+		if k.reach[r.Name] {
+			k.collectCaptures(r)
+		}
+	}
 	for _, r := range k.rules {
 		if k.reach[r.Name] {
 			k.walkRule(r)

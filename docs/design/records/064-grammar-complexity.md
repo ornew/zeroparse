@@ -421,8 +421,9 @@ The groups are addressed by these mechanisms:
   recursion whose action copies the list of the rest at every level (1.26M, 4.70M and 18.1M steps for 4k, 8.2k and
   17k bytes). Replacing the action of the CUE recursion with its tail alone measures 205k, 410k and 824k steps for the
   multi-line family, so a repetition with one flat concatenation is linear. The classifier reports this copy of a
-  recursion's own value only through the unknown reason of the nested recursion, which the memo-bound refinement
-  removes. After that refinement, the classifier must still report the copy. CUE's plain multi-line strings test the
+  recursion's own value as a polynomial witness of degree 2 in each rule of the recursion, and in each rule that
+  starts an interpolation, which copies the list of the rest once but counts as a copy of the recursion, because the
+  rest is a value on a cycle of such values. CUE's plain multi-line strings test the
   indentation of each line in a fold that joins the closing indentation with U+10FFFF for every line. Every line that
   the fold reaches starts with the closing indentation, so the joins copy no more than the input and the families
   measure linear, but the classifier sees a copy of a value from outside the lambda for each element. Testing the
@@ -467,6 +468,7 @@ The groups are addressed by these mechanisms:
 | cue | multi-line-indentation | 1 | grammar rewrite | 2 | 1.00 | n |
 | cue | string-bodies | 6 | token-scan refinement | 5 | 1.00 | n |
 | cue | interpolation-lists | 4 | grammar rewrite | 3 | 1.88 | n² |
+| cue | interpolation-copies | 10 | grammar rewrite | 0 | – | n² |
 | cue | file-clauses | 2 | memo-bound refinement | 2 | 0.99 | n |
 | cue | nested | 52 | memo-bound refinement | 8 | 1.01 | n |
 | cue | definitions | 5 | token-scan refinement | 3 | 1.00 | n |

@@ -139,7 +139,6 @@ func (c wctx) with(cn *cont) wctx { c.cont = cn; return c }
 // sources, units, bindings and copying operations.
 func (k *classifier) walkRule(r *grammar.RuleDef) {
 	c := wctx{rule: r.Name, cont: &cont{end: endRule, rule: r.Name}, mayStart: true, mustStart: true}
-	k.collectCaptures(r)
 	k.walk(r.Expr, c)
 	if r.Action != nil {
 		k.walkTerm(r.Action, termCtx{rule: r.Name, c: c, action: true})

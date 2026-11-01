@@ -1,4 +1,4 @@
-# cue: exponential (degree 0), 42 witnesses, 59 reasons
+# cue: exponential (degree 0), 52 witnesses, 59 reasons
 
 ## whitespace (13) -> F97
 113:11 sp: the cost can grow as n^2: after the lookahead at 141:69 in rule embed_tail fails, what follows the lookahead &tail_mark_end can start again inside the input that the repetition [ \t\r]* at 113:11 in rule sp examined; this repeats in the recursion of rule embed_tail
@@ -66,6 +66,18 @@
 432:23 sq_rest: the alternative at 432:23 in rule sq_rest is not committing against the later alternative sq_last at 432:33 in rule sq_rest, and units that are not committing are nested in it without bound through a recursion of rule calls
 473:24 gsl_rest: the alternative at 473:24 in rule gsl_rest is not committing against the later alternative gsl_last at 473:35 in rule gsl_rest, and units that are not committing are nested in it without bound through a recursion of rule calls
 498:24 gml_rest: the alternative at 498:24 in rule gml_rest is not committing against the later alternative gml_last at 498:35 in rule gml_rest, and units that are not committing are nested in it without bound through a recursion of rule calls
+
+## interpolation-copies (10) -> M28
+420:75 dq_interp: the cost can grow as n^2: concat(list($f), $t) at 420:75 in rule dq_interp copies $t, which holds a call on a recursion with rule dq_interp
+422:59 dq_more: the cost can grow as n^2: concat(list($e, $m), $t) at 422:59 in rule dq_more copies $t, which holds a call on a recursion with rule dq_more
+431:75 sq_interp: the cost can grow as n^2: concat(list($f), $t) at 431:75 in rule sq_interp copies $t, which holds a call on a recursion with rule sq_interp
+433:59 sq_more: the cost can grow as n^2: concat(list($e, $m), $t) at 433:59 in rule sq_more copies $t, which holds a call on a recursion with rule sq_more
+469:26 gsl_interp: the cost can grow as n^2: concat(list($f), $t) at 469:26 in rule gsl_interp copies $t, which holds a call on a recursion with rule gsl_interp
+472:26 gsl_interp_s: the cost can grow as n^2: concat(list($f), $t) at 472:26 in rule gsl_interp_s copies $t, which holds a call on a recursion with rule gsl_interp_s
+474:62 gsl_more: the cost can grow as n^2: concat(list($e, $m), $t) at 474:62 in rule gsl_more copies $t, which holds a call on a recursion with rule gsl_more
+494:26 gml_interp: the cost can grow as n^2: concat(list($f), $t) at 494:26 in rule gml_interp copies $t, which holds a call on a recursion with rule gml_interp
+497:26 gml_interp_s: the cost can grow as n^2: concat(list($f), $t) at 497:26 in rule gml_interp_s copies $t, which holds a call on a recursion with rule gml_interp_s
+499:62 gml_more: the cost can grow as n^2: concat(list($e, $m), $t) at 499:62 in rule gml_more copies $t, which holds a call on a recursion with rule gml_more
 
 ## nested (52) -> F100
 81:18 main: the alternative at 81:18 in rule main is not committing against the later alternative file at 81:30 in rule main, and units that are not committing are nested in it without bound through a recursion of rule calls
