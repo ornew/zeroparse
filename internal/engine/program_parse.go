@@ -55,6 +55,7 @@ func (prog *Program) ParseWith(start, input string, o ParseOptions) (n *value.No
 	p.MaxDepth = core.DepthLimit(o, o.Backend)
 	p.Expectations = o.Expectations
 	p.DeferMemo = true
+	p.ContextMemoOff = o.ContextMemoOff
 	if o.MissingTokens > 0 && active.HasMissing {
 		p.Missing, p.MissingLen = &core.MissingTokenState{Limit: o.MissingTokens}, 0
 	}

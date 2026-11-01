@@ -324,7 +324,12 @@ func (f *callFrame) next(mc *ivmMachine, vm *Program, res iresult) (iframe, ires
 		}
 		f.st = st
 		if r.Leader {
-			f.g = p.GrowBegin(st.Key)
+			f.g = p.GrowBegin(st.Key, r.LeaderBit)
+			if !p.GrowNext(&f.g) {
+				v, ok = p.GrowEnd(r, &f.g)
+				v, ok = p.CallEnd(r, &f.st, v, ok)
+				return nil, iresult{v: v, ok: ok}, true
+			}
 		}
 		return f.invoke(mc), iresult{}, false
 	default: // cInvoked
@@ -337,7 +342,8 @@ func (f *callFrame) next(mc *ivmMachine, vm *Program, res iresult) (iframe, ires
 			return nil, iresult{v: v, ok: ok}, true
 		}
 		if r.Leader {
-			if p.GrowStep(&f.g, v, ok) {
+			p.GrowStep(&f.g, v, ok)
+			if p.GrowNext(&f.g) {
 				return f.invoke(mc), iresult{}, false
 			}
 			v, ok = p.GrowEnd(r, &f.g)

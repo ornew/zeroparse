@@ -257,7 +257,7 @@ rule bol = ^ [a-z] #atomic
 rule mid = [a-z] #atomic / "\n"`, strings.Repeat("ab\ncd\n", 8), []string{"\n", "x", ""}},
 		// The expectations of reused elements: the error at the end includes the " " that the last
 		// element expected there.
-		// Runs with recovered errors or provisional results of a left recursion are not recorded.
+		// Runs with recovered errors or results that read the seed of a left recursion are not recorded.
 		{"recovered", `rule main = stmt* $$
 rule stmt = ([a-z]+ #atomic ";") #recover(skip=[^;]+ ";")`, strings.Repeat("ab;c1;", 8) + ";", []string{"a", "1", ";", ""}},
 		{"left recursion", `rule main = a $$

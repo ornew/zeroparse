@@ -179,25 +179,6 @@ func (t *MemoTable) Get(k MemoKey) (*MemoEntry, bool) {
 	return nil, false
 }
 
-// growing returns the growing result of a left-recursion leader with the rule, position, level
-// and lookahead kind of k, whatever variable environment it was stored with: while a leader
-// grows at a position, every call of it there reads that result (see CallBegin).
-func (t *MemoTable) growing(k MemoKey) (*MemoEntry, bool) {
-	i := k.Pos - t.Base
-	if i >= t.Gap {
-		i += t.GapLen
-	}
-	if i < 0 || i >= len(t.Slots) {
-		return nil, false
-	}
-	for e := t.Slots[i]; e != nil; e = e.Next {
-		if e.Growing && e.Rule == int32(k.Rule) && e.Min == int32(k.Min) && e.missingSilent == k.MissingSilent {
-			return e, true
-		}
-	}
-	return nil, false
-}
-
 // Put sets the entry for key k to e (replacing any existing entry for the same key).
 func (t *MemoTable) Put(k MemoKey, e *MemoEntry) {
 	i := k.Pos - t.Base
@@ -392,30 +373,6 @@ func (t *MemoTable) Splice(start, end, delta int, advance func(e *MemoEntry) boo
 		e.Next = t.Slots[i]
 		t.Slots[i] = e
 		e = next
-	}
-}
-
-// RemoveProvisional removes from the table the entries of es that are still provisional and in
-// the table: es may also hold entries that were replaced, and retired or allocated again, since.
-func (t *MemoTable) RemoveProvisional(es []*MemoEntry) {
-	for _, e := range es {
-		if !e.Provisional {
-			continue
-		}
-		i := e.Pos - t.Base
-		if i >= t.Gap {
-			i += t.GapLen
-		}
-		if i < 0 || i >= len(t.Slots) {
-			continue
-		}
-		for link := &t.Slots[i]; *link != nil; link = &(*link).Next {
-			if *link == e {
-				*link = e.Next
-				t.Retire(e)
-				break
-			}
-		}
 	}
 }
 

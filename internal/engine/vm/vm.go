@@ -191,6 +191,7 @@ func buildVMProgram(m *bytecode.Module, bodies vmBodies) *Program {
 		statics[i] = core.StaticRuleOf(r)
 	}
 	vm.nseen = compile.NumberSeen(statics)
+	compile.NumberLeaders(statics)
 	vm.runSites = make([]*vmRunSite, len(m.Code))
 	for ip, in := range m.Code {
 		if in.Op == bytecode.OpRepeat || in.Op == bytecode.OpRepeatWide {
@@ -904,9 +905,11 @@ func (mc *Machine) step(vm *Program, b *vmBody, resume, rok bool, rv *value.Node
 			}
 			mc.ents = append(mc.ents, vmEntry{kind: kind, ip: in.A, save: mc.save()})
 			p.Silent++
+			p.LookBegin(ip)
 		case bytecode.OpEndLook:
 			e := mc.ents[len(mc.ents)-1]
 			mc.ents = mc.ents[:len(mc.ents)-1]
+			p.LookEnd(true)
 			p.Silent--
 			if in.A == 1 {
 				mc.restore(&e.save)
@@ -1011,10 +1014,12 @@ func (mc *Machine) unwind(m *bytecode.Module, ebase int) (ip int, ok bool) {
 			}
 			return int(e.ip), true
 		case eLook:
+			p.LookEnd(false)
 			p.Silent--
 			mc.restore(&e.save)
 			continue
 		case eNotLook:
+			p.LookEnd(false)
 			p.Silent--
 			mc.restore(&e.save)
 			return int(e.ip), true

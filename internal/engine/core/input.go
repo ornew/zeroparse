@@ -66,6 +66,10 @@ type ParseOptions struct {
 	// failure and the messages of @error. Without it, a syntax error has the farthest failure
 	// position, no expectations and no messages. A Document fixes it at construction.
 	Expectations bool
+	// ContextMemoOff evaluates again every call of a rule of a left-recursion cycle where a leader
+	// grows, instead of reusing a result (Parser.ContextMemoOff): the reference that tests compare
+	// the dependency memo with.
+	ContextMemoOff bool
 }
 
 // Default limits on call nesting depth. Backends that run recursively use the host stack, so

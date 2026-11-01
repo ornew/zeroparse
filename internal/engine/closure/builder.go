@@ -21,6 +21,8 @@ type Builder struct {
 	// rules holds the rules the parser runs, by ID (staticRule.ID). They are made when a body or a
 	// call needs them and get the facts of their static rules in Finish.
 	rules []*core.Rule
+	// looks numbers the lookaheads (Parser.LookBegin).
+	looks int
 }
 
 var _ compile.ExprBuilder[core.Matcher] = (*Builder)(nil)
@@ -303,10 +305,14 @@ func (b *Builder) Optional(e *grammar.Optional, m core.Matcher, build bool) core
 }
 
 func (b *Builder) And(m core.Matcher) core.Matcher {
+	b.looks++
+	site := b.looks
 	return func(p *core.Parser) (*value.Node, bool) {
 		start, prevCut := p.Pos, p.Cut
 		p.Silent++
+		p.LookBegin(site)
 		_, ok := m(p)
+		p.LookEnd(ok)
 		p.Silent--
 		p.Cut = prevCut
 		p.Pos = start
@@ -315,11 +321,15 @@ func (b *Builder) And(m core.Matcher) core.Matcher {
 }
 
 func (b *Builder) Not(m core.Matcher) core.Matcher {
+	b.looks++
+	site := b.looks
 	return func(p *core.Parser) (*value.Node, bool) {
 		m0 := p.Mark()
 		prevCut := p.Cut
 		p.Silent++
+		p.LookBegin(site)
 		_, ok := m(p)
+		p.LookEnd(ok)
 		p.Silent--
 		p.Cut = prevCut
 		p.Reset(m0)

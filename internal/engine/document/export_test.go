@@ -20,11 +20,11 @@ const (
 	SnapshotChildChunksEnabled = snapshotChildChunksEnabled
 )
 
-// KeepProvisional makes later parses of Documents reuse provisional results, which they must not,
-// and returns a function that restores removing them.
-func KeepProvisional() (restore func()) {
-	removeProvisional = false
-	return func() { removeProvisional = true }
+// KeepSeedResults makes later parses of Documents reuse the results that read a growing seed,
+// which they must not, and returns a function that restores dropping them.
+func KeepSeedResults() (restore func()) {
+	core.ContextMemoMutation = core.CtxKeepSeedResults
+	return func() { core.ContextMemoMutation = 0 }
 }
 
 // SetMaxEdits sets the bound of the edit log to n and returns a function that restores it.

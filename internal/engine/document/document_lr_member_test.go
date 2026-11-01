@@ -106,13 +106,14 @@ func TestDocumentLeftRecursionMemberReparseRandom(t *testing.T) {
 }
 
 // TestDocumentLeftRecursionMemberReparseControl checks that the checks of
-// TestDocumentLeftRecursionMemberReparse detect a later parse that reuses provisional results:
-// with them kept, each of LeftRecursionMemberDocumentCases differs from a parse from scratch.
+// TestDocumentLeftRecursionMemberReparse detect a later parse that reuses results that read a
+// growing seed: with them kept, each of LeftRecursionMemberDocumentCases differs from a parse
+// from scratch.
 func TestDocumentLeftRecursionMemberReparseControl(t *testing.T) {
-	defer document.KeepProvisional()()
+	defer document.KeepSeedResults()()
 	for _, c := range gentest.LeftRecursionMemberDocumentCases() {
 		if len(memberDocumentDiffers(t, c)) == 0 {
-			t.Errorf("%s: no difference with provisional results kept", c.Name)
+			t.Errorf("%s: no difference with the results that read a seed kept", c.Name)
 		}
 	}
 }

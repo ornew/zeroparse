@@ -24,9 +24,9 @@ type missingReplayCancelContext struct {
 }
 
 func (c *missingReplayCancelContext) Err() error {
-	if p := c.p; p != nil && p.Missing != nil && p.ActiveSeed != nil {
+	if p := c.p; p != nil && p.Missing != nil && p.InnermostSeed() != nil {
 		s := p.Missing
-		events := s.Seeds[p.ActiveSeed]
+		events := s.Seeds[p.InnermostSeed()]
 		if len(events) == c.literalCount && s.Attempts > c.literalCount && len(s.Path) > 0 && len(s.Path) < len(events) {
 			c.interrupted = true
 			c.installedAtCancel, c.attemptsAtCancel = len(s.Path), s.Attempts
@@ -60,7 +60,7 @@ rule e = e "x" / (` + strings.Repeat(`";" #missing `, literalCount) + `)`
 		if n != nil || !errors.Is(err, context.Canceled) {
 			t.Fatalf("interrupted replay returned tree=%v, error=%v", n, err)
 		}
-		if ctx.p == nil || !ctx.p.Aborted || ctx.p.Missing != nil || ctx.p.ActiveSeed != nil {
+		if ctx.p == nil || !ctx.p.Aborted || ctx.p.Missing != nil || ctx.p.InnermostSeed() != nil {
 			t.Fatal("aborted traced invocation retained provisional insertion/seed state")
 		}
 		// A retry must start with a new ledger and budget rather than import

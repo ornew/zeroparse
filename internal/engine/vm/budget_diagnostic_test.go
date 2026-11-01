@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"math"
 	"slices"
 	"testing"
 
@@ -64,8 +63,6 @@ func TestBudgetDiagnosticRecoveredCopies(t *testing.T) {
 				case "memo snapshot":
 					p.Pos = 1
 					p.Recovered = append(p.Recovered, records...)
-					// As CallBegin leaves it: the body read no growing result.
-					p.ReadDepth = math.MaxInt
 					steps += 2 // atomic memo put after the snapshot
 					run = func() { p.CallEnd(r, &core.CallState{Key: key, Rec: 1}, retained, true) }
 					completed = func() { assertSnapshot(p.Memo.Slots[0].Errs) }
@@ -75,24 +72,24 @@ func TestBudgetDiagnosticRecoveredCopies(t *testing.T) {
 						}
 					}
 				case "LR snapshot":
-					seed := &core.MemoEntry{Rule: 7, Growing: true}
-					p.Memo.Slots[0], p.ActiveSeed, p.Pos = seed, seed, 1
+					g := p.GrowBegin(key, 0)
+					seed := g.Best
+					p.Pos = 1
 					p.Recovered = append(p.Recovered, records...)
-					g := core.GrowState{Key: key, Rec: 1, Best: seed}
-					steps += 4 // growth visit plus replacement put
+					steps++ // the growth step
 					run = func() {
-						if !p.GrowStep(&g, retained, true) {
+						if p.GrowStep(&g, retained, true); !p.GrowNext(&g) {
 							t.Fatal("LR seed did not grow")
 						}
 					}
 					completed = func() {
 						assertSnapshot(g.Best.Errs)
-						if p.ActiveSeed != g.Best || p.Memo.Slots[0] != g.Best || len(p.Recovered) != 1 {
+						if s, _ := p.GrowingSeed(key); s != g.Best || len(p.Recovered) != 1 {
 							t.Fatal("LR publication state differs")
 						}
 					}
 					aborted = func() {
-						if p.Memo.Slots[0] != seed || p.ActiveSeed != seed {
+						if s, _ := p.GrowingSeed(key); s != seed {
 							t.Fatal("partial LR seed published")
 						}
 					}

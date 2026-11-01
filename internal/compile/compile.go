@@ -130,6 +130,9 @@ type Rule struct {
 	// Member reports that the rule belongs to a left-recursion cycle and is not its leader: its
 	// results may read the growing seed of a leader at their own position.
 	Member bool
+	// LeaderBit is the bit of a leader in the sets of growths that a memoized result was evaluated
+	// with (NumberLeaders), or 0 for a rule that is not a leader and for a leader numbered past 63.
+	LeaderBit uint64
 	// Stream reports that the top level of the rule body has a #stream repetition.
 	Stream bool
 	// Positional reports that the result may depend on position values (analysis.positional).
@@ -493,6 +496,7 @@ func CompileProgram[M any](g *grammar.Grammar, opts Options, flags []RuleFlags, 
 		return nil, c.errs
 	}
 	prog.NSeen = NumberSeen(prog.RuleList, prog.Twins)
+	NumberLeaders(prog.RuleList)
 	prog.typeKinds = map[string]*value.NodeKind{}
 	prog.NodeKinds = map[string]*value.NodeTypeKinds{}
 	for name, spec := range prog.Types {
@@ -590,6 +594,20 @@ func NumberSeen(lists ...[]*Rule) int {
 		}
 	}
 	return n
+}
+
+// NumberLeaders gives the first 64 leaders of rules, in order, a bit each (Rule.LeaderBit).
+func NumberLeaders(rules []*Rule) {
+	n := 0
+	for _, r := range rules {
+		r.LeaderBit = 0
+		if r.Leader {
+			if n < 64 {
+				r.LeaderBit = 1 << n
+			}
+			n++
+		}
+	}
 }
 
 // EntryDepth returns the nesting levels that a call of the rule adds: one for a recursive rule, none

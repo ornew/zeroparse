@@ -189,7 +189,7 @@ func TestBudgetMemoParseBudgetPoolRetryAndRetainedResult(t *testing.T) {
 				if !armed && e.Kind == TraceEnter && e.Rule == "r" {
 					armed = true
 					core.TraceParser(e).DeferMemo = false
-					core.TraceParser(e).Control.Limits.Budget = core.TraceParser(e).Control.Used + 500
+					core.TraceParser(e).Control.Limits.Budget = core.TraceParser(e).Control.Used + 16
 				}
 			}
 			if node, parseErr := prog.ParseWith("main", input, limited); node != nil || !errors.Is(parseErr, limits.ErrLimit) {
@@ -307,6 +307,9 @@ func TestBudgetMemoChainAndStringLimits(t *testing.T) {
 }
 
 func budgetMemoPrefix(table *core.MemoTable, retained *value.Node) {
+	if len(table.Slots) == 0 { // a growth in progress has no entry in the table
+		table.Slots = append(table.Slots, nil)
+	}
 	for i := 0; i < 320; i++ {
 		e := table.Alloc()
 		*e = core.MemoEntry{Rule: int32(10000 + i), Node: retained, Next: table.Slots[0]}
@@ -334,23 +337,21 @@ rule expr = expr "a" / "a"`)
 	retained := value.Ptr(value.Data{Text: "retained", Children: []*value.Node{value.Ptr(value.Data{Text: "child"})}})
 	before, _ := json.Marshal(retained)
 	key := core.MemoKey{Rule: prog.ByName["expr"].ID}
-	g := p.GrowBegin(key)
+	g := p.GrowBegin(key, prog.ByName["expr"].LeaderBit)
 	oldSeed := g.Best
 	budgetMemoPrefix(p.Memo, retained)
 	oldHead := p.Memo.Slots[0]
 	p.Pos, p.Hw = 1, 1
 	p.Control = core.NewBudgetControl(nil, limits.Limits{Budget: 64})
+	p.Control.Used = 64
 	if err := catchFatal(t, func() { p.GrowStep(&g, retained, true) }); !errors.Is(err, limits.ErrLimit) {
 		t.Fatalf("LR replacement interruption=%v", err)
 	}
 	if p.Memo.Slots[0] != oldHead {
 		t.Fatal("interrupted growth changed memo chain")
 	}
-	if stored, ok := p.Memo.Get(key); !ok || stored != oldSeed || !oldSeed.Growing {
-		t.Fatal("interruption retired the old seed")
-	}
-	if g.Best == oldSeed || g.Best.Node != retained {
-		t.Fatal("test did not reach replacement publication")
+	if seed, ok := p.GrowingSeed(key); !ok || seed != oldSeed || g.Best != oldSeed || !oldSeed.Growing {
+		t.Fatal("interruption replaced the old seed")
 	}
 	chunks := append([][]core.MemoEntry(nil), p.Memo.Chunks...)
 	p.ReleaseScratch()
@@ -393,7 +394,8 @@ rule atom = "a"`)
 							if cancel {
 								core.TraceParser(e).Control.Ctx = newPollingContext(2)
 							} else {
-								core.TraceParser(e).Control.Limits.Budget = core.TraceParser(e).Control.Used + 64
+								// Stop at the next charge, inside the growth of expr.
+								core.TraceParser(e).Control.Limits.Budget = core.TraceParser(e).Control.Used + 1
 							}
 						}
 					}}
@@ -406,7 +408,7 @@ rule atom = "a"`)
 						t.Fatalf("%v/%v recognize=%v cancel=%v: armed=%v node=%v error=%v", backend, unit, recognize, cancel, armed, n, err)
 					}
 					if exprExits != 1 { // The initial recursive seed call exits before atom enters.
-						t.Fatalf("unexpected completed expr calls: %d", exprExits)
+						t.Fatalf("%v/%v recognize=%v cancel=%v: unexpected completed expr calls: %d", backend, unit, recognize, cancel, exprExits)
 					}
 					if observed.Control != nil || observed.Scratch != nil {
 						t.Fatal("batch interruption retained invocation state")
@@ -446,43 +448,44 @@ rule expr = expr "a" / "a"`)
 	}
 
 	// The units of a begun growth and of a growing step, with room for all.
+	bit := prog.ByName["expr"].LeaderBit
 	p := parser(1 << 10)
-	g := p.GrowBegin(key)
+	g := p.GrowBegin(key, bit)
 	begin := 1<<10 - (p.Control.Limits.Budget - p.Control.Used)
 	p.Pos = 1
 	used := p.Control.Used
-	if !p.GrowStep(&g, retained, true) {
+	if p.GrowStep(&g, retained, true); !p.GrowNext(&g) {
 		t.Fatal("the seed did not grow")
 	}
 	step := p.Control.Used - used
 	p.Pos, used = 1, p.Control.Used
-	if p.GrowStep(&g, retained, true) || p.Control.Used != used {
+	if p.GrowStep(&g, retained, true); p.GrowNext(&g) || p.Control.Used != used {
 		t.Fatalf("a step that does not grow charged %d units, want 0: no evaluation follows it", p.Control.Used-used)
 	}
 	p.ReleaseScratch()
-	if begin < 2 || step < 2 {
-		t.Fatalf("a growth charges %d units to begin and %d to grow, want its memo put and the step", begin, step)
+	if begin < 1 || step < 1 {
+		t.Fatalf("a growth charges %d units to begin and %d to grow, want the step", begin, step)
 	}
 
 	// Short of one unit, neither publishes.
 	p = parser(begin - 1)
-	if err := catchFatal(t, func() { p.GrowBegin(key) }); !errors.Is(err, limits.ErrLimit) {
+	if err := catchFatal(t, func() { p.GrowBegin(key, bit) }); !errors.Is(err, limits.ErrLimit) {
 		t.Fatalf("growth begun short of a unit: %v", err)
 	}
-	if _, ok := p.Memo.Get(key); ok {
+	if _, ok := p.GrowingSeed(key); ok {
 		t.Fatal("a growth stopped before its seed published the seed")
 	}
 	p.ReleaseScratch()
 
 	p = parser(begin + step - 1)
-	g = p.GrowBegin(key)
+	g = p.GrowBegin(key, bit)
 	seed := g.Best
 	p.Pos = 1
 	if err := catchFatal(t, func() { p.GrowStep(&g, retained, true) }); !errors.Is(err, limits.ErrLimit) {
 		t.Fatalf("growth step short of a unit: %v", err)
 	}
-	if stored, ok := p.Memo.Get(key); !ok || stored != seed || p.Pos != 1 {
-		t.Fatal("a growth step stopped short of a unit changed the memo or the position")
+	if stored, ok := p.GrowingSeed(key); !ok || stored != seed || p.Pos != 1 {
+		t.Fatal("a growth step stopped short of a unit changed the seed or the position")
 	}
 	p.ReleaseScratch()
 }

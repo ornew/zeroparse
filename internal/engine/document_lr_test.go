@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"slices"
 	"strings"
 	"testing"
 
@@ -10,109 +9,100 @@ import (
 	"zeroparse.dev/zp/internal/gentest"
 )
 
-func TestDocumentSeedDependencyCompletion(t *testing.T) {
+// TestDocumentSeedDependentResultsNotInMemo checks the invariant that lets a Document keep its
+// memo table between parses: no entry of the table depends on a growing seed. A result of a rule
+// of a cycle that reads a seed is kept only for the growth in progress (context_memo.go); one that
+// reads none is stored with the leaders that grew (MemoEntry.Present).
+func TestDocumentSeedDependentResultsNotInMemo(t *testing.T) {
 	t.Parallel()
-	for _, imported := range []bool{false, true} {
-		p := &core.Parser{Memo: core.NewMemoTable(), MemoAll: true}
-		r := &core.Rule{ID: 1, Leader: true}
-		st, _, _, hit := p.CallBegin(r, 0)
-		if hit {
-			t.Fatal("new leader unexpectedly memoized")
-		}
-		g := p.GrowBegin(st.Key)
-		if imported {
-			// This helper was computed under an earlier head in this generation.
-			e := p.Memo.Alloc()
-			*e = core.MemoEntry{Ok: true, Provisional: true}
-			p.Memo.Put(core.MemoKey{Rule: 2}, e)
-			r = &core.Rule{ID: 2}
-		}
-		if _, _, _, hit := p.CallBegin(r, 0); !hit {
-			t.Fatal("seed or imported helper was not reused")
-		}
-		r = &core.Rule{ID: 1, Leader: true}
-		v, ok := p.GrowEnd(r, &g)
-		p.CallEnd(r, &st, v, ok)
-		e, _ := p.Memo.Get(st.Key)
-		if e.Provisional != imported || p.Provisional != 1 || p.MemoSeedUses != 0 {
-			t.Fatalf("imported=%v: provisional=%v, seed uses=%d, repetition uses=%d", imported, e.Provisional, p.MemoSeedUses, p.Provisional)
-		}
-		// A provisional entry is collected for removal when the parse ends, so no later parse
-		// reuses it, with or without edits.
-		if collected := slices.Contains(p.ProvisionalEntries, e); collected != imported {
-			t.Fatalf("imported=%v: entry collected for removal=%v", imported, collected)
-		}
+	leader := func(id int, bit uint64) *core.Rule {
+		r := &core.Rule{}
+		r.ID, r.Leader, r.LeaderBit = id, true, bit
+		return r
 	}
-	t.Run("nested head retains outer dependency", func(t *testing.T) {
+	member := func(id int) *core.Rule {
+		r := &core.Rule{}
+		r.ID, r.Member = id, true
+		return r
+	}
+	t.Run("a member that reads the seed", func(t *testing.T) {
 		p := &core.Parser{Memo: core.NewMemoTable(), MemoAll: true}
-		outer, inner := &core.Rule{ID: 1, Leader: true}, &core.Rule{ID: 2, Leader: true}
-		outerCall, _, _, _ := p.CallBegin(outer, 0)
-		outerGrow := p.GrowBegin(outerCall.Key)
-		innerCall, _, _, _ := p.CallBegin(inner, 0)
-		innerGrow := p.GrowBegin(innerCall.Key)
-		if _, _, _, hit := p.CallBegin(outer, 0); !hit {
-			t.Fatal("outer seed was not reused")
-		}
-		v, ok := p.GrowEnd(inner, &innerGrow)
-		p.CallEnd(inner, &innerCall, v, ok)
-		e, _ := p.Memo.Get(innerCall.Key)
-		if !e.Provisional || p.MemoProvisionalUses == 0 {
-			t.Fatal("inner completion discharged an unresolved outer seed")
-		}
-		v, ok = p.GrowEnd(outer, &outerGrow)
-		p.CallEnd(outer, &outerCall, v, ok)
-		e, _ = p.Memo.Get(outerCall.Key)
-		if !e.Provisional || p.ActiveSeed != nil || p.MemoSeedUses != 0 {
-			t.Fatal("outer completion lost the intermediate dependency")
-		}
-	})
-	t.Run("nested own seeds are resolved", func(t *testing.T) {
-		p := &core.Parser{Memo: core.NewMemoTable(), MemoAll: true}
-		outer, inner := &core.Rule{ID: 1, Leader: true}, &core.Rule{ID: 2, Leader: true}
-		outerCall, _, _, _ := p.CallBegin(outer, 0)
-		outerGrow := p.GrowBegin(outerCall.Key)
-		innerCall, _, _, _ := p.CallBegin(inner, 0)
-		innerGrow := p.GrowBegin(innerCall.Key)
-		p.CallBegin(inner, 0)
-		p.Pos = 1
-		if !p.GrowStep(&innerGrow, nil, true) || p.ActiveSeed != innerGrow.Best {
-			t.Fatal("active seed did not advance with growth")
-		}
-		p.CallBegin(inner, 0)
-		v, ok := p.GrowEnd(inner, &innerGrow)
-		p.CallEnd(inner, &innerCall, v, ok)
-		e, _ := p.Memo.Get(innerCall.Key)
-		if e.Provisional || p.ActiveSeed != outerGrow.Best {
-			t.Fatal("inner own-seed dependency survived completion")
-		}
-		p.Pos = 0
-		p.CallBegin(outer, 0)
-		v, ok = p.GrowEnd(outer, &outerGrow)
-		p.CallEnd(outer, &outerCall, v, ok)
-		e, _ = p.Memo.Get(outerCall.Key)
-		if e.Provisional || p.ActiveSeed != nil || p.Provisional != 3 {
-			t.Fatal("outer completion failed to resolve own seeds or changed repetition tracking")
-		}
-	})
-	t.Run("fresh intermediate dependency is not stored", func(t *testing.T) {
-		p := &core.Parser{Memo: core.NewMemoTable(), MemoAll: true}
-		head, helper := &core.Rule{ID: 1, Leader: true}, &core.Rule{ID: 2}
+		head, m := leader(1, 1), member(2)
 		headCall, _, _, _ := p.CallBegin(head, 0)
-		growth := p.GrowBegin(headCall.Key)
-		helperCall, _, _, hit := p.CallBegin(helper, 0)
-		if hit {
-			t.Fatal("fresh helper unexpectedly memoized")
+		growth := p.GrowBegin(headCall.Key, head.LeaderBit)
+		if !p.GrowNext(&growth) {
+			t.Fatal("the growth did not evaluate its first step")
 		}
-		p.CallBegin(head, 0) // The fresh helper reads the active seed.
-		p.CallEnd(helper, &helperCall, nil, false)
-		if e, found := p.Memo.Get(helperCall.Key); found {
-			t.Fatalf("a result that read the growing seed was stored: %+v", e)
+		mCall, _, _, hit := p.CallBegin(m, 0)
+		if hit {
+			t.Fatal("fresh member unexpectedly memoized")
+		}
+		if _, _, _, hit := p.CallBegin(head, 0); !hit || p.SeedReads != 1 {
+			t.Fatal("the member did not read the seed")
+		}
+		p.CallEnd(m, &mCall, nil, false)
+		if e, found := p.Memo.Get(mCall.Key); found {
+			t.Fatalf("a result that read the growing seed was stored in the memo table: %+v", e)
+		}
+		p.GrowStep(&growth, nil, false)
+		if p.GrowNext(&growth) {
+			t.Fatal("a failed step continued the growth")
 		}
 		v, ok := p.GrowEnd(head, &growth)
 		p.CallEnd(head, &headCall, v, ok)
-		e, _ := p.Memo.Get(headCall.Key)
-		if e.Provisional || p.MemoProvisionalUses != 0 {
-			t.Fatal("head completion depends on a helper result that was never stored")
+		if e, found := p.Memo.Get(headCall.Key); !found || e.Present != 0 {
+			t.Fatal("the result of the growth was not stored without a present set")
+		}
+	})
+	t.Run("a member that reads no seed", func(t *testing.T) {
+		p := &core.Parser{Memo: core.NewMemoTable(), MemoAll: true}
+		head, m := leader(1, 1), member(2)
+		headCall, _, _, _ := p.CallBegin(head, 0)
+		growth := p.GrowBegin(headCall.Key, head.LeaderBit)
+		p.GrowNext(&growth)
+		mCall, _, _, _ := p.CallBegin(m, 0)
+		p.CallEnd(m, &mCall, nil, false)
+		if e, found := p.Memo.Get(mCall.Key); !found || e.Present != 1 {
+			t.Fatal("a result that read no seed was not stored with the leader that grew")
+		}
+		if _, _, _, hit := p.CallBegin(m, 0); !hit {
+			t.Fatal("the result was not reused while the leader grows")
+		}
+		p.GrowStep(&growth, nil, false)
+		p.GrowNext(&growth)
+		v, ok := p.GrowEnd(head, &growth)
+		p.CallEnd(head, &headCall, v, ok)
+	})
+	t.Run("a nested leader that reads the outer seed", func(t *testing.T) {
+		p := &core.Parser{Memo: core.NewMemoTable(), MemoAll: true}
+		outer, inner := leader(1, 1), leader(2, 2)
+		outerCall, _, _, _ := p.CallBegin(outer, 0)
+		outerGrow := p.GrowBegin(outerCall.Key, outer.LeaderBit)
+		p.GrowNext(&outerGrow)
+		innerCall, _, _, hit := p.CallBegin(inner, 0)
+		if hit {
+			t.Fatal("the inner leader was reused before it grew")
+		}
+		innerGrow := p.GrowBegin(innerCall.Key, inner.LeaderBit)
+		if !p.GrowNext(&innerGrow) {
+			t.Fatal("the inner growth did not evaluate its first step")
+		}
+		if _, _, _, hit := p.CallBegin(outer, 0); !hit {
+			t.Fatal("outer seed was not read")
+		}
+		p.GrowStep(&innerGrow, nil, false)
+		p.GrowNext(&innerGrow)
+		v, ok := p.GrowEnd(inner, &innerGrow)
+		p.CallEnd(inner, &innerCall, v, ok)
+		if _, found := p.Memo.Get(innerCall.Key); found {
+			t.Fatal("the inner result, which read the outer seed, was stored in the memo table")
+		}
+		p.GrowStep(&outerGrow, nil, false)
+		p.GrowNext(&outerGrow)
+		v, ok = p.GrowEnd(outer, &outerGrow)
+		p.CallEnd(outer, &outerCall, v, ok)
+		if e, found := p.Memo.Get(outerCall.Key); !found || e.Present != 0 {
+			t.Fatal("the outer result was not stored")
 		}
 	})
 }

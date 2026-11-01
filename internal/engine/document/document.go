@@ -20,8 +20,8 @@ import (
 //     result depends on position values, and results containing recovered errors, cannot be
 //     shifted.
 //   - All other results are discarded.
-//   - Completed intermediate results that depended on an unfinished left-recursion
-//     seed are discarded after any edit, even outside their examined input range.
+//   - Results that read the seed of a growing left recursion never enter the memo table: they
+//     are kept only while the growth lasts, so no later parse reuses them.
 //
 // Edit applies these rules only to the results at the edited positions; any other result applies
 // the edits made since its last use when it is next looked up (AdvanceEntry).
@@ -73,10 +73,6 @@ func New(runner Runner, start string, back core.Backend, o core.ParseOptions, in
 // maxEdits bounds the edit log: when it is full, the memo is dropped and the log restarts. It is a
 // variable for tests.
 var maxEdits = 1 << 16
-
-// removeProvisional is false only in tests that check that their checks detect provisional
-// results reused by a later parse.
-var removeProvisional = true
 
 // ParseDefaults returns a copy of the construction options. Invocation counters
 // are separate from these defaults.
@@ -210,16 +206,11 @@ func (d *Document) finishParse(p *core.Parser) {
 	// Keep the tables the parse built on demand, so later parses and edits reuse them.
 	d.in.Offs, d.in.Lines = p.Offs, p.Lines
 	if p.Aborted {
-		// Completed calls may depend on provisional LR seeds too, so
-		// removing only entries marked growing is insufficient.
+		// The parse stopped inside growths and runs: discard its state rather than
+		// sort out which of its results a completed parse would have kept.
 		d.invalidateParseState()
 	} else {
-		// A provisional result depends on the order in which this parse evaluated the calls, so
-		// a later parse does not reuse it, even of the same text (see "Evaluations of Rules" in
-		// spec/runtime/parsing.md).
-		if removeProvisional {
-			d.memo.RemoveProvisional(p.ProvisionalEntries)
-		}
+		core.KeepSeedResults(d.memo, p)
 		d.runs, d.resumed = p.Runs, p.Resumed
 		d.runGen = p.Gen
 	}

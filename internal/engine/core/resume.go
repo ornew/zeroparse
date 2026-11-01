@@ -23,7 +23,7 @@ import (
 //
 // An element's result must depend only on the input it examined, as for a memo result: repetitions
 // whose elements have predicates or call rules that read variables are not resumed, nor is a run
-// that recovered errors or used a provisional result of a growing left recursion. Elements are
+// that recovered errors or read the seed of a growing left recursion. Elements are
 // moved past an edit only if their values contain no position values.
 
 // RunSite is a repetition that can be resumed (compiler.repeat).
@@ -61,15 +61,15 @@ var MinRecorded = 16
 // RunState is a run of a repetition in progress in a Document parse (ResumeRepeat, and the REPEAT
 // instruction of the VMs).
 type RunState struct {
-	Key         RunKey
-	min, max    int
-	shiftable   bool
-	Old         []RunElem // the run of the previous parse that this one takes over, updated in place
-	edit        DocEdit   // the edit since (none if old is from this parse)
-	Count       int
-	done        bool // the old run ended where it stopped
-	moved       bool // old is the run that the edit moved here: none of it lies before the edit
-	rec0, prov0 int
+	Key              RunKey
+	min, max         int
+	shiftable        bool
+	Old              []RunElem // the run of the previous parse that this one takes over, updated in place
+	edit             DocEdit   // the edit since (none if old is from this parse)
+	Count            int
+	done             bool // the old run ended where it stopped
+	moved            bool // old is the run that the edit moved here: none of it lies before the edit
+	rec0, seedReads0 int
 	// The run is old[:k], then the new elements mid, then old[j:j+t] (the elements after the edit,
 	// moved), then the new elements post.
 	K, J, T   int
@@ -85,7 +85,7 @@ type RunState struct {
 func (p *Parser) StartRun(r *RunState, id, min, max int, shiftable bool) {
 	start := p.Pos
 	*r = RunState{Key: RunKey{id, start}, min: min, max: max, shiftable: shiftable, J: -1,
-		edit: DocEdit{Start: int(^uint(0) >> 1), End: int(^uint(0) >> 1)}, rec0: len(p.Recovered), prov0: p.Provisional,
+		edit: DocEdit{Start: int(^uint(0) >> 1), End: int(^uint(0) >> 1)}, rec0: len(p.Recovered), seedReads0: p.SeedReads,
 		Mid: r.Mid[:0], Post: r.Post[:0]}
 	if rec := p.Runs[r.Key]; rec != nil {
 		r.Old = rec.Elems // the same repetition ran here earlier in this parse
@@ -216,7 +216,7 @@ func (p *Parser) EndElem(r *RunState, ok bool, v *value.Node) {
 
 // FinishRun records the run of a repetition that matched, for the next parse.
 func (p *Parser) FinishRun(r *RunState) {
-	if r.Count < MinRecorded || len(p.Recovered) != r.rec0 || p.Provisional != r.prov0 {
+	if r.Count < MinRecorded || len(p.Recovered) != r.rec0 || p.SeedReads != r.seedReads0 {
 		return
 	}
 	var elems []RunElem

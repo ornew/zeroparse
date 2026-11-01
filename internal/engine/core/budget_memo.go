@@ -61,28 +61,6 @@ func (p *Parser) MemoGet(k MemoKey) (*MemoEntry, bool) {
 	return nil, false
 }
 
-func (p *Parser) memoGrowing(k MemoKey) (*MemoEntry, bool) {
-	if !BudgetControlsEnabled || p.Control == nil {
-		return p.Memo.growing(k)
-	}
-	p.Spend()
-	t := p.Memo
-	i := k.Pos - t.Base
-	if i >= t.Gap {
-		i += t.GapLen
-	}
-	if i < 0 || i >= len(t.Slots) {
-		return nil, false
-	}
-	for e := t.Slots[i]; e != nil; e = e.Next {
-		p.Spend()
-		if e.Growing && e.Rule == int32(k.Rule) && e.Min == int32(k.Min) && e.missingSilent == k.MissingSilent {
-			return e, true
-		}
-	}
-	return nil, false
-}
-
 func (p *Parser) MemoPut(k MemoKey, e *MemoEntry) {
 	if !BudgetControlsEnabled || p.Control == nil {
 		p.Memo.Put(k, e)

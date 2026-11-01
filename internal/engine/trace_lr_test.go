@@ -66,7 +66,7 @@ rule seed = ^ "é"`, "\né", true},
 						if e.Kind != TraceExit || e.Rule != "expr" || !e.Memo || !e.Matched {
 							return
 						}
-						seed, found := core.TraceParser(e).Memo.Get(core.MemoKey{Rule: prog.ByName["expr"].ID, Pos: e.Pos})
+						seed, found := core.TraceParser(e).GrowingSeed(core.MemoKey{Rule: prog.ByName["expr"].ID, Pos: e.Pos})
 						if !found || !seed.Growing || !seed.Ok {
 							t.Fatal("successful growing seed is not available")
 						}
