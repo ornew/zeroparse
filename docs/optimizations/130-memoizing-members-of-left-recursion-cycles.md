@@ -140,7 +140,7 @@ with the input `aaa`, `B` at 0 grows to `("a" "a")@B`, and inside the growth of 
 to `("a"@A "a")@B`, which ends at the same offset. Giving both the same identity reuses the first where the second
 belongs, and the tree loses the rule of its first leaf.
 
-Three more shapes show what the other rules exclude. In
+Five more shapes show what the other rules exclude. In
 
 ```
 main = S $$
@@ -152,7 +152,16 @@ U = P P
 
 the capture that the lookahead of `M` makes holds, after the lookahead, the seed it read. Reusing a call of `M` by
 the outcome of its lookahead returns an earlier seed: on `yqqq` a node ends at 2 instead of 3. The same grammar with
-`M = &(S (("!") #recover(skip=[q]))) ""` reuses an error recovered at the end of an earlier seed. In
+`M = &(S (("!") #recover(skip=[q]))) ""` reuses an error recovered at the end of an earlier seed, and the
+same grammar with
+
+```
+var v int
+M = &(S ("qq" {v := 2} / "q" {v := 1} / {v := 0})) (({v == 2} => "two") / ({v == 1} => "one") / ("" => "zero"))
+```
+
+reuses a binding that depends on the seed the lookahead read: on `yqqq` a node of `M` holds `two` instead of `one`.
+In
 
 ```
 main = T $$
@@ -163,10 +172,23 @@ L = T "!" / &T S "q" "q"
 
 the lookahead `&L` reads only `T` while the seed of `T` is `yqq`, and also the seed of `S` once it is `yqq!z`. A run
 of `S` recorded under the first seed of `T` is checked under the second only for the first seed of `S`, where `&L`
-still matches; taking it skips a step where `&L` fails, and `yqq!z#` does not parse. Last, a reused result that
-passed on the seed identities that its lookaheads read where it was made, instead of the current ones, let a result
-around it be kept under identities it did not read: random recovering cycle grammar 2964 then rejects `baabcac`
-where generated parsers and the engine without examined ranges must accept it.
+still matches; taking it skips a step where `&L` fails, and `yqq!z#` does not parse. In
+
+```
+main = O $$
+O = &O &L L "o" / &O L "q" "o" "!" / "yz"
+L = M L ("z" / "q") / "y"
+M = &(L "z" / &L O "q")
+U = M M
+```
+
+`L` grows twice while the seed of `O` is `yz`, first inside `&L`. The second growth reuses the call of `M` made
+under the seed `y` of `L`, where its lookahead read only `L`, under the seed `yz`, where the outcome memoized for
+the lookahead also read `O`. A reuse that passed on only the seeds the lookahead read where the call was made would
+leave the call of `L` independent of `O`, and reusing it once `O` is `yzqo` rejects `yzqo!`. Last, a reused result
+that passed on the seed identities that its lookaheads read where it was made, instead of the current ones, let a
+result around it be kept under identities it did not read: random recovering cycle grammar 2964 then rejects
+`baabcac` where generated parsers and the engine without examined ranges must accept it.
 
 The engine records the input that every evaluation examines, because its traces report it, so equal step results
 and equal lookahead outcomes also need equal examined ranges there. Generated Go records it only in Document parses
@@ -179,13 +201,16 @@ A differential test compares every engine backend with the engine's reference th
 context again, on the random grammars of 800 seeds: for each seed, a grammar of cycles with several leaders and
 members, read inside and outside lookaheads, the same with cuts, and one whose items recover errors. Generated Go (untyped and typed, with and
 without the Exec IR compositions, ordinary and budget-controlled) and generated TypeScript are compared with the
-engine on the grammars of the first 60 seeds, and the grammars of the first 120 seeds detect, on every
-implementation, each check broken in turn: a reuse that ignores the identities of the seeds read, one that ignores
-the observations, a memo result reused whatever its present set, equal step results given one identity without
-comparing them, a jump over observations whose outcomes read the growing seed, a reuse that passes on the seeds its
-observations read where it was made, and an observation of a lookahead that recovered errors. The grammars above are
-among the compared grammars on every implementation; the engine detects the broken replay with the test option that
-leaves examined ranges out, as generated parsers do. A wider sweep, run once, found no difference: the grammars of seeds 800 to 3,999 on
+engine on the grammars of the first 60 seeds, and each check broken in turn is detected on every implementation: a
+reuse that ignores the identities of the seeds read, one that ignores the observations, a memo result reused
+whatever its present set, equal step results given one identity without comparing them, a jump over observations
+whose outcomes read the growing seed, a reuse that passes on the seeds its observations read where it was made with
+the identities they had there, one that passes on those seeds with their current identities but not the seeds that
+the current outcomes of its observations read, and an observation of a lookahead that recovered errors. The grammars
+above are among the compared grammars on every implementation. The grammars of the first 120 seeds detect every
+broken check but the second broken replay, which only the grammar of the reused observation above detects. The
+engine detects the first broken replay with the test option that leaves examined ranges out, as generated parsers
+do, and the second only with that option. A wider sweep, run once, found no difference: the grammars of seeds 800 to 3,999 on
 every engine backend, with and without examined ranges (9,173 grammars), and the grammars of the first 600 seeds with
 generated Go and generated TypeScript (1,734 grammars, 103,812 TypeScript results).
 
