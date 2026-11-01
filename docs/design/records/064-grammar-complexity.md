@@ -547,7 +547,8 @@ blow-ups. That leaves unmemoized re-entry and diverging state as the exponential
    never restart inside runs, show no slowdown. Without that evidence it stays behind the control.
 4. **Memory has no bound beyond cost.** Budget bounds memory linearly. A memo-entry cap with eviction, which is
    semantically safe except for growing seeds and Documents, is reconsidered when a Document or stream workload
-   shows memo memory as the limit. A byte budget for values is not added.
+   shows memo memory as the limit. A byte budget for values is not added. [Record 066](066-limits-by-purpose.md)
+   revises this decision: a memory measure bounds what the parser holds, beside the compute measure.
 5. **The automatic budget uses c_G times a safety factor.** The factor is documented, and the caller can override c.
    For grammars that are not certified linear, the caller must give c. A corpus-measured constant was rejected
    because it is wrong for unusual grammars.
