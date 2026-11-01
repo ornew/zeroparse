@@ -216,6 +216,14 @@ func Build(cfg Config) (Stats, error) {
 			return err
 		}
 		ctx.Assets["playground/examples.json"] = data
+		vanity, err := vanityPages(cfg.Repo)
+		if err != nil {
+			return err
+		}
+		// ZeroSite fails the build if a name collides with a page or another asset.
+		for name, page := range vanity {
+			ctx.Assets[name] = page
+		}
 		return nil
 	}
 	ext.Decorate = func(ctx *sitegen.Context, q *sitegen.Page, body string) (string, error) {

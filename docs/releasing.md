@@ -59,34 +59,32 @@ API and generated Go with either runtime: the default `-runtime embed`, which co
 package, and `-runtime import`, which makes the consumer depend on the ZeroParse module. Generated Go is required to build
 with Go 1.27.1 or later; no lower version is promised.
 
-**Recording `zp` as a tool raises the module's `go` line to 1.27.1.** `go get -tool zeroparse.dev/zp/cmd/zp`
-(`zeroparse.dev/zp/cmd/zp` once the repository has moved; see [Tagging a Release](#tagging-a-release)) adds
+**Recording `zp` as a tool raises the module's `go` line to 1.27.1.** `go get -tool zeroparse.dev/zp/cmd/zp` adds
 the ZeroParse module as a dependency, and because that module requires Go 1.27.1, the `go` command raises the consumer
 module's `go` line to match (`go: upgraded go 1.23 => 1.27.1`). This is expected: the generated code needs the same
 version.
 
 ## Tagging a Release
 
-In the commands below, `vX.Y.Z` is the version being released, and the module path is the one in force at the time:
-`zeroparse.dev/zp` once the repository has moved (step 2).
+In the commands below, `vX.Y.Z` is the version being released and the module path is `zeroparse.dev/zp`.
 
 1. Check that the release items of the [project strategy](strategy.md#wedge-and-sequencing) are done.
-2. For the first release only, move the repository to the `zeroparse` GitHub organization:
-   - transfer the repository from `zeroparse.dev/zp` to `github.com/zeroparse/zp`, and point the `origin`
-     remote of each checkout at the new address;
-   - serve `go-import` and `go-source` meta tags from the site so that `zeroparse.dev/X` resolves to
-     `github.com/zeroparse/X` for every repository of the organization;
-   - change the module path to `zeroparse.dev/zp` in every `go.mod` of the repository and in every import
-     path and document that names it (the root package is already named `zp`, so no qualified use changes);
-   - regenerate the generated files with `go generate ./bench`;
-   - run the full suite, as in step 4;
-   - update the site (`repository` in `site/config.json`) and the Workers Builds Git source (the repository that the
-     Cloudflare Worker builds from, see [website maintenance](site.md));
-   - enable private vulnerability reporting for the new repository, so that the route in
-     [SECURITY.md](../SECURITY.md) works;
-   - commit the change to `main`.
+2. The repository lives in the `zeroparse` GitHub organization, at `github.com/zeroparse/zp`, and its module path is
+   `zeroparse.dev/zp`. The site serves `go-import` and `go-source` meta tags so that `zeroparse.dev/X` resolves to
+   `github.com/zeroparse/X` for the repositories listed in `site/vanity.go` (see
+   [Go vanity imports](site.md#go-vanity-imports)). Before the first release, check that the deployed site serves
+   them:
 
-   After the first release, the ready-made parsers may move to their own repositories under the organization.
+   ```bash
+   curl -sL 'https://zeroparse.dev/zp/cmd/zp?go-get=1' | grep go-import
+   ```
+
+   It prints `<meta name="go-import" content="zeroparse.dev/zp git https://github.com/zeroparse/zp">`. Also check that
+   private vulnerability reporting is enabled for the repository, so that the route in [SECURITY.md](../SECURITY.md)
+   works.
+
+   The ready-made parsers are in their own repository, `github.com/zeroparse/alpha-parsers`, which the site serves as
+   `zeroparse.dev/alpha-parsers`.
 
 3. Start from a clean checkout of `main` at the commit to tag:
 

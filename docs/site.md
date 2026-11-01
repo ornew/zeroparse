@@ -50,6 +50,7 @@ The build output (`site/dist`) is not committed.
 | `/docs/tutorial/`, `/docs/guide/`, `/spec/`, `/docs/design/`, `/docs/design/records/`, `/docs/…`, `/examples/` | The Markdown files of the repository, rendered at build time. Links between Markdown files (relative, relative to the repository root like `/spec/language/types.md`, or percent-encoded) become links between pages; links to other files of the repository go to GitHub. The design records get a generated index |
 | `/reference/` | The API reference of every public package of the module (`zp`, `grammar`, `runtime`, `gen`, `lint`, `schema`, `query`, `sample` and `editfuzz`), generated from the Go source with `go/doc`, and the reference of the `zp` command, generated from what the command prints: its usage message and `zp <command> -h` for every command it lists. Types that are aliases of internal types (such as `Node`) show the definition and methods of the internal type. A site test fails when an importable package outside `internal/` that exports a name is missing from the API reference |
 | `/playground/` | The playground: `app.js`, `worker.js`, content-hashed `wasm/zp-<hash>.wasm` and `runtime/wasm_exec-<hash>.js`, plus `assets.json` pairing current/previous Go and optional TinyGo generations; every page records the current Go WASM in `<html data-wasm>` and dual builds also record `data-tinygo-wasm`. The stable `wasm_exec.js` supports pre-manifest workers |
+| `/zp/…`, `/alpha-parsers/` | Go vanity import pages for the organization's repositories, generated from the package directories of the repository (see [Go vanity imports](#go-vanity-imports)). They are not linked from the pages |
 | `/search-index.json` | The text of every page, for the search box in the header (press `/`) |
 
 Nothing is copied by hand, so the site cannot drift from the repository: rebuilding it picks up every change.
@@ -106,6 +107,33 @@ assets directory, `site/dist`, the output of the site build; each build runs the
 the deploy instead of publishing it. Cloudflare serves directory index files with a trailing slash
 (`html_handling` is `auto-trailing-slash`); the site emits no `404.html`, so unknown paths get Cloudflare's plain 404
 response (`not_found_handling` is `none`).
+
+### Go Vanity Imports
+
+The module path is `zeroparse.dev/zp`, and `zeroparse.dev/X` resolves to `github.com/zeroparse/X` for the repositories of
+the `zeroparse` GitHub organization that Go code imports. The `go` command and the module proxy find a module's
+repository by requesting `https://zeroparse.dev/<import path>?go-get=1` and reading the `go-import` meta tag of the
+answer, so the site publishes a small HTML page for every such import path instead of running a Worker script:
+
+```html
+<meta name="go-import" content="zeroparse.dev/zp git https://github.com/zeroparse/zp">
+<meta name="go-source" content="zeroparse.dev/zp https://github.com/zeroparse/zp https://github.com/zeroparse/zp/tree/main{/dir} https://github.com/zeroparse/zp/blob/main{/dir}/{file}#L{line}">
+```
+
+Every page of a repository names the repository root as the prefix, so `go get zeroparse.dev/zp/cmd/zp` resolves from
+`/zp/cmd/zp/index.html`, and browsers that open a page are sent to the package on pkg.go.dev. `site/vanity.go` lists the
+repositories (`vanityRepos`). For the repository being built (`zp`) the build writes a page for every directory with a
+non-test Go file outside `internal`, `testdata`, hidden directories and nested modules, so a new package is served
+without further changes. Other repositories get only their root page, because their packages are not known to this build; the `go`
+command resolves a package of such a repository by trying its parent paths, down to the module root. Serving a new repository means adding it to `vanityRepos` and deploying the site. A path that collides with a page or an asset of the
+site fails the build, so the repository names must stay distinct from the site's own paths (`docs`, `spec`,
+`reference`, `playground`, `examples`, `assets`).
+
+Cloudflare answers `/zp/cmd/zp?go-get=1` with a redirect to `/zp/cmd/zp/?go-get=1` (`html_handling` is
+`auto-trailing-slash`). The `go` command follows redirects and the query string is kept, so this needs no special
+handling; a site test serves the generated pages behind the same redirect and runs the discovery steps against them.
+After a deployment, check the live site with
+`curl -sL 'https://zeroparse.dev/zp/cmd/zp?go-get=1' | grep go-import`.
 
 ### Workers Builds Settings
 
