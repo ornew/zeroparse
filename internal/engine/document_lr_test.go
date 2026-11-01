@@ -17,19 +17,19 @@ func TestDocumentSeedDependentResultsNotInMemo(t *testing.T) {
 	t.Parallel()
 	leader := func(id int, bit uint64) *core.Rule {
 		r := &core.Rule{}
-		r.ID, r.Leader, r.LeaderBit = id, true, bit
+		r.ID, r.Leader, r.LeaderBit, r.Cycle = id, true, bit, 1
 		return r
 	}
 	member := func(id int) *core.Rule {
 		r := &core.Rule{}
-		r.ID, r.Member = id, true
+		r.ID, r.Member, r.Cycle = id, true, 1
 		return r
 	}
 	t.Run("a member that reads the seed", func(t *testing.T) {
 		p := &core.Parser{Memo: core.NewMemoTable(), MemoAll: true}
 		head, m := leader(1, 1), member(2)
 		headCall, _, _, _ := p.CallBegin(head, 0)
-		growth := p.GrowBegin(headCall.Key, head.LeaderBit)
+		growth := p.GrowBegin(headCall.Key, head.LeaderBit, head.Cycle)
 		if !p.GrowNext(&growth) {
 			t.Fatal("the growth did not evaluate its first step")
 		}
@@ -58,7 +58,7 @@ func TestDocumentSeedDependentResultsNotInMemo(t *testing.T) {
 		p := &core.Parser{Memo: core.NewMemoTable(), MemoAll: true}
 		head, m := leader(1, 1), member(2)
 		headCall, _, _, _ := p.CallBegin(head, 0)
-		growth := p.GrowBegin(headCall.Key, head.LeaderBit)
+		growth := p.GrowBegin(headCall.Key, head.LeaderBit, head.Cycle)
 		p.GrowNext(&growth)
 		mCall, _, _, _ := p.CallBegin(m, 0)
 		p.CallEnd(m, &mCall, nil, false)
@@ -77,13 +77,13 @@ func TestDocumentSeedDependentResultsNotInMemo(t *testing.T) {
 		p := &core.Parser{Memo: core.NewMemoTable(), MemoAll: true}
 		outer, inner := leader(1, 1), leader(2, 2)
 		outerCall, _, _, _ := p.CallBegin(outer, 0)
-		outerGrow := p.GrowBegin(outerCall.Key, outer.LeaderBit)
+		outerGrow := p.GrowBegin(outerCall.Key, outer.LeaderBit, outer.Cycle)
 		p.GrowNext(&outerGrow)
 		innerCall, _, _, hit := p.CallBegin(inner, 0)
 		if hit {
 			t.Fatal("the inner leader was reused before it grew")
 		}
-		innerGrow := p.GrowBegin(innerCall.Key, inner.LeaderBit)
+		innerGrow := p.GrowBegin(innerCall.Key, inner.LeaderBit, inner.Cycle)
 		if !p.GrowNext(&innerGrow) {
 			t.Fatal("the inner growth did not evaluate its first step")
 		}

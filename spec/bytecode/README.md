@@ -78,6 +78,7 @@ uses the existing -1 sentinel for both `REPEAT` and `SCAN` variants.
 | Body is a sequence | Whether the body's value is a tuple; used to interpret `$n` |
 | Node type | Name of the named node type a rule declared with one converts its value to (see Rule Completion), or -1 if there is none. For a rule with an Operators Rule and no action, it is the named node type every operator's value is converted to (see Operators Rule); with an action, it is the type the action's result is converted to |
 | Memoize, left-recursion leader, member, position-dependent | Results of static analysis. A member is a rule of a left-recursion cycle that is not its leader. |
+| Cycle | The number of the left-recursion cycle of a leader or member, from 1, the same for the rules of one cycle; 0 for any other rule |
 | Operators Rule | Index into the Operators Rule table, or -1 if there is none |
 | Value-free twin | Whether this entry is a value-free twin (see below). The value of a value-free twin is always nil. |
 | Transient | The rule is not memoized in normal parses ([Rule calls](#rule-calls)) |
@@ -204,10 +205,10 @@ When a recovery entry is popped on failure, the VM:
 
 A rule is marked transient when it calls no other rule, or when it is referenced only once in the grammar. Re-evaluating the former only scans the input once more; the latter is re-evaluated at the same position only when its single caller is. In both cases a memo entry would never be reused.
 
-1. Look up the memo: a provisional result of a growing left recursion for (r, pos, min), whatever the variable values it was stored with, or else a result for (r, pos, min) and, when the rule reads variables, for the current values of those variables (the rule table's variable list). A result that is not growing is not used when the rule is a member and the innermost growing left recursion grows at the current position. If there is one, and it is growing, or it was not computed inside a lookahead, or the VM is currently inside a lookahead, use it: record the expectations stored with the result (unless it is growing) and its recovered errors; on success, advance the position and return the value.
+1. Look up the memo. A leader whose growth for (r, pos, min) is in progress reads its growing result, whatever the variable values. Otherwise look up a result for (r, pos, min) and, when the rule reads variables, for the current values of those variables (the rule table's variable list). In the context of the growths of the rule's cycle at the current position, a result in the memo is used only if it was computed while at least those growths were in progress, and a result kept for the context is used under the conditions of [Evaluations of Rules](../runtime/parsing.md#evaluations-of-rules). If there is one, and it is growing, or it was not computed inside a lookahead, or the VM is currently inside a lookahead, use it: record the expectations stored with the result (unless it is growing) and its recovered errors; on success, advance the position and return the value.
 2. If the call is memoized, save the farthest failure and reset it to (start position, empty).
 3. If the rule is a leader, evaluate it by [growing the seed](#left-recursion); otherwise [evaluate the body](#body-evaluation) once. On failure, remove the errors recovered during this call.
-4. If the call is memoized, store in the memo the result, the end position, the recovered errors, whether the call ran inside a lookahead, and the expectations recorded inside; then merge those expectations into the saved farthest failure and restore it. A call of a rule that is not a leader stores nothing when, in step 1 of its own call or of the calls it made, it read the growing result of a left recursion that was already growing when it started, or an unstable result: its result depends on a result that can still change. A call of a leader also reads the leader's final result when its growth ends. The result of a leader is unstable when its growth read such a result and it was computed inside a lookahead or recovered errors, so that a call in the other kind of context grows the leader again.
+4. If the call is memoized, store in the memo the result, the end position, the recovered errors, whether the call ran inside a lookahead, and the expectations recorded inside; then merge those expectations into the saved farthest failure and restore it. A call in a context records the leaders of the growths of its context with its result. A result that read a growing result of its context, or observed a lookahead at the position that read one, is kept for the context instead, with what it read and observed ([Evaluations of Rules](../runtime/parsing.md#evaluations-of-rules)).
 5. On failure, reset the position to the start position.
 
 ### Body Evaluation
@@ -220,10 +221,12 @@ When the body finishes, the VM restores the frame and the capture trail; on succ
 
 A leader rule is evaluated as follows:
 
-1. Store a failure for (r, pos, min) in the memo, marked as growing.
+1. Start the growth of (r, pos, min) with a failure as its growing result.
 2. Reset the position to the start position, reset the recovered errors to their state before the call, and evaluate the body.
-3. If the body fails, or does not advance beyond the previous success, stop. Otherwise store the result in the memo, marked as growing, and go back to step 2.
-4. Finalize the last result (clear the growing mark) and return it.
+3. If the body fails, or does not advance beyond the previous success, stop. Otherwise make the result the growing result and go back to step 2.
+4. End the growth and return the last result.
+
+A growth that begins where another growth of its cycle is in progress reuses, in step 2, the steps that an earlier growth of the leader took in the same context ([Evaluations of Rules](../runtime/parsing.md#evaluations-of-rules)).
 
 ### Rule Completion
 
@@ -311,12 +314,12 @@ Expectation strings are those the compiler placed in the string table: literals 
 
 ## File Format
 
-A compiled grammar uses container version 7. It stores one execution-only compile result: the module of one mode and the start rule, with no grammar AST and no output schema (see [Compiled Grammars](../runtime/compiled-grammars.md)). The container version and the module's instruction-set version are separate version axes. A loader accepts only container version 7. Integers are variable-length: unsigned integers use LEB128 and signed integers use zigzag-encoded LEB128. A boolean is one byte (0 or 1).
+A compiled grammar uses container version 8. It stores one execution-only compile result: the module of one mode and the start rule, with no grammar AST and no output schema (see [Compiled Grammars](../runtime/compiled-grammars.md)). The container version and the module's instruction-set version are separate version axes. A loader accepts only container version 8. Integers are variable-length: unsigned integers use LEB128 and signed integers use zigzag-encoded LEB128. A boolean is one byte (0 or 1).
 
 | Part | Contents |
 |:--|:--|
 | Magic | `ZPC\x00` (6 bytes) |
-| Version | 1 byte: 6. A loader refuses any other value. |
+| Version | 1 byte: 8. A loader refuses any other value. |
 | Mode | 1 byte: 0 parse, 1 recognize, 2 document. The module serves the operations of this mode only. A parse-mode or document-mode module is the module of the grammar; a recognize-mode module is the module of its recognizer. A loader refuses any other value. |
 | Instruction-set version | Unsigned integer for this module: 30. Every module uses this version, whatever instructions it contains. Earlier versions built the syntax trees that preceded the value model, held terminal types, wrote field types with the earlier node type names, had no named node types, had no default-value flag, had no tuple values, carried text struct node types and the text flag of `EMEMBER` and `EBIN`, did not give the node type of an Operators Rule its meaning, had no whole-rule action of an Operators Rule, had no variable table, had no start rules, checked field values, rule results and bindings when they ran (the `ECHECK` instruction, the check operands of `BIND` and `ENODE`, and the checks of rules and lines), had no member flag in the rule table, or had no `SKIPREPEAT`; a runtime rejects them and asks for the grammar to be compiled again. |
 | String table | Count, then each string (byte length and UTF-8 bytes), all unsigned. The module's string table is a prefix of this table. |
@@ -333,7 +336,7 @@ The module is laid out in the following order. A *list* is a count (unsigned) fo
 5. Type table: a list of (name, list of field names, underlying node type). The underlying node type is a string index, or -1 for a struct type.
 6. Field-list table, then scope table: each a list of lists of string indices.
 7. Variable table: a list of (name, type, integer, string). The type is 0 for `int`, 1 for `string` and 2 for `bool`. The integer is the initial value of an `int` variable, and 0 or 1 for a `bool` variable. The string is the string table index of the initial value of a `string` variable, and -1 for the other types.
-8. Rule table: a list of (name, body, scope, action, node type, memoize, leader, member, position-dependent, Operators Rule, value-free twin, transient, where, splice, variables, check).
+8. Rule table: a list of (name, body, scope, action, node type, memoize, leader, member, cycle, position-dependent, Operators Rule, value-free twin, transient, recursive, where, splice, variables).
 9. Start rules: a list of the rule table indices of the start rules, the rules marked `@start`, in increasing order, followed by the rule table index of the default start rule. Parsing begins only at these rules.
 10. Operators Rule table: a list of (skip, list of operand lines, list of prefix operators, list of infix and postfix operators). A line is (start, scope, action, body is a sequence, check); an operator is (index, kind, associativity, level, line).
 11. Match code, then expression code: each a list of instructions (opcode as 1 byte, then `A`, `B`, `C`).

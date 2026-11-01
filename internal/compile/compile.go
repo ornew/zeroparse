@@ -130,6 +130,10 @@ type Rule struct {
 	// Member reports that the rule belongs to a left-recursion cycle and is not its leader: its
 	// results may read the growing seed of a leader at their own position.
 	Member bool
+	// Cycle numbers the left-recursion cycle of a leader or member from 1, the same for the rules of
+	// one cycle, and is 0 for any other rule: a result reads only the seeds of the growths of its own
+	// cycle.
+	Cycle int
 	// LeaderBit is the bit of a leader in the sets of growths that a memoized result was evaluated
 	// with (NumberLeaders), or 0 for a rule that is not a leader and for a leader numbered past 63.
 	LeaderBit uint64
@@ -273,6 +277,8 @@ func (c *Compiler) errorf(pos grammar.Pos, format string, args ...any) {
 // grammars so loading can skip the analysis.
 type RuleFlags struct {
 	Memo, Leader, Member, Positional bool
+	// Cycle is Rule.Cycle.
+	Cycle int
 	// Twin reports that the rule has a value-free twin (Rule.Twin).
 	Twin bool
 }
@@ -446,9 +452,14 @@ func CompileProgram[M any](g *grammar.Grammar, opts Options, flags []RuleFlags, 
 		twin := false
 		if flags != nil {
 			r.Memo, r.Leader, r.Member, r.Positional, twin = flags[i].Memo, flags[i].Leader, flags[i].Member, flags[i].Positional, flags[i].Twin
+			r.Cycle = flags[i].Cycle
 		} else {
 			r.Leader = c.an.leaders[r.Name]
 			r.Member = c.an.cyclic[r.Name] && !r.Leader
+			r.Cycle = 0
+			if c.an.cyclic[r.Name] {
+				r.Cycle = c.an.cycle[r.Name] + 1
+			}
 			r.Positional = c.an.positional[r.Name]
 			// Leaders are always memoized (Leader); the other members of a cycle memoize the results
 			// that read no growing seed.

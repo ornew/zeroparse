@@ -51,10 +51,11 @@ growth of $L$ at $p$ is **open** from the start of that call to its end, and
 while it is open it has a **current result**. A call of $L$ at $p$ while the
 growth is open is answered with the current result, whatever its $\eta$. A
 call **reads** an open growth when it, or a call evaluated within it, is
-answered with that growth's current result. The **context** of a call at $p$
-is $\Gamma$, the sequence of the growths open at $p$ when it starts, each with
-its leader and its current result, and its **present set** $P$ is the set of
-those leaders. A lookahead at $p$ in a context **observes** its outcome: whether
+answered with that growth's current result. The **context** of a call of $A$
+at $p$ is $\Gamma$, the sequence of the growths of the leaders of the cycle of
+$A$ that are open at $p$ when it starts, each with its leader and its current
+result, and its **present set** $P$ is the set of those leaders. By Lemma 2 a
+call reads no other open growth. A lookahead at $p$ in a context **observes** its outcome: whether
 its expression matched, and its examined range.
 
 **The two parses.** The **reference parse** $\mathcal{R}$ evaluates every call
@@ -219,8 +220,9 @@ that stored the entry, which read no growth open at its start. Compare the
 two evaluations in $\mathcal{R}$ from their start: they take the same steps
 until one of them is answered with a current result. A growth that started
 within one started within the other too, so the first difference is a call of
-a leader $L \in P'$ at $p$ answered with the current result of a growth open
-at the start. Since $L \in P$, the corresponding call in the evaluation that
+a leader $L$ at $p$ answered with the current result of a growth open at the
+start, which by Lemma 2 is on the cycle of the rule, so $L \in P'$. Since
+$L \in P$, the corresponding call in the evaluation that
 stored the entry is answered with a current result too, which it never is. So
 the call reads no growth open at its start, and by Lemma 1 its outcome in
 $\mathcal{R}$ is $F(\kappa, \lambda')$, with the range that Lemma 1 gives for
@@ -244,10 +246,10 @@ $\rho$.
 
 *Proof.* Compare the evaluations of $x$ and $y$ from their start. They take
 the same steps as long as each step reads the same state, and, as in Lemma 1,
-the state that a step reads differs between them only in the current results
-of the growths open at $p$ at their start. A call of a leader at $p$ is
-answered with a current result in both or in neither, since the present sets
-are equal; when it is, the result is equal, since $x$ read it. A lookahead at
+the state that a step reads differs between them only in the growths open at
+$p$ at their start. A call of a leader at $p$ is answered with a current
+result in both or in neither: only a growth of the cycle of the rule can
+answer it (Lemma 2), and the present sets are equal; when it is, the result is equal, since $x$ read it. A lookahead at
 $p$ that reads such a growth has the same outcome and range in both, since $x$
 observed it, and by (A1) its expression records nothing outside it. A call at
 $p$ within $x$ that grows a leader of the cycle grows it in both, from the same

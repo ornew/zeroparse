@@ -27,7 +27,7 @@ import (
 
 const (
 	compiledMagic   = "ZPC\x00"
-	compiledVersion = 7
+	compiledVersion = 8
 )
 
 // CompiledMode is the mode of a compiled grammar file: the one kind of parse its module serves.

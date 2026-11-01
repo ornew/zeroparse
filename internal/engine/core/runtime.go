@@ -483,7 +483,7 @@ func (p *Parser) Call(r *Rule, min int) (*value.Node, bool) {
 		return v, ok
 	}
 	if r.Leader {
-		g := p.GrowBegin(st.Key, r.LeaderBit)
+		g := p.GrowBegin(st.Key, r.LeaderBit, r.Cycle)
 		for p.GrowNext(&g) {
 			v, ok = p.invoke(r, min)
 			p.GrowStep(&g, v, ok)
@@ -577,8 +577,8 @@ func (p *Parser) CallBegin(r *Rule, min int) (st CallState, v *value.Node, ok, h
 		key.Env = p.memoEnv(r)
 	}
 	gp := len(p.Gamma)
-	if gp > 0 && (r.Leader || r.Member) {
-		gp = p.gammaAt(key.Pos)
+	if gp > 0 && r.Cycle != 0 {
+		gp = p.gammaAt(key.Pos, r.Cycle)
 	}
 	if r.Leader && gp < len(p.Gamma) {
 		// A leader that grows here reads its seed, whatever its variable values.
@@ -642,7 +642,7 @@ func (p *Parser) CallBegin(r *Rule, min int) (st CallState, v *value.Node, ok, h
 	st = CallState{Key: key, start: p.Pos, savedHW: p.Hw, savedLW: p.lw, Rec: len(p.Recovered), missing: p.missingMark(),
 		gp: gp, present: present, ctx: ctx, known: known}
 	if ctx && known && !p.strictCtx() {
-		p.pushFrame(key.Pos)
+		p.pushFrame(key.Pos, gp)
 		st.framed = true
 	}
 	p.Hw, p.lw = st.start, st.start
@@ -696,7 +696,7 @@ func (p *Parser) CallEnd(r *Rule, st *CallState, v *value.Node, ok bool) (*value
 		_, ds := p.popFrame()
 		sd, read := p.stored(ds)
 		if read {
-			p.ctxStore(st.Key.Pos, ctxHeadKey{kind: ctxCall, id: int32(st.Key.Rule), min: int32(st.Key.Min), ms: st.Key.MissingSilent, present: st.present},
+			p.ctxStore(st.Key.Pos, st.gp, ctxHeadKey{kind: ctxCall, id: int32(st.Key.Rule), min: int32(st.Key.Min), ms: st.Key.MissingSilent, present: st.present},
 				sd, &ctxSlot{e: e, env: st.Key.Env})
 			if ContextMemoMutation == CtxKeepSeedResults {
 				p.keptSeedResults = append(p.keptSeedResults, keptSeedResult{st.Key, e})
@@ -729,8 +729,10 @@ func (p *Parser) entry(ctx bool) *MemoEntry {
 
 // GrowingSeed returns the seed of the growth of the leader of key at its position, if it grows.
 func (p *Parser) GrowingSeed(key MemoKey) (*MemoEntry, bool) {
-	if i := p.gammaFind(p.gammaAt(key.Pos), key.Rule, key.Min, key.MissingSilent); i >= 0 {
-		return p.Gamma[i].seed, true
+	for i := len(p.Gamma) - 1; i >= 0 && p.Gamma[i].key.Pos == key.Pos; i-- {
+		if k := &p.Gamma[i].key; k.Rule == key.Rule && k.Min == key.Min && k.MissingSilent == key.MissingSilent {
+			return p.Gamma[i].seed, true
+		}
 	}
 	return nil, false
 }
@@ -751,6 +753,7 @@ type GrowState struct {
 	missing int
 	Best    *MemoEntry
 	gi      int // the index of the growth in Gamma
+	gp      int // the index in Gamma of the first growth of the leader's cycle at the position
 	// ctx reports a growth in a context, whose steps are memoized with the present set present.
 	ctx bool
 	// inCtx reports a growth that began where another growth was in progress at its position.
@@ -778,19 +781,20 @@ type runStep struct {
 // GrowBegin starts the growth of a leader at the current position from a failure. A growth in a
 // context, where another leader grows, memoizes its steps (GrowNext); the body is evaluated
 // repeatedly, and the result at the point where the match stops growing is adopted.
-func (p *Parser) GrowBegin(key MemoKey, bit uint64) GrowState {
+func (p *Parser) GrowBegin(key MemoKey, bit uint64, cycle int) GrowState {
 	// One budget unit before each evaluation of the body, the seed's included; it is charged before
 	// the memo changes, so that a parse stopped by the budget publishes nothing.
 	p.Spend()
 	g := GrowState{Key: key, start: p.Pos, Rec: len(p.Recovered), missing: p.missingMark(), gi: len(p.Gamma)}
-	gp := p.gammaAt(key.Pos)
+	gp := p.gammaAt(key.Pos, cycle)
+	g.gp = gp
 	g.inCtx = gp < g.gi
 	g.Best = p.entry(g.inCtx)
 	*g.Best = MemoEntry{Ok: false, End: g.start, Examined: g.start, From: g.start, Growing: true, Gen: p.Gen, Vgen: p.Gen}
 	if p.Missing != nil {
 		p.RecordMissingSeed(g.Best, g.missing)
 	}
-	p.Gamma = append(p.Gamma, growRec{key: key, seed: g.Best, id: failSeed, bit: bit})
+	p.Gamma = append(p.Gamma, growRec{key: key, seed: g.Best, id: failSeed, bit: bit, cycle: cycle})
 	if gp < g.gi && !p.strictCtx() {
 		present, known := p.present(gp)
 		g.ctx, g.present = known, present
@@ -811,7 +815,7 @@ func (p *Parser) GrowNext(g *GrowState) bool {
 	if !g.ctx {
 		return true
 	}
-	gp := p.gammaAt(g.start)
+	gp := g.gp
 	for {
 		id := p.Gamma[g.gi].id
 		if j := p.findJump(g, gp, id); j != nil {
@@ -836,7 +840,7 @@ func (p *Parser) GrowNext(g *GrowState) bool {
 			continue
 		}
 		// Evaluate the step, with its own frame, examined range and expectations.
-		p.pushFrame(g.start)
+		p.pushFrame(g.start, g.gp)
 		g.savedHW, g.savedLW = p.Hw, p.lw
 		p.Hw, p.lw = g.start, g.start
 		g.exp = p.Isolate(g.start)
@@ -885,10 +889,10 @@ func (p *Parser) GrowStep(g *GrowState, v *value.Node, ok bool) {
 	} else {
 		res.End = g.start
 	}
-	res, rid := p.canonicalSeed(g.start, g.growKey(), res)
+	res, rid := p.canonicalSeed(g.start, g.gp, g.growKey(), res)
 	sd, _ := p.stored(ds)
 	h := ctxHeadKey{kind: ctxStep, id: int32(g.Key.Rule), min: int32(g.Key.Min), ms: g.Key.MissingSilent, present: g.present}
-	p.ctxStore(g.start, h, sd, &ctxSlot{e: res, id: rid, far: far, exp: exp, examined: examined, from: from, silent: p.Silent > 0})
+	p.ctxStore(g.start, g.gp, h, sd, &ctxSlot{e: res, id: rid, far: far, exp: exp, examined: examined, from: from, silent: p.Silent > 0})
 	p.mergeDeps(ds)
 	p.advance(g, res, rid, runStep{seed: id, far: far, exp: exp, examined: examined, from: from, silent: p.Silent > 0, deps: sd})
 }
@@ -938,7 +942,7 @@ func (p *Parser) recordJumps(g *GrowState) {
 	if len(g.run) == 0 {
 		return
 	}
-	t := p.table(g.start, true)
+	t := p.table(g.start, g.gp, true)
 	if t.jumps == nil {
 		t.jumps = map[jumpKey][]jumpRec{}
 	}
@@ -964,7 +968,7 @@ func (p *Parser) recordJumps(g *GrowState) {
 
 // findJump returns a jump from the seed with identity id that holds in the current context.
 func (p *Parser) findJump(g *GrowState, gp int, id uint64) *jumpRec {
-	t := p.table(g.start, false)
+	t := p.table(g.start, g.gp, false)
 	if t == nil || t.jumps == nil {
 		return nil
 	}

@@ -5,11 +5,12 @@ import "zeroparse.dev/zp/internal/value"
 // The dependency memo of left recursion (see "Evaluations of Rules" in spec/runtime/parsing.md
 // and spec/proofs/memoization.md).
 //
-// The result of a call of rule A at position p is a function of the growths in progress at p,
-// the context: the leaders that grow there and the seeds they have reached (Gamma). A leader called
-// at p while it grows there reads its seed; a leader that does not grow there grows from failure,
-// with the seeds of the context visible. Only growths at p matter: a call at p evaluates nothing
-// before p, and a growth at a later position ends before the parse returns to p.
+// The result of a call of rule A at position p is a function of the growths of A's cycle in
+// progress at p, the context: the leaders that grow there and the seeds they have reached (Gamma,
+// gammaAt). A leader called at p while it grows there reads its seed; a leader that does not grow
+// there grows from failure, with the seeds of the context visible. Only growths at p matter: a call
+// at p evaluates nothing before p, and a growth at a later position ends before the parse returns
+// to p. Nor do growths of other cycles: the call reads none of their seeds.
 //
 // A rule that is on no left-recursion cycle never reads a seed of the context of its call: a
 // leader that grows at p reaches the call there through left calls, so a call that read the
@@ -25,7 +26,7 @@ import "zeroparse.dev/zp/internal/value"
 //
 // A result that read no seed and made no observation is stored in the memo table with its present
 // set (MemoEntry.Present) and is reused in any context whose leaders it includes. Any other result
-// is stored in the context table of p (ctxTable), which exists while a growth at p is in progress,
+// is stored in the table of the context (ctxTable), which exists while its first growth lasts,
 // and is reused in a context with the same present set where the seeds it read have the same
 // identities and the lookaheads it observed have the same outcomes there. An observation is
 // checked against the outcome memoized for the lookahead in the current context; when there is
@@ -56,10 +57,11 @@ const (
 
 // growRec is a growth in progress: the leader's key, its current seed and the seed's identity.
 type growRec struct {
-	key  MemoKey
-	seed *MemoEntry
-	id   uint64
-	bit  uint64 // Rule.LeaderBit
+	key   MemoKey
+	seed  *MemoEntry
+	id    uint64
+	bit   uint64 // Rule.LeaderBit
+	cycle int    // Rule.Cycle
 }
 
 // depKind is the kind of a dependency.
@@ -80,10 +82,11 @@ type dep struct {
 	val  uint64
 }
 
-// depFrame records the dependencies of an evaluation at pos in the context Gamma[:depth]. Its
-// dependencies are deps[base:] while it is the innermost frame.
+// depFrame records the dependencies of an evaluation at pos in the context Gamma[:depth], whose
+// growths at pos are Gamma[gp:depth]. Its dependencies are deps[base:] while it is the innermost
+// frame.
 type depFrame struct {
-	pos, depth, base int
+	pos, gp, depth, base int
 }
 
 // sdep is a stored dependency: a seed (or shadow) by the leader's key, or an observation by site.
@@ -173,11 +176,12 @@ type canonRec struct {
 	id uint64
 }
 
-// ctxTable is the context table of a position: what the calls and growth steps there memoized
-// while a growth there is in progress. It is dropped when the first growth there ends.
+// ctxTable is the context table of the growths of one cycle at a position: what the calls and
+// growth steps there memoized while such a growth is in progress. It is dropped when the first of
+// those growths ends.
 type ctxTable struct {
 	pos   int
-	depth int // the index in Gamma of the first growth at pos
+	depth int // the index in Gamma of the first of the growths
 	heads map[ctxHeadKey]*[]*ctxSet
 	jumps map[jumpKey][]jumpRec
 	canon map[canonKey]canonRec
@@ -207,10 +211,19 @@ func (p *Parser) strictCtx() bool {
 	return p.ContextMemoOff || p.Missing != nil
 }
 
-// gammaAt returns the index of the first growth at pos (len(Gamma) if none).
-func (p *Parser) gammaAt(pos int) int {
+// gammaAt returns the index of the first growth of the cycle at pos that the innermost growths
+// there are (len(Gamma) if the innermost growth is not one).
+//
+// Only these growths matter to a call of a rule of the cycle at pos. A call at pos inside the growth
+// of a leader at pos is reached from the leader through calls at pos, so the leader reaches the
+// rule and a seed the call reads is of a leader that the rule reaches: the leaders whose seeds the
+// call can read are on the rule's cycle. Growths at pos are nested in an order of their cycles,
+// since a growth inside the growth of a leader of another cycle at pos cannot reach that leader:
+// the growths of the rule's cycle at pos are consecutive, and if the innermost growth at pos is of
+// another cycle, there is none.
+func (p *Parser) gammaAt(pos, cycle int) int {
 	i := len(p.Gamma)
-	for i > 0 && p.Gamma[i-1].key.Pos == pos {
+	for i > 0 && p.Gamma[i-1].key.Pos == pos && p.Gamma[i-1].cycle == cycle {
 		i--
 	}
 	return i
@@ -242,9 +255,10 @@ func (p *Parser) present(gp int) (uint64, bool) {
 	return m, true
 }
 
-// pushFrame starts recording the dependencies of an evaluation at pos.
-func (p *Parser) pushFrame(pos int) {
-	p.frames = append(p.frames, depFrame{pos: pos, depth: len(p.Gamma), base: len(p.deps)})
+// pushFrame starts recording the dependencies of an evaluation at pos, in the context of the
+// growths Gamma[gp:] there.
+func (p *Parser) pushFrame(pos, gp int) {
+	p.frames = append(p.frames, depFrame{pos: pos, gp: gp, depth: len(p.Gamma), base: len(p.deps)})
 }
 
 // popFrame ends the innermost frame and returns its dependencies, valid until the next push.
@@ -352,15 +366,15 @@ func (p *Parser) replayDeps(gp int, ds []sdep) {
 	p.mergeDeps(buf)
 }
 
-// table returns the context table of pos, creating it if create is set, or nil.
-func (p *Parser) table(pos int, create bool) *ctxTable {
-	if n := len(p.ctxs); n > 0 && p.ctxs[n-1].pos == pos {
+// table returns the context table of the growths Gamma[gp:] at pos, creating it if create is set,
+// or nil.
+func (p *Parser) table(pos, gp int, create bool) *ctxTable {
+	if n := len(p.ctxs); n > 0 && p.ctxs[n-1].pos == pos && p.ctxs[n-1].depth == gp {
 		return p.ctxs[n-1]
 	}
 	if !create {
 		return nil
 	}
-	gp := p.gammaAt(pos)
 	t := &ctxTable{pos: pos, depth: gp, heads: map[ctxHeadKey]*[]*ctxSet{}}
 	p.ctxs = append(p.ctxs, t)
 	return t
@@ -425,7 +439,7 @@ func (p *Parser) obsValue(pos, gp int, present uint64, site int32) uint64 {
 
 // ctxFind looks up a result of head h in the context table of pos for the current context.
 func (p *Parser) ctxFind(pos, gp int, h ctxHeadKey, env []any) *ctxSlot {
-	t := p.table(pos, false)
+	t := p.table(pos, gp, false)
 	if t == nil {
 		return nil
 	}
@@ -468,8 +482,9 @@ next:
 	return nil
 }
 
-// ctxStore stores slot as the result of head h with the stored dependencies ds.
-func (p *Parser) ctxStore(pos int, h ctxHeadKey, ds []sdep, slot *ctxSlot) {
+// ctxStore stores slot as the result of head h in the context of the growths Gamma[gp:] at pos,
+// with the stored dependencies ds.
+func (p *Parser) ctxStore(pos, gp int, h ctxHeadKey, ds []sdep, slot *ctxSlot) {
 	var seeds []growKey
 	var obs []int32
 	var k valsKey
@@ -507,7 +522,7 @@ func (p *Parser) ctxStore(pos int, h ctxHeadKey, ds []sdep, slot *ctxSlot) {
 			k.n++
 		}
 	}
-	t := p.table(pos, true)
+	t := p.table(pos, gp, true)
 	p.Spend()
 	sets := t.heads[h]
 	if sets == nil {
@@ -577,12 +592,15 @@ func (p *Parser) reusable(silent bool, errs int) bool {
 // lookahead records what it reads, so that a result that depends on it records its outcome
 // instead of the seeds it read (LookEnd).
 func (p *Parser) LookBegin(site int) {
-	if len(p.frames) > 0 && p.frames[len(p.frames)-1].pos == p.Pos && p.gammaAt(p.Pos) < len(p.Gamma) {
-		// The examined range of the lookahead is part of its observation.
-		p.looks = append(p.looks, lookRec{site: int32(site), hw: p.Hw, lw: p.lw})
-		p.Hw, p.lw = p.Pos, p.Pos
-		p.pushFrame(p.Pos)
-		return
+	if n := len(p.frames); n > 0 {
+		f := &p.frames[n-1]
+		if g := len(p.Gamma); f.pos == p.Pos && f.gp < g && p.Gamma[g-1].key.Pos == p.Pos && p.Gamma[g-1].cycle == p.Gamma[f.gp].cycle {
+			// The examined range of the lookahead is part of its observation.
+			p.looks = append(p.looks, lookRec{site: int32(site), hw: p.Hw, lw: p.lw})
+			p.Hw, p.lw = p.Pos, p.Pos
+			p.pushFrame(p.Pos, f.gp)
+			return
+		}
 	}
 	p.looks = append(p.looks, lookRec{site: -1})
 }
@@ -610,12 +628,12 @@ func (p *Parser) LookEnd(ok bool) {
 		return
 	}
 	val, ok2 := obsOutcome(ok, f.pos, examined, from)
-	gp := p.gammaAt(f.pos)
+	gp := f.gp
 	present, known := p.present(gp)
 	ok2 = ok2 && known
 	sd, _ := p.stored(ds)
 	if ok2 {
-		p.ctxStore(f.pos, ctxHeadKey{kind: ctxLook, id: site, present: present}, sd, &ctxSlot{id: val})
+		p.ctxStore(f.pos, gp, ctxHeadKey{kind: ctxLook, id: site, present: present}, sd, &ctxSlot{id: val})
 	}
 	out := make([]dep, 0, len(ds)+1)
 	out = append(out, dep{kind: depObs, idx: site, d: int32(f.depth), val: val})
@@ -631,13 +649,13 @@ func (p *Parser) LookEnd(ok bool) {
 
 // canonicalSeed returns the identity of the result e of a growth step of the leader of g, the
 // same as an earlier equal result's, whose entry it then returns instead of e.
-func (p *Parser) canonicalSeed(pos int, g growKey, e *MemoEntry) (*MemoEntry, uint64) {
+func (p *Parser) canonicalSeed(pos, gp int, g growKey, e *MemoEntry) (*MemoEntry, uint64) {
 	p.seedSeq++
 	id := p.seedSeq + failSeed
 	if !e.Ok || len(e.Errs) > 0 {
 		return e, id
 	}
-	t := p.table(pos, true)
+	t := p.table(pos, gp, true)
 	if t.canon == nil {
 		t.canon = map[canonKey]canonRec{}
 	}

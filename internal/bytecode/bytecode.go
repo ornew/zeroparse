@@ -105,7 +105,10 @@ type RuleInfo struct {
 	Memo     bool
 	Leader   bool
 	// Member reports that the rule belongs to a left-recursion cycle and is not its leader.
-	Member        bool
+	Member bool
+	// Cycle numbers the left-recursion cycle of a leader or member from 1, and is 0 for any other
+	// rule.
+	Cycle         int
 	Positional    bool
 	OperatorsRule int // OperatorsRule table index (-1 if none)
 	// NoValue reports that this is a value-free twin, called from places where the value is

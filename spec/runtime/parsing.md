@@ -367,22 +367,24 @@ exceptions.
 - While rules grow at a position, a call there of a rule of their
   left-recursion cycle, a leader (see
   [Conditions for Linear Cost](#conditions-for-linear-cost)) or another rule,
-  is in the context of those growths. Its result is the result of evaluating
-  its body with the growing results that they have reached. The call reuses a
-  memoized result only if that result read no growing result, observed no
-  lookahead that read one, and was computed while at least the growths now in
-  progress there were in progress. Otherwise it reuses a result computed in a
-  context of the same growths only if every growing result that it read is
-  equal to the one there now and every such lookahead has the same outcome and
-  examined range. A result that read a growing result is kept only until the
-  first growth at its position ends, and never enters the memo of a later parse.
+  is in the context of those growths. Only the growths of the rule's own
+  cycle form its context: a call reads no growing result of another cycle.
+  Its result is the result of evaluating its body with the growing results
+  that they have reached. The call reuses a memoized result only if that
+  result read no growing result, observed no lookahead that read one, and was
+  computed while at least the growths of its context were in progress.
+  Otherwise it reuses a result computed in a context of the same growths only
+  if every growing result that it read is equal to the one there now and every
+  such lookahead has the same outcome and examined range. A result that read a
+  growing result is kept only until the first growth of its context ends, and
+  never enters the memo of a later parse.
 - A growing rule evaluates its body once for each step of the growth, and the
   number of steps is at most two more than the length of the input it
-  consumes. A leader that grows at a position where another growth is in
-  progress grows again in each context in which it is called there. A step of
-  such a growth reuses the step that an earlier growth of the leader took from
-  the same growing result under the same condition, and a run of steps that
-  read no other growing result is taken at once.
+  consumes. A leader that grows at a position where another growth of its
+  cycle is in progress grows again in each context in which it is called
+  there. A step of such a growth reuses the step that an earlier growth of the
+  leader took from the same growing result under the same condition, and a run
+  of steps that read no other growing result is taken at once.
 
 Every other result of a rule of a left-recursion cycle is memoized like that of
 any rule. Calls at a later position finish their own growth, outside the

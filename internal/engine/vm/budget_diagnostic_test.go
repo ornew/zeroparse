@@ -72,7 +72,7 @@ func TestBudgetDiagnosticRecoveredCopies(t *testing.T) {
 						}
 					}
 				case "LR snapshot":
-					g := p.GrowBegin(key, 0)
+					g := p.GrowBegin(key, 0, 0)
 					seed := g.Best
 					p.Pos = 1
 					p.Recovered = append(p.Recovered, records...)
