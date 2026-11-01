@@ -56,6 +56,7 @@ const (
 	CtxJumpAnySeed                // a jump uses observations whose outcomes read the growing seed
 	CtxStaleReplay                // a reuse replays the seeds its observations read where they were made
 	CtxLookErrors                 // an observation summarizes a lookahead that recovered errors
+	CtxNoReplayObs                // a reuse passes on only the seeds its observations read where they were made
 )
 
 // growRec is a growth in progress: the leader's key, its current seed and the seed's identity.
@@ -371,7 +372,7 @@ func (p *Parser) replayDeps(pos, gp int, present uint64, ds []sdep) {
 			buf = append(buf, dep{kind: d.kind, idx: int32(i), d: depth, val: v})
 		case depObs:
 			buf = append(buf, dep{kind: depObs, idx: d.site, d: depth, val: d.val})
-			if ContextMemoMutation != CtxStaleReplay {
+			if ContextMemoMutation != CtxStaleReplay && ContextMemoMutation != CtxNoReplayObs {
 				buf = p.replayObs(buf, pos, gp, present, d.site, depth)
 			}
 		}

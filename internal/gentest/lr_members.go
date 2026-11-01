@@ -252,6 +252,18 @@ rule M = &(x:S) => $x
 rule U = P P`,
 		Inputs: []string{"y", "yq", "yqq", "yqqq", "yqqqq"},
 	}, {
+		// The variable that M's lookahead binds depends on the seed it read after the lookahead,
+		// so the lookahead's outcome does not summarize it.
+		Name: "binding in a lookahead",
+		Src: `var v int
+@start
+rule main = S $$
+rule S = M P S "q" / "y" ("qqqqqqqq")?
+rule P = M ""
+rule M = &(S ("qq" {v := 2} / "q" {v := 1} / {v := 0})) (({v == 2} => "two") / ({v == 1} => "one") / ("" => "zero"))
+rule U = P P`,
+		Inputs: []string{"y", "yq", "yqq", "yqqq", "yqqqq"},
+	}, {
 		// The error recovered in M's lookahead is at the end of the seed it read.
 		Name: "error recovered in a lookahead",
 		Src: `@start
@@ -261,6 +273,19 @@ rule P = M ""
 rule M = &(S (("!") #recover(skip=[q]))) ""
 rule U = P P`,
 		Inputs: []string{"y", "yq", "yqq", "yqqq", "yqqqq"},
+	}, {
+		// M's lookahead reads O's seed at L's seed "yz" only. The growth of L inside &L memoizes its
+		// outcome there; the growth of L after it reuses M from L's seed "y", where the lookahead read
+		// L's seed alone, and depends on O's seed only through the seeds that the memoized outcome
+		// read.
+		Name: "observation that reads another seed where it is reused",
+		Src: `@start
+rule main = O $$
+rule O = &O &L L "o" / &O L "q" "o" "!" / "yz"
+rule L = M L ("z" / "q") / "y"
+rule M = &(L "z" / &L O "q")
+rule U = M M`,
+		Inputs: []string{"yzqo!", "yzqo", "yzq", "yz"},
 	}, {
 		// The lookahead &L of S reads the seed of S in some contexts of T only: a jump of S taken
 		// from one seed holds only where the outcome of &L is the same for every seed of S.

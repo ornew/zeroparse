@@ -100,6 +100,7 @@ func TestLeftRecursionDependencyMemoControls(t *testing.T) {
 		{"canonical seeds", core.CtxNoCanonical, false},
 		{"jumps over observations of the growing seed", core.CtxJumpAnySeed, false},
 		{"replayed observations", core.CtxStaleReplay, true},
+		{"observations replayed in the current context", core.CtxNoReplayObs, true},
 		{"lookaheads with recovered errors", core.CtxLookErrors, false},
 	} {
 		t.Run(m.name, func(t *testing.T) {

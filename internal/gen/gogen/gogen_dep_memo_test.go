@@ -63,8 +63,9 @@ func testGeneratedLeftRecursionDependencyMemo(t *testing.T) {
 // not compare the identities of the seeds read, that does not check observations, a result in the
 // memo reused whatever its present set, equal step results given the same identity without
 // comparing them, a jump that uses observations whose outcomes read the growing seed, a reused
-// result that replays the seeds its observations read where it was made, and an observation that
-// summarizes a lookahead that recovered errors.
+// result that replays the seeds its observations read where it was made, one that passes on only
+// those seeds of its observations with current identities, and an observation that summarizes a
+// lookahead that recovered errors.
 var depMemoMutations = map[string][][2]string{
 	"seed identities": {
 		{"k.v[k.n] = p.gamma[i].id\n", "k.v[k.n] = 0\n"},
@@ -86,6 +87,9 @@ var depMemoMutations = map[string][][2]string{
 	},
 	"replayed observations": {
 		{"buf = append(buf, dep{kind: d.kind, idx: int32(i), d: depth, val: p.gamma[i].id})", "buf = append(buf, dep{kind: d.kind, idx: int32(i), d: depth, val: d.val})"},
+		{"buf = p.replayObs(buf, pos, gp, present, d.site, depth)\n", "\n"},
+	},
+	"observations replayed in the current context": {
 		{"buf = p.replayObs(buf, pos, gp, present, d.site, depth)\n", "\n"},
 	},
 	"lookaheads with recovered errors": {
