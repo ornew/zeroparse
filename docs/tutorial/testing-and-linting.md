@@ -96,6 +96,9 @@ zp lint -g robust.zp
 
 A run with no findings prints nothing and exits with status 0.
 
+The flag `-classify` also reports how the cost of a grammar grows with the input; for a super-linear verdict, [Rewrite a
+Grammar to Linear Cost](../cookbook/linear-rewrites.md) shows the rewrite for each cause.
+
 ## Formatting
 
 `zp fmt` rewrites a grammar into the canonical layout and keeps comments. `-l` lists the files whose formatting
