@@ -23,6 +23,7 @@ func TestPythonFieldTextIsLinear(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	skipWithoutBudget(t)
 	families := []TriageFamily{
 		{Name: "nested f-strings", Build: func(n int) string { return "x = " + nest("f'{", "1", "}'")(n) + "\n" }, Sizes: []int{24, 48, 96}},
 		{Name: "many fields", Build: func(n int) string { return "x = f'" + rep("{a!r:>10}", n) + "'\n" }, Sizes: doubling(500, 3)},

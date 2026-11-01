@@ -165,6 +165,7 @@ func TestCorpus(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			skipWithoutBudget(t)
 			sizes := e.sizes
 			if testing.Short() {
 				sizes = e.shortSizes

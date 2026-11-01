@@ -11,6 +11,7 @@ import (
 	"zeroparse.dev/zp"
 	"zeroparse.dev/zp/grammar"
 	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/engine/core"
 	"zeroparse.dev/zp/internal/starttest"
 )
 
@@ -188,6 +189,9 @@ func linearClaims(t *testing.T, count int, claimsLinear func(*grammar.Grammar) b
 			continue
 		}
 		checked++
+		if !core.BudgetControlsEnabled {
+			continue // the claim is counted, but the reference build cannot measure it
+		}
 	measure:
 		for _, backend := range []zp.Backend{zp.Closure, zp.Bytecode} {
 			for i, build := range differentialInputs {
@@ -244,6 +248,7 @@ func TestLinearClaims(t *testing.T) {
 // some random grammar measures otherwise.
 func TestLinearClaimsNegativeControl(t *testing.T) {
 	t.Parallel()
+	skipWithoutBudget(t)
 	count := *differentialGrammars
 	if testing.Short() {
 		count /= 4

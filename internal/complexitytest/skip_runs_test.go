@@ -30,11 +30,18 @@ func skipRunControls(t *testing.T) []Control {
 func TestSkipRunsNeverRecordControl(t *testing.T) {
 	core.SkipRecordMutation = core.SkipNeverRecord
 	defer func() { core.SkipRecordMutation = 0 }()
-	for _, c := range skipRunControls(t) {
+	controls := skipRunControls(t)
+	progs := make([]*zp.Parser, len(controls))
+	for i, c := range controls {
 		p, err := Compile(c.Source)
 		if err != nil {
 			t.Fatal(err)
 		}
+		progs[i] = p
+	}
+	skipWithoutBudget(t)
+	for i, c := range controls {
+		p := progs[i]
 		for _, b := range Backends {
 			s, err := Measure(p, c.Input, c.ShortSizes, b, Cap)
 			if err != nil {

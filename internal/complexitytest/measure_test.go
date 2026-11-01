@@ -95,6 +95,7 @@ func mustCompile(t *testing.T, src string) *zp.Parser {
 // the counter of a traced parse is an upper estimate within 15%.
 func TestStepsBisectionAndTrace(t *testing.T) {
 	t.Parallel()
+	skipWithoutBudget(t)
 	cases := []struct{ name, src, in string }{
 		{"scan", "rule main = (a / \"a\")* $$\nrule a = \"a\"* \"c\"\n", rep("a", 60)},
 		{"left recursion", "rule main = e $$\nrule e = e \"x\" / \"x\"\n", rep("x", 40)},
@@ -125,6 +126,7 @@ func TestStepsBisectionAndTrace(t *testing.T) {
 
 func TestStepsCapAndErrors(t *testing.T) {
 	t.Parallel()
+	skipWithoutBudget(t)
 	p := mustCompile(t, "rule main = (a / \"a\")* $$\nrule a = \"a\"* \"c\"\n")
 	for _, b := range Backends {
 		c, err := Steps(p, rep("a", 200), b, 1000)
@@ -143,6 +145,7 @@ func TestStepsCapAndErrors(t *testing.T) {
 
 func TestStepsLenient(t *testing.T) {
 	t.Parallel()
+	skipWithoutBudget(t)
 	p := mustCompile(t, "rule main = \"a\"* $$\n")
 	for _, b := range Backends {
 		c, err := StepsLenient(p, "aaab", b, 100_000)
@@ -165,6 +168,7 @@ func TestStepsLenient(t *testing.T) {
 // bisection ends, so a looser stopping rule shows on some of them.
 func TestStepsTolerance(t *testing.T) {
 	t.Parallel()
+	skipWithoutBudget(t)
 	p := mustCompile(t, "rule main = (a / \"a\")* $$\nrule a = \"a\"* \"c\"\n")
 	for _, b := range Backends {
 		for n := 40; n <= 160; n += 4 {

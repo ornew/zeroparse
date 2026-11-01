@@ -22,6 +22,7 @@ func TestControls(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			skipWithoutBudget(t)
 			sizes := c.Sizes
 			if testing.Short() {
 				sizes = c.ShortSizes
