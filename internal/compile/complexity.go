@@ -351,6 +351,7 @@ func (k *classifier) classify() *Complexity {
 	k.computeFollow()
 	k.checkUnits()
 	k.checkGrowth()
+	k.checkCarriedGrowth()
 	k.checkNesting()
 	k.checkValues()
 	return k.result()

@@ -187,6 +187,48 @@ func TestClassifyComplexity(t *testing.T) {
 	}
 }
 
+// TestClassifyCarriedGrowth checks condition 5: a leader that grows where another leader of its
+// cycle grows, from a result that includes the other's growing result, is quadratic when the step
+// can drop its result and its growth goes on over input that later steps examine again, and the
+// witness names both rules. The linear grammars have leaders that grow inside other growths
+// without both.
+func TestClassifyCarriedGrowth(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name, src string
+		class     ComplexityClass
+	}{
+		// The lookahead drops the growth of R from each seed of S, which goes on over the "q" of
+		// later steps.
+		{"tree carried in a lookahead", "rule main = S $$\nrule S = &R S \"q\" / \"y\"\nrule R = R \"q\" / S\n", ClassPoly},
+		// The growth of R fails at "!" and S grows by its next alternative.
+		{"tree carried before a growing alternative", "rule main = S $$\nrule S = R \"!\" / S \"q\" / \"y\"\nrule R = R \"q\" / S\n", ClassPoly},
+		// When R "s" fails, S cannot grow, so R grows past the seed of S once.
+		{"nested reads", "rule main = S $$\nrule S = S \"q\" / R \"s\" / \"y\"\nrule R = R \"r\" / S \"t\"\n", ClassLinear},
+		// R grows from the seed of S only after a "t", where S cannot grow.
+		{"lookahead regrowth", "rule main = S $$\nrule S = &R S \"q\" / \"y\"\nrule R = R (\"q\" / \"r\") / S \"t\" / \"y\"\n", ClassLinear},
+		{"three leaders", "rule main = S $$\nrule S = &R S \"q\" / \"y\"\nrule R = &T R \"q\" / \"y\"\nrule T = T \"q\" / S \"z\" / \"y\"\n", ClassLinear},
+		// R is after S's growing alternative, so a step that drops it does not grow.
+		{"tree carried after the growing alternative", "rule main = S $$\nrule S = S \"q\" / R \"!\" / \"y\"\nrule R = R \"q\" / S\n", ClassLinear},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := classifySource(t, tc.src)
+			if c.Class != tc.class {
+				t.Fatalf("class %v, want %v\ncauses %v\nreasons %v", c.Class, tc.class, c.Causes, c.Reasons)
+			}
+			if tc.class != ClassPoly {
+				return
+			}
+			if c.Degree != 2 || len(c.Causes) != 1 {
+				t.Fatalf("degree %d causes %v, want one cause of degree 2", c.Degree, c.Causes)
+			}
+			if m := c.Causes[0].Message; !strings.Contains(m, "grows R where S grows") || !strings.Contains(m, "growing result of S") {
+				t.Errorf("witness %q does not name R and S", m)
+			}
+		})
+	}
+}
+
 // TestClassifyComplexityDeterministic checks that classifying a grammar again gives the same
 // result, on a grammar whose units have several callees with sources.
 func TestClassifyComplexityDeterministic(t *testing.T) {

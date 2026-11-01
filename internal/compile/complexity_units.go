@@ -54,6 +54,7 @@ type site struct {
 	mayStart, mustStart bool
 	repeated            string     // why the call is evaluated repeatedly within its caller, or ""
 	seqs                []seqFrame // the sequences around the call
+	units               []*unit    // the units around the call in its caller, outermost first
 }
 
 // unitKind is the kind of a unit (an expression after whose failure the parser continues where
@@ -343,7 +344,7 @@ func (k *classifier) walkRef(e *grammar.Ref, c wctx) {
 		u.calls[e.Name] = true
 	}
 	k.sites = append(k.sites, &site{caller: c.rule, callee: e.Name, ref: e, cont: c.cont, mayStart: c.mayStart,
-		mustStart: c.mustStart, repeated: c.repeated, seqs: c.seqs})
+		mustStart: c.mustStart, repeated: c.repeated, seqs: c.seqs, units: c.open})
 	if k.an.cyclic[e.Name] && (!k.sameCycle(c.rule, e.Name) || !c.mustStart) {
 		k.addSource(c, exprPos(e), "the growth of the left-recursive rule "+e.Name+" at a new position")
 		k.srcExprs[e] = true
