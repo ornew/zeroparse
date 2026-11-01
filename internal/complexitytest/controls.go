@@ -317,6 +317,52 @@ func Controls() []Control {
 		},
 		// A fold whose accumulator doubles inside an element of the list it builds grows by a
 		// factor exponential in the number of steps, which the bound limits but the input reaches.
+		// Duplicating the elements of the accumulator, or padding each and joining them, doubles
+		// it on each step; joining each element once keeps its size, but the inner fold copies its
+		// own accumulator once for each element, which the classifier bounds by an accumulator of
+		// n elements, cubic over n steps, though here it holds one and measures linear.
+		{
+			Name: "Fold duplicating and joining elements", Family: "bounded lambda",
+			Source: "rule main = a:\"x\"* b:\"y\"* => foldl(list(text($a)), $b, (acc, y) => foldl(list(), map(acc, (e) => list(e, e)), (s, l) => concat(s, l)))\n",
+			Input:  func(n int) string { return "x" + rep("y", n) },
+			Sizes:  double(3), ShortSizes: double(3), Order: Exp, Capped: true, Class: ClassExp,
+		},
+		{
+			Name: "Fold padding and joining elements", Family: "bounded lambda",
+			Source: "rule main = a:\"x\"* b:\"y\"* => foldl(list(text($a)), $b, (acc, y) => foldl(list(), map(acc, (e) => list(e, \"x\")), (s, l) => concat(s, l)))\n",
+			Input:  func(n int) string { return "x" + rep("y", n) },
+			Sizes:  double(3), ShortSizes: double(3), Order: Exp, Capped: true, Class: ClassExp,
+		},
+		{
+			Name: "Fold joining elements once", Family: "bounded lambda",
+			Source: "rule main = a:\"x\"* b:\"y\"* => foldl(list(text($a)), $b, (acc, y) => foldl(list(), map(acc, (e) => list(e)), (s, l) => concat(s, l)))\n",
+			Input:  func(n int) string { return "x" + rep("y", n) },
+			Sizes:  double(250), ShortSizes: double(100), Order: Linear, Class: ClassPoly,
+		},
+		// A value read from outside the fold adds up to n on each of n steps, so the accumulator
+		// grows quadratically and copying it costs n^3.
+		{
+			Name: "Fold adding an outside value", Family: "bounded lambda",
+			Source: "rule main = a:\"x\"* b:\"y\"* c:\"z\"* => foldl(text($a), $b, (acc, y) => acc + text($c))\n",
+			Input:  func(n int) string { return "x" + rep("y", n) + rep("z", n) },
+			Sizes:  double(40), ShortSizes: double(25), Order: Poly(3), Class: ClassPoly,
+		},
+		// Measuring the first element, of n characters, for each of n elements examines n^2
+		// characters on each of n steps.
+		{
+			Name: "Fold measuring its first element for every element", Family: "bounded lambda",
+			Source: "rule main = a:\"x\"* b:\"y\"* => foldl(concat(list(text($a)), map($a, (z) => text(z))), $b, (acc, y) => filter(acc, (e) => len(acc[0]) > 0))\n",
+			Input:  func(n int) string { return rep("x", n) + rep("y", n) },
+			Sizes:  double(40), ShortSizes: double(25), Order: Poly(3), Class: ClassPoly,
+		},
+		// A map that extends every element of an accumulator of n elements on each of n steps
+		// costs n per step for each element.
+		{
+			Name: "Fold extending every element", Family: "bounded lambda",
+			Source: "rule main = a:\"x\"* b:\"y\"* => foldl(map($a, (z) => text(z)), $b, (acc, y) => map(acc, (e) => e + \"x\"))\n",
+			Input:  func(n int) string { return rep("x", n) + rep("y", n) },
+			Sizes:  double(40), ShortSizes: double(25), Order: Poly(3), Class: ClassPoly,
+		},
 		{
 			Name: "Bounded fold doubling an element it keeps", Family: "bounded lambda",
 			Source: "rule main = a:\"x\"* b:\"y\" #repeat(,14) => foldl(list(text($a)), $b, (acc, y) => concat(list(acc[0] + acc[0]), acc))\n",

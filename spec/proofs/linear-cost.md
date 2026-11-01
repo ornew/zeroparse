@@ -250,14 +250,71 @@ over at most $m$ evaluations gives at most a constant times
 $m (a^m (I + B) + B)$, which is $c (I + E + S + 1)$ for a constant $c$.
 $\square$
 
-When the value of the lambda holds the first parameter at most once,
-counting the copies in its elements and in the elements of the lists it
-builds, so that its total size is at most that of the first parameter plus
-$(r + 1) B$, the recurrence is $A_{j+1} \le A_j + (r + 1) B$, so $A_j \le I + j (r + 1) B$,
-which grows linearly with $m$ rather than as $a^m$. Condition 4 applies the
-lemma only to such folds: a fold whose lambda can hold the first parameter
-twice multiplies it by a factor that is exponential in $m$, a constant that
-a bound such as `#repeat(,30)` makes larger than any input.
+When the [step matrix](../runtime/parsing.md#conditions-for-linear-cost) of
+the fold cannot double the first parameter, the factor $a^m$ shrinks to a
+polynomial. Let $n$ be the size of the input. The degrees below assume that
+the initial value, the list and every value that the lambda reads from outside
+the fold have sizes at most a constant times $n$; a value of a rule can be
+larger, as a rule that joins its whole text once for each of its elements
+makes it, and the degrees then fall short of the cost. Let $O \le n$ be the size of such
+a value, $Y_j$ the size of the element of step $j$, with
+$\sum_j Y_j \le n$, and $v_j = (S_j, M_j, N_j)$ the size, the size of the
+largest element and the number of elements of the first parameter after $j$
+steps, where a list of $N$ elements of sizes $E_i$ has size
+$1 + N + \sum_i E_i$. Each rule of condition 4 bounds a quantity of a value by
+a sum of terms $c \, q \, O^a Y_j^b$, with $c$ a constant and $q$ a quantity
+of the values that it is built from, or 1: a list, a tuple, `+` and `concat`
+hold their operands, and a concatenation is no larger than the sum of its
+operands; an element taken by an index, which is an int, is at most the
+largest element; a member is at most its value; a `filter` holds at most its
+list; a `map` holds one value of its lambda, plus one, for each element of its
+list, and a term $\alpha E_i + \beta$ of the lambda in the size $E_i$ of the
+element sums over the elements to at most $\alpha S + (\beta - \alpha) N$,
+since $\sum_i E_i \le S - N$; an inner fold that joins its own first
+parameter once holds its initial value and, once each, the values that its
+steps join, which sum over its list in the same way; and a term that the
+rules do not follow, or a product of two quantities of the first parameter, is
+bounded by many copies of everything that it reads. Where a value can be
+either of two values, as an element of a list built from several, the larger
+is at most their sum. So each quantity of $v_{j+1}$ is at most such a sum over
+the quantities of $v_j$.
+
+Give each quantity $x$ a degree $d_x$, and the constant 1 the degree 0, in the
+graph with an edge from $x$ to $q$ for each term of $x$ that reads $q$. By the
+condition, each strongly connected component with a cycle is a single cycle
+whose terms have coefficient 1 and no factor $O$ or $Y_j$. For $x$ on no
+cycle, $d_x$ is the largest of 1 and of $d_q + a + b$ over its terms; for a
+component $C$ with a cycle, every member has the largest of 1 and of
+$d_q + a + \max(b, 1)$ over the terms of its members that read outside $C$.
+We show by induction on the components, from those with no edges out, that
+$v_j(x) \le c_x n^{d_x}$ for every $j \le m$, with $m \le n$ the number of
+steps. For $x$ on no cycle, $v_0(x) \le n$, and $v_{j+1}(x)$ is a sum of
+terms $c \, q \, O^a Y_j^b \le c \, c_q n^{d_q + a + b}$ over quantities of
+lower components. For a component $C$ with a cycle, let $u_j$ be the largest
+of $v_j(x)$ over $x \in C$. Each member has one term in $C$, which reads a
+member with coefficient 1, so $u_{j+1} \le u_j + t_j$, where $t_j$ is the sum
+of the other terms, and $u_m \le n + \sum_{j < m} t_j$. A term with $b = 0$
+sums over at most $n$ steps to at most $c \, c_q n^{d_q + a + 1}$; one with
+$b \ge 1$ to at most $c \, c_q n^{d_q + a} \sum_j Y_j^b \le c \, c_q n^{d_q + a + b}$,
+since $\sum_j Y_j^b \le (\sum_j Y_j)^b \le n^b$. Over a bounded list, $m$
+is a constant, and the same sums over $m$ steps replace the factor $a^m$ of
+the proof above by a polynomial in $m$.
+
+The copying operations of one step cost at most a sum of such terms, each a
+product of quantities of $v_j$ times $O^a Y_j^b$: a string copy costs its
+characters and a list copy its elements, at most the sizes that condition 4
+bounds, a comparison of values that are not ints and `len` of a string
+examine their operands, and a fold inside the lambda copies its own first parameter on each
+of its steps, at most its number of steps times the size of its value. By the
+same sums, the steps of a fold over a list that is not bounded cost at most a
+constant times $n^d$, where $d$ is the largest of
+$\sum_q d_q + a + \max(b, 1)$ over the terms of the cost. This is the degree
+that the classifier reports when it is 3 or more; a cost of degree 2 is that
+of a copy of the first parameter in each step, which condition 4 reports with
+degree 2, or of a value read from outside, for which condition 4 fails
+without a witness, so that the class is not linear. When the step matrix fails the
+condition, no bound is claimed: the classifier reports the fold exponential,
+which over-approximates it.
 
 The copies of such a call are therefore those of a constant number of copies,
 in the context of the call, of the initial value, the list and the values from
@@ -266,8 +323,8 @@ each element only when a lambda around the call is over a list that is not
 bounded, and the first parameter of a fold includes what the initial value
 and the value of the lambda include, so that a copy of it that includes the
 value of a call on the recursion is checked as such a copy. The lemma itself
-needs $a^m$ only to be a constant; the restriction to folds that hold the first
-parameter once keeps the constant of the class proportional to $m$.
+needs $a^m$ only to be a constant; the restriction to folds that cannot double
+the first parameter keeps the constant of the class polynomial in $m$.
 
 ## Lemma 8 (Finite Values)
 

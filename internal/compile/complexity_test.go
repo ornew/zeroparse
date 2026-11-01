@@ -126,6 +126,54 @@ func TestClassifyComplexity(t *testing.T) {
 		{"fold over a bounded list that builds a doubled element", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(list(text($a)), $b, (acc, y) => list(acc[0] + acc[0]))\n", ClassExp, 0},
 		{"fold over a bounded list that doubles each element", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(list(text($a)), $b, (acc, y) => map(acc, (e) => e + e))\n", ClassExp, 0},
 		{"fold over a bounded list that extends each element", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(list(text($a)), $b, (acc, y) => map(acc, (e) => e + text(y)))\n", ClassLinear, 0},
+		// Duplicating the elements of the accumulator and joining them doubles it on each step,
+		// though no copy reads it twice; joining each element once does not.
+		{"fold that duplicates and joins elements", "rule main = a:\"x\"* b:\"y\"* => foldl(list(text($a)), $b, (acc, y) => foldl(list(), map(acc, (e) => list(e, e)), (s, l) => concat(s, l)))\n", ClassExp, 0},
+		{"bounded fold that duplicates and joins elements", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(list(text($a)), $b, (acc, y) => foldl(list(), map(acc, (e) => list(e, e)), (s, l) => concat(s, l)))\n", ClassExp, 0},
+		{"fold that joins each element twice", "rule main = a:\"x\"* b:\"y\"* => foldl(list(text($a)), $b, (acc, y) => foldl(list(), acc, (s, l) => concat(s, list(l, l))))\n", ClassExp, 0},
+		// Joining each element once copies the accumulator inside the inner fold on each of its
+		// steps, as many as the accumulator has elements, which the initial value can make n.
+		{"fold that joins elements once", "rule main = a:\"x\"* b:\"y\"* => foldl(list(text($a)), $b, (acc, y) => foldl(list(), map(acc, (e) => list(e)), (s, l) => concat(s, l)))\n", ClassPoly, 3},
+		// The size, the largest element and the number of elements of an accumulator bound those
+		// of the value of the lambda: a fold whose lambda keeps one element twice does not grow;
+		// one that reads the accumulator in a lambda over another list, or that pads every element
+		// and joins them, can double it.
+		{"fold that keeps one element twice", "rule main = a:\"x\"* b:\"y\"* => foldl(list(text($a)), $b, (acc, y) => foldl(list(), acc, (s, l) => list(l, l)))\n", ClassLinear, 0},
+		{"fold that keeps one element in two lists", "rule main = a:\"x\"* b:\"y\"* => foldl(list(text($a)), $b, (acc, y) => foldl(list(), acc, (s, l) => concat(list(l), list(l))))\n", ClassLinear, 0},
+		{"inner fold that adds the accumulator on each step", "rule main = a:\"x\"* b:\"y\"* => foldl(list(text($a)), $b, (acc, y) => foldl(list(), $b, (s, l) => concat(s, acc)))\n", ClassExp, 0},
+		{"map that copies the accumulator for each element", "rule main = a:\"x\"* b:\"y\"* => foldl(list(text($a)), $b, (acc, y) => foldl(list(), map($b, (z) => acc), (s, l) => concat(s, l)))\n", ClassExp, 0},
+		{"fold that duplicates the parts of its first element", "rule main = a:\"x\"* b:\"y\"* => foldl(list(list(text($a))), $b, (acc, y) => list(foldl(list(), map(acc[0], (e) => list(e, e)), (s, l) => concat(s, l))))\n", ClassExp, 0},
+		{"fold that pads and joins elements", "rule main = a:\"x\"* b:\"y\"* => foldl(list(text($a)), $b, (acc, y) => foldl(list(), map(acc, (e) => list(e, \"x\")), (s, l) => concat(s, l)))\n", ClassExp, 0},
+		// A map that adds to every element adds to the size once for each element, which the
+		// initial value can make n, so the size grows quadratically; so does appending a copy of
+		// the first element on each step.
+		{"fold that extends each element", "rule main = a:\"x\"* b:\"y\"* => foldl(map($a, (z) => text(z)), $b, (acc, y) => map(acc, (e) => e + \"x\"))\n", ClassPoly, 3},
+		// A value read from outside the fold can add up to the input on every step, and a part of it
+		// for each element multiplies the number of elements.
+		{"fold that adds an outside value on each step", "rule main = a:\"x\"* b:\"y\"* c:\"z\"* => foldl(text($a), $b, (acc, y) => acc + text($c))\n", ClassPoly, 3},
+		{"fold that appends an outside list on each step", "rule main = a:\"x\"* b:\"y\"* c:\"z\"* => foldl(list(text($a)), $b, (acc, y) => concat(acc, map($c, (z) => text(z))))\n", ClassPoly, 3},
+		{"fold that adds an outside value to every element", "rule main = a:\"x\"* b:\"y\"* c:\"z\"* => foldl(map($a, (z) => text(z)), $b, (acc, y) => map(acc, (e) => e + text($c)))\n", ClassPoly, 4},
+		{"fold that extends every element and appends an outside list", "rule main = a:\"x\"* b:\"y\"* c:\"z\"* => foldl(map($a, (z) => text(z)), $b, (acc, y) => concat(map(acc, (e) => e + \"x\"), map($c, (z) => text(z))))\n", ClassPoly, 4},
+		// An index is an int and adds nothing to the element it takes; a map that keeps every element
+		// rebuilds the list without growing it.
+		{"fold that appends its last element", "rule main = a:\"x\"* b:\"y\"* => foldl(list(text($a)), $b, (acc, y) => concat(acc, list(acc[len(acc) - 1])))\n", ClassPoly, 2},
+		{"fold that maps its accumulator unchanged", "rule main = a:\"x\"* b:\"y\"* => foldl(map($a, (z) => text(z)), $b, (acc, y) => map(acc, (e) => e))\n", ClassPoly, 2},
+		// A fold inside the step copies its own accumulator once for each element of its list.
+		{"fold that rebuilds its accumulator by an inner fold", "rule main = a:\"x\"* b:\"y\"* => foldl(map($a, (z) => text(z)), $b, (acc, y) => foldl(list(), acc, (s, l) => concat(s, list(l))))\n", ClassPoly, 3},
+		{"fold that joins its accumulator in a predicate", "rule main = a:\"x\"* b:\"y\"* => foldl(list(text($a)), $b, (acc, y) => concat(acc, filter(list(\"x\"), (z) => len(foldl(\"\", acc, (s, l) => s + l)) > 0)))\n", ClassPoly, 3},
+		// A comparison of values that are not ints, and len of a string, examine their operands;
+		// len of a list does not. The accumulator holds n elements, the first of n characters.
+		// Comparing every element with the first is classed by the sizes of both operands, which
+		// over-approximates: == stops at the shorter one, so it measures about n^2.
+		{"fold that compares every element with its first", "rule main = a:\"x\"* b:\"y\"* => foldl(concat(list(text($a)), map($a, (z) => text(z))), $b, (acc, y) => filter(acc, (e) => e == acc[0]))\n", ClassPoly, 3},
+		{"fold that measures its first element for every element", "rule main = a:\"x\"* b:\"y\"* => foldl(concat(list(text($a)), map($a, (z) => text(z))), $b, (acc, y) => filter(acc, (e) => len(acc[0]) > 0))\n", ClassPoly, 3},
+		{"fold that measures every element", "rule main = a:\"x\"* b:\"y\"* => foldl(concat(list(text($a)), map($a, (z) => text(z))), $b, (acc, y) => filter(acc, (e) => len(e) > 0))\n", ClassPoly, 2},
+		{"fold that measures its length for every element", "rule main = a:\"x\"* b:\"y\"* => foldl(concat(list(text($a)), map($a, (z) => text(z))), $b, (acc, y) => filter(acc, (e) => len(acc) > 0))\n", ClassPoly, 2},
+		{"fold that appends its first element", "rule main = a:\"x\"* b:\"y\"* => foldl(list(text($a)), $b, (acc, y) => concat(list(acc[0]), acc))\n", ClassPoly, 2},
+		{"bounded fold that appends its first element", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(list(text($a)), $b, (acc, y) => concat(list(acc[0]), acc))\n", ClassLinear, 0},
+		{"fold that filters its accumulator into a copy", "rule main = a:\"x\"* b:\"y\"* => foldl(list(text($a)), $b, (acc, y) => concat(acc, filter(acc, (e) => e != \"\")))\n", ClassExp, 0},
+
+		{"bounded fold that joins elements once", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(list(text($a)), $b, (acc, y) => foldl(list(), map(acc, (e) => list(e)), (s, l) => concat(s, l)))\n", ClassPoly, 2},
 		{"bounded elements inside a map", "rule main = zs:\"z\"* b:\"y\" #repeat(,2) => map($zs, (z) => foldl(\"\", $b, (acc, y) => acc + text(y)))\n", ClassLinear, 0},
 		{"doubling fold over a list", "rule main = a:\"x\"* b:\"y\"* => foldl(text($a), $b, (acc, y) => acc + acc)\n", ClassExp, 0},
 		{"bounded map copying a value from outside", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => map($b, (y) => text($a) + text(y))\n", ClassLinear, 0},

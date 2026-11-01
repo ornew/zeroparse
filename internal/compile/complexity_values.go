@@ -212,6 +212,9 @@ func (k *classifier) walkTerm(t grammar.Term, tc termCtx) {
 			}
 			k.walkTerm(a, tc)
 		}
+		if lam, ok := lambdaArg(t, 2); ok && (t.Func == "foldl" || t.Func == "foldr") && len(lam.Params) > 0 {
+			k.checkFoldGrowth(t, lam, tc)
+		}
 		switch {
 		case t.Func == "len":
 			// len builds an int, but examines all of a string value.
@@ -332,7 +335,16 @@ func (k *classifier) lambdaCtx(call *grammar.Call, i int, lam *grammar.Lambda, t
 		// they reach a fixed point. The fold runs at most c times, so this can only overstate.
 		for {
 			acc := params[lam.Params[0]]
-			next := acc.elem.join(k.sizeOf(lam.Body, tc, textSize).atMostTwo())
+			body := k.sizeOf(lam.Body, tc, textSize)
+			// The accumulators of the folds inside the body are not in scope where the
+			// accumulator is read.
+			body.acc = maps.Clone(body.acc)
+			for n := range body.acc {
+				if p, ok := params[n]; !ok || !p.acc {
+					delete(body.acc, n)
+				}
+			}
+			next := acc.elem.join(body.atMostTwo())
 			if next.equal(acc.elem) {
 				break
 			}
@@ -341,115 +353,6 @@ func (k *classifier) lambdaCtx(call *grammar.Call, i int, lam *grammar.Lambda, t
 		}
 	}
 	return tc
-}
-
-// doubles reports whether the value of the lambda of a fold can hold its accumulator, the first
-// parameter, more than once, counting the copies inside the elements of the lists it builds.
-func (k *classifier) doubles(call *grammar.Call, lam *grammar.Lambda, tc termCtx) bool {
-	if len(lam.Params) == 0 {
-		return false
-	}
-	params := maps.Clone(tc.params)
-	if params == nil {
-		params = map[string]param{}
-	}
-	for j, n := range lam.Params {
-		params[n] = param{acc: j == 0, int: j == 0 && len(call.Args) > 0 && k.isInt(call.Args[0], tc)}
-	}
-	tc.params, tc.lambda = params, true
-	return k.accCopies(lam.Body, tc, map[string]int{lam.Params[0]: 1}) > 1
-}
-
-// accCopies bounds how many copies of the accumulator the value of t can hold, where held maps
-// each lambda parameter that can hold it to its number of copies. A term whose value it does not
-// follow, such as a block, a nested fold or a call of an action function, holds two copies when
-// it reads one at all.
-func (k *classifier) accCopies(t grammar.Term, tc termCtx, held map[string]int) int {
-	sum := func(ts ...grammar.Term) int {
-		n := 0
-		for _, x := range ts {
-			n += k.accCopies(x, tc, held)
-		}
-		return min(n, 2)
-	}
-	switch t := t.(type) {
-	case nil, *grammar.IntLit, *grammar.BoolLit, *grammar.NilLit, *grammar.StringLit, *grammar.Unary,
-		*grammar.VarRef, *grammar.IndexRef:
-		// Numbers and Booleans hold no list; variables and indexed captures are bound outside the
-		// lambda.
-		return 0
-	case *grammar.CaptureRef:
-		return held[t.Name]
-	case *grammar.TermGroup:
-		return sum(t.Term)
-	case *grammar.Cast:
-		return sum(t.X)
-	case *grammar.Member:
-		return sum(t.X)
-	case *grammar.TupleLit:
-		return sum(t.Elems...)
-	case *grammar.ListConstructor:
-		return sum(t.Items...)
-	case *grammar.New:
-		n := sum(t.Args...)
-		for _, f := range t.Fields {
-			n = min(n+k.accCopies(f.Value, tc, held), 2)
-		}
-		return n
-	case *grammar.Binary:
-		if scalarOps[t.Op] || t.Op == "+" && (k.isInt(t.L, tc) || k.isInt(t.R, tc)) {
-			return 0
-		}
-		return sum(t.L, t.R)
-	case *grammar.Call:
-		switch t.Func {
-		case "len":
-			return 0
-		case "text", "list", "concat":
-			return sum(t.Args...)
-		case "map", "filter":
-			if len(t.Args) != 2 {
-				break
-			}
-			list := k.accCopies(t.Args[0], tc, held)
-			lam, ok := t.Args[1].(*grammar.Lambda)
-			if !ok {
-				break
-			}
-			// The lambda runs once for each element: a copy it reads from outside is held once
-			// for each element, and a copy that it reads through its parameter is held as many
-			// times as the parameter appears in its value.
-			inner := maps.Clone(held)
-			for n := range inner {
-				if inner[n] > 0 {
-					inner[n] = 2
-				}
-			}
-			for _, n := range lam.Params {
-				inner[n] = list
-			}
-			if t.Func == "filter" {
-				// The lambda selects elements: its value is a Boolean.
-				return list
-			}
-			return max(list, k.accCopies(lam.Body, tc, inner))
-		}
-	}
-	if k.readsAcc(t, held) {
-		return 2
-	}
-	return 0
-}
-
-// readsAcc reports whether t reads a parameter that can hold the accumulator.
-func (k *classifier) readsAcc(t grammar.Term, held map[string]int) bool {
-	found := false
-	WalkTerm(t, func(x grammar.Term) {
-		if c, ok := x.(*grammar.CaptureRef); ok && held[c.Name] > 0 {
-			found = true
-		}
-	})
-	return found
 }
 
 // elemSize describes what the size of an element of the list t can depend on: anything that the

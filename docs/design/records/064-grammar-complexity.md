@@ -428,10 +428,24 @@ The groups are addressed by these mechanisms:
   dictionary displays fold over the `/` marker and a `#repeat(,1)` value, and they carry no cause; the corpus measures
   them linear. A bounded fold inside a map over a list that is not bounded still copies its outer values once for each
   element of that list, and a fold whose accumulator doubles stays exponential, since its factor is exponential in the
-  bound. The copies are counted inside the elements of the lists the lambda builds, as in `list(acc[0] + acc[0])` and
-  `map(acc, (e) => e + e)`, and a term whose value the count does not follow, such as a block or a nested fold, counts
-  as two copies when it reads the accumulator: an index such as `acc[0]` counts as a whole copy, so
-  `concat(list(acc[0]), acc)` is checked as a fold over a list that is not bounded, though it grows linearly. The accumulator of a bounded fold is taken to hold what any number of steps can add, not at most the bound:
+  bound. Whether an accumulator can double is decided by the step matrix of the fold: the size, the largest element
+  and the number of elements of the value of the lambda, each bounded by terms in the same three quantities of the
+  accumulator, times powers of the sizes of the values read from outside the fold and of the element of the step.
+  Counting copies of the accumulator alone cannot tell `foldl(list(), acc, (s, l) => list(l, l))`, which keeps one
+  element twice and does not grow, from `foldl(list(), map(acc, (e) => list(e, "x")), (s, l) => concat(s, l))`, which
+  pads every element and doubles the number of elements on each step; the three quantities can. The matrix doubles
+  the accumulator when a cycle of its graph has a coefficient above 1 or a factor of a size, or two cycles share a
+  quantity. Otherwise it bounds each quantity by a polynomial in the input, and a value read from outside counts as
+  large as the input on every step, while the elements of the step add up to the input over all steps, so
+  `acc + text($c)` grows quadratically and `acc + text(y)` linearly. The cost of the steps follows from the same
+  terms, with comparisons and `len` of a string examining their operands, multiplied where a fold inside the lambda
+  copies its own accumulator once for each of its elements, and a fold over a list that is not bounded is reported
+  with its degree when that is 3 or more. The degrees take the initial value, the list and the values read from
+  outside to be at most linear in the input; a rule whose value grows faster, as one that joins its whole text once
+  for each of its elements, makes them too low. The matrix is an upper
+  bound: a term it does not follow, such as a block, counts as many copies of what it reads, and an exponential class
+  may over-approximate. Copies inside a lambda nested in a `map` or `filter` that is not inside the step of a fold
+  are reported with degree 2, without the elements of the lambdas around them. The accumulator of a bounded fold is taken to hold what any number of steps can add, not at most the bound:
   a fold over `#repeat(,1)` that adds the value of the rule's own recursion on each step is reported exponential,
   though it runs at most once and holds that value once, which condition 4 classes polynomial.
 - **Recovery-skip refinement of the classifier.** A `#recover` skip is not a scanning source once repetition-run reuse

@@ -841,12 +841,50 @@ necessary.
    most a constant number of times, so its copying operations are checked as
    copies outside it, in the lambdas around it, and the first parameter of a
    fold over it holds what the initial value and the value of the lambda hold,
-   at most a constant multiple of their sizes. A fold whose lambda builds a
-   value that can hold the first parameter more than once, counting the copies
-   in the elements of the lists it builds, as `acc + acc`,
-   `list(acc[0] + acc[0])` and `map(acc, (e) => e + e)` do, doubles it on each step, by a factor exponential in the bound, and it
-   is checked as a fold over a list that is not bounded. A copying operation that copies
-   the value of a variable is linear given an environment bound.
+   at most a constant multiple of their sizes, unless the fold can double it.
+   The classifier bounds one step of a fold by its **step matrix**: it bounds
+   the size, the size of the largest element and the number of elements of
+   the value of the lambda each by a sum of terms, each a constant times one
+   of the same three quantities of the first parameter, or times none, and
+   times powers of the size of a value read from outside the fold and of the
+   size of the element of the step. The size of a list is one more than its
+   number of elements plus the sizes of its elements. A list, a tuple or a
+   struct adds the quantities of its items, and `+` and `concat` add those of
+   their operands; an element taken by `[]` is at most the largest element,
+   whatever its index; a member is at most the value it is taken from; a
+   `filter` counts as its whole list, since it can keep every element; a
+   `map` holds, for each element of its list, the value of its lambda for that
+   element, so a part of the lambda that does not depend on the element counts
+   once for each element; a fold inside the lambda that does not read its own
+   first parameter holds its initial value or the value of its lambda, and one
+   that joins its own first parameter once by `concat` or `+` with values that
+   do not read it holds its initial value and those values summed over the
+   elements of its list. A part that multiplies two quantities of the first
+   parameter, as the first parameter read inside a lambda over a list that
+   grows with it, and a term whose value the classifier does not follow, such
+   as a block or a fold of another form, count as many copies of what they
+   read. The fold can double its first parameter when, in the graph of the
+   three quantities with an edge for each term that reads one, a cycle has a
+   coefficient above 1 or a factor of a size, or two cycles share a quantity,
+   as `acc + acc`, `list(acc[0] + acc[0])`, `map(acc, (e) => e + e)`,
+   `map($c, (z) => acc)` and
+   `foldl(list(), map(acc, (e) => list(e, e)), (s, l) => concat(s, l))` do.
+   Such a fold is checked as a fold over a list that is not bounded. Otherwise
+   each quantity is bounded over all the steps by a polynomial in the size of
+   the input: keeping one element twice, as
+   `foldl(list(), acc, (s, l) => list(l, l))` does, does not grow the first
+   parameter; adding to every element, as `map(acc, (e) => e + "x")` does,
+   grows the size by the number of elements on each step; and adding a value
+   read from outside, as `acc + text($c)` does, grows it by up to the size of
+   that value on each step. The classifier bounds the cost of one step by such
+   terms as well, where a term may multiply quantities: a comparison of values
+   that are not ints and `len` of a string examine their operands, and a fold
+   inside the lambda copies its own first parameter on each of its steps. The
+   degrees take the initial value, the list and the values read from outside
+   to be at most linear in the size of the input; a value of a rule that grows
+   faster makes them too low. A copying
+   operation that copies the value of a variable is linear given an
+   environment bound.
 5. **Carried growth.** No leader R grows, at the position where another leader
    S of its cycle grows, from a result that includes the growing result of S,
    where the step of S that calls R can drop the result of R and still grow,
@@ -921,10 +959,18 @@ reason:
   inside a restarted repetition gives 3. A copying operation whose size
   includes the value of a call on its own recursion, or a fold accumulator,
   gives 2, and so does a scanning source evaluated in each step of
-  a growth.
+  a growth. A fold over a list that is not bounded gives the degree in the size
+  of the input of the cost of all its steps, which the step matrix of
+  condition 4 bounds, when that is 3 or more: a term of the cost adds the
+  degrees of the quantities that it multiplies, and one more for the sum over
+  the steps.
 - **Exponential.** A binding that makes a variable depend on its own earlier
   value, or a copying operation that copies a value of its own recursion, or a
-  fold accumulator, more than once, as `s + s` does.
+  fold accumulator, more than once, as `s + s` does, or a fold whose step
+  matrix of condition 4 can double its first parameter, though no single
+  copying operation copies it twice, as by duplicating its elements and
+  joining them. The step matrix bounds the growth from above, so a fold that
+  it classes exponential can grow more slowly.
 - **Unknown.** A condition for linear cost fails without a witness of a
   polynomial or exponential cause, as when sources that are not committing are nested in one
   another without bound through a recursion of rule calls. Memoized calls in
