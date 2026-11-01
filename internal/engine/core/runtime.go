@@ -156,7 +156,7 @@ type Parser struct {
 	// numbers the seeds, and grown passes the result of GrowEnd to CallEnd (context_memo.go).
 	frames   []depFrame
 	deps     []dep
-	looks    []int32
+	looks    []lookRec
 	obsGuard []int32
 	ctxs     []*ctxTable
 	seedSeq  uint64

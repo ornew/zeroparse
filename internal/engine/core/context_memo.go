@@ -134,7 +134,7 @@ type valsKey struct {
 // result and what the step itself recorded (its result entry is a seed shared by equal results).
 type ctxSlot struct {
 	e              *MemoEntry
-	id             uint64 // the identity of a step result; the outcome of a lookahead (1 matched)
+	id             uint64 // the identity of a step result; the outcome of a lookahead (obsOutcome)
 	far            int
 	exp            []ExpID
 	examined, from int
@@ -374,22 +374,51 @@ func (p *Parser) dropTable(i int) {
 	}
 }
 
-// obsValue returns the outcome memoized for the lookahead site at pos in the current context: 1
-// if it matched, 0 if it failed, and 2 if there is none.
+// lookRec is a lookahead in progress: its site (-1 for one that records nothing) and the examined
+// range from before it.
+type lookRec struct {
+	site   int32
+	hw, lw int
+}
+
+// The values of an observation other than outcomes (obsOutcome).
+const (
+	obsNone    uint64 = 1 << 63       // no outcome is memoized
+	obsIgnored uint64 = 1<<63 | 1<<62 // every outcome under CtxIgnoreObs
+	obsUnique  uint64 = 1<<63 | 1<<61 // an outcome that obsOutcome cannot encode, which nothing matches
+)
+
+// obsOutcome encodes the outcome of a lookahead at pos, whose expression matched if ok and examined
+// [from, examined): equal values are equal outcomes with equal examined ranges. ok2 is false for an
+// outcome it cannot encode, whose value is obsUnique.
+func obsOutcome(ok bool, pos, examined, from int) (v uint64, ok2 bool) {
+	hi, lo := examined-pos, pos-from
+	if hi < 0 || lo < 0 || hi >= 1<<30 || lo >= 1<<30 {
+		return obsUnique, false
+	}
+	v = uint64(hi)<<1 | uint64(lo)<<31
+	if ok {
+		v |= 1
+	}
+	return v, true
+}
+
+// obsValue returns the outcome memoized for the lookahead site at pos in the current context
+// (obsOutcome), or obsNone.
 func (p *Parser) obsValue(pos, gp int, present uint64, site int32) uint64 {
 	if ContextMemoMutation == CtxIgnoreObs {
-		return 3
+		return obsIgnored
 	}
 	for _, s := range p.obsGuard {
 		if s == site {
-			return 2
+			return obsNone
 		}
 	}
 	p.obsGuard = append(p.obsGuard, site)
 	defer func() { p.obsGuard = p.obsGuard[:len(p.obsGuard)-1] }()
 	s := p.ctxFind(pos, gp, ctxHeadKey{kind: ctxLook, id: site, present: present}, nil)
 	if s == nil {
-		return 2
+		return obsNone
 	}
 	return s.id
 }
@@ -423,7 +452,7 @@ next:
 		}
 		for _, o := range s.obs {
 			v := p.obsValue(pos, gp, h.present, o)
-			if v == 2 {
+			if v == obsNone {
 				continue next
 			}
 			k.v[k.n] = v
@@ -472,7 +501,7 @@ func (p *Parser) ctxStore(pos int, h ctxHeadKey, ds []sdep, slot *ctxSlot) {
 		if d.kind == depObs {
 			v := d.val
 			if ContextMemoMutation == CtxIgnoreObs {
-				v = 3
+				v = obsIgnored
 			}
 			k.v[k.n] = v
 			k.n++
@@ -549,20 +578,25 @@ func (p *Parser) reusable(silent bool, errs int) bool {
 // instead of the seeds it read (LookEnd).
 func (p *Parser) LookBegin(site int) {
 	if len(p.frames) > 0 && p.frames[len(p.frames)-1].pos == p.Pos && p.gammaAt(p.Pos) < len(p.Gamma) {
-		p.looks = append(p.looks, int32(site))
+		// The examined range of the lookahead is part of its observation.
+		p.looks = append(p.looks, lookRec{site: int32(site), hw: p.Hw, lw: p.lw})
+		p.Hw, p.lw = p.Pos, p.Pos
 		p.pushFrame(p.Pos)
 		return
 	}
-	p.looks = append(p.looks, -1)
+	p.looks = append(p.looks, lookRec{site: -1})
 }
 
 // LookEnd ends the innermost lookahead, whose expression matched if ok.
 func (p *Parser) LookEnd(ok bool) {
-	site := p.looks[len(p.looks)-1]
+	l := p.looks[len(p.looks)-1]
 	p.looks = p.looks[:len(p.looks)-1]
+	site := l.site
 	if site < 0 {
 		return
 	}
+	examined, from := p.Hw, p.lw
+	p.Hw, p.lw = max(l.hw, p.Hw), Min2(l.lw, p.lw)
 	f, ds := p.popFrame()
 	read := false
 	for _, d := range ds {
@@ -575,12 +609,10 @@ func (p *Parser) LookEnd(ok bool) {
 		p.mergeDeps(ds)
 		return
 	}
-	var val uint64
-	if ok {
-		val = 1
-	}
+	val, ok2 := obsOutcome(ok, f.pos, examined, from)
 	gp := p.gammaAt(f.pos)
-	present, ok2 := p.present(gp)
+	present, known := p.present(gp)
+	ok2 = ok2 && known
 	sd, _ := p.stored(ds)
 	if ok2 {
 		p.ctxStore(f.pos, ctxHeadKey{kind: ctxLook, id: site, present: present}, sd, &ctxSlot{id: val})
