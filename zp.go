@@ -11,8 +11,10 @@ import (
 	"zeroparse.dev/zp/grammar"
 	"zeroparse.dev/zp/internal/engine"
 	"zeroparse.dev/zp/internal/limits"
+	ischema "zeroparse.dev/zp/internal/schema"
 	"zeroparse.dev/zp/internal/syntax"
 	"zeroparse.dev/zp/internal/value"
+	"zeroparse.dev/zp/schema"
 )
 
 // Node is a value of a parse result: a node of the input with a range and a string, tuple or list
@@ -528,3 +530,176 @@ func (p *Parser) DefaultStart() string { return p.prog.DefaultStart() }
 
 // Grammar returns the parser's grammar, or nil for a parser loaded from a compiled grammar.
 func (p *Parser) Grammar() *grammar.Grammar { return p.prog.SourceGrammar() }
+
+// PrefixResult reports a rule's value and successful cursor. Consumption comes
+// from the runtime cursor, even when Node is nil or its span differs.
+type PrefixResult struct {
+	Node          *Node
+	Consumed      int // Selected parser Unit; defaults to CodePoints.
+	ConsumedBytes int // Exact UTF-8 byte endpoint in the supplied input.
+}
+
+// ParsePrefix parses the named start rule at the beginning of input without requiring
+// whole-input consumption; an empty name selects the grammar's default start rule. EOF assertions still refer to the complete input.
+// Positions remain local to input. For a source slice, add its starting byte
+// offset to ConsumedBytes to find the consumed endpoint in the original source.
+// Recovered success returns the result and SyntaxErrors. Unrecovered syntax
+// failures and fatal errors return a zero result. A zero-width success returns
+// zero consumption; a nil Node does not imply failure. Parse remains whole-input.
+// WithDiagnosticCallback and positive WithMissingTokens limits are invalid for
+// this operation. Grammars containing #missing are unsupported even when
+// insertion is disabled.
+func (p *Parser) ParsePrefix(name, input string, opts ...ParseOption) (PrefixResult, error) {
+	r, err := p.prog.ParsePrefixWith(name, input, parseOptions(opts))
+	return PrefixResult{Node: r.Node, Consumed: r.Consumed, ConsumedBytes: r.ConsumedBytes}, err
+}
+
+// StreamIterator delivers one committed stream element per Next call.
+// It is single-owner; Next and Close must not overlap. The reader remains
+// caller-owned, and Close cannot interrupt a blocked Read.
+type StreamIterator = engine.StreamIterator
+
+// ErrStreamClosed identifies an iterator closed before its terminal result.
+var ErrStreamClosed = engine.ErrStreamClosed
+
+// Iterate validates a #stream parser and returns a lazy pull iterator. Reader
+// access begins on Next; lookahead and buffering may still read ahead. With a
+// diagnostic callback, Next reports committed recoveries before their element.
+func (p *Parser) Iterate(r io.Reader, opts ...ParseOption) (*StreamIterator, error) {
+	return p.prog.Iterate(p.start, r, parseOptions(opts))
+}
+
+// DocumentChangeKind distinguishes source operations, captured outcomes and
+// lost history requiring a full refresh.
+type DocumentChangeKind = engine.DocumentChangeKind
+
+const (
+	ChangeEdit        = engine.ChangeEdit
+	ChangeOutcome     = engine.ChangeOutcome
+	ChangeFullRefresh = engine.ChangeFullRefresh
+)
+
+// OutputChange is conservative whole-output comparison, never a minimal diff.
+type OutputChange = engine.OutputChange
+
+const (
+	OutputUnchanged      = engine.OutputUnchanged
+	OutputChanged        = engine.OutputChanged
+	OutputMayHaveChanged = engine.OutputMayHaveChanged
+	OutputUnavailable    = engine.OutputUnavailable
+)
+
+// DocumentChange owns an edit operation or an outcome comparison. Edit From/To
+// advance source revisions; outcome From/To identify compared snapshots. Consumers
+// track those streams separately. FullRefresh requires rebuilding current state.
+type DocumentChange = engine.DocumentChange
+
+// EnableChanges opts into bounded notifications and one retained comparison
+// snapshot. queueLimit bounds record count, not replacement or snapshot bytes.
+// It must be positive; enabling twice is rejected. Future Parse and Snapshot calls
+// capture and compare immutable outcomes inside their cumulative spend.
+// Comparison is conservative about aliases and nil-versus-empty collections;
+// this policy does not define language value equality. Interrupted invocations
+// return nil and notify unavailable, breaking the comparison chain.
+func (d *Document) EnableChanges(queueLimit int) error { return d.doc.EnableChanges(queueLimit) }
+
+// DrainChanges transfers queued events. Overflow produces one full-refresh
+// marker; draining resets the queue but retains the last comparison snapshot.
+func (d *Document) DrainChanges() []DocumentChange { return d.doc.DrainChanges() }
+
+// CacheStats describes the incremental reuse history retained by a Document.
+// EstimatedBytes is an approximation of cache-owned backing storage, excluding
+// text, caller-held trees, shared strings and allocator overhead.
+type CacheStats = engine.CacheStats
+
+// ResetHistory discards incremental reuse history while preserving text,
+// construction options, version and the statistics of the last parse. Earlier
+// result trees are detached from later node movement.
+func (d *Document) ResetHistory() { d.doc.ResetHistory() }
+
+// CacheStats inspects retained incremental history without changing it.
+// Document methods, including this one, require exclusive ownership.
+func (d *Document) CacheStats() CacheStats { return d.doc.CacheStats() }
+
+// WalkAction controls whether a walk descends, skips descendants, or stops.
+type WalkAction = value.WalkAction
+
+const (
+	WalkContinue = value.WalkContinue
+	WalkSkip     = value.WalkSkip
+	WalkStop     = value.WalkStop
+)
+
+// WalkVisit describes a live value, its incoming edge and nearest owning node.
+// Node is non-nil only for node values. Depth counts edges from the root.
+type WalkVisit = value.WalkVisit
+
+// WalkEdge identifies a root, child, field, or nested []any list edge.
+type WalkEdge = value.WalkEdge
+
+// WalkEdgeKind identifies the kind of a visit's incoming edge.
+type WalkEdgeKind = value.WalkEdgeKind
+
+const (
+	WalkRoot        = value.WalkRoot
+	WalkChild       = value.WalkChild
+	WalkField       = value.WalkField
+	WalkListElement = value.WalkListElement
+)
+
+// CycleError reports the root-to-back-edge path of a cyclic node or []any graph.
+type CycleError = value.CycleError
+
+// Cursor selects node spans in an explicitly supplied input position unit.
+// At selects a point; Range selects a half-open range. It does not infer or
+// convert units and does not prune children based on a parent's span.
+type Cursor = engine.Cursor
+
+// Walk visits a live node graph in pre-order: children in slice order, then
+// fields in name order, and nested []any elements in index order. Scalar and nil
+// values are visits too. Shared subtrees are visited once per incoming edge;
+// active-path cycles return CycleError. The graph must not be mutated concurrently.
+// A callback error returns unchanged; WalkStop succeeds and WalkSkip skips descendants.
+func Walk(root *Node, visit func(WalkVisit) (WalkAction, error)) error {
+	return value.Walk(root, visit)
+}
+
+// ErrSchemaUnavailable reports that checked grammar metadata is unavailable.
+// In particular, a parser loaded from a compiled file cannot export a schema.
+var ErrSchemaUnavailable = ischema.ErrUnavailable
+
+type schemaOptions struct{ allRules bool }
+
+// SchemaOption configures one output schema export.
+type SchemaOption func(*schemaOptions)
+
+// WithAllSchemaRules includes unreachable rules and declared types in the schema.
+// By default, export starts at the parser's configured start rule.
+func WithAllSchemaRules() SchemaOption {
+	return func(o *schemaOptions) { o.allRules = true }
+}
+
+// OutputSchema exports checked grammar metadata. It does not inspect parse
+// results or change parsing.
+func (p *Parser) OutputSchema(opts ...SchemaOption) (*schema.Output, error) {
+	if p == nil || p.prog == nil {
+		return nil, ErrSchemaUnavailable
+	}
+	var o schemaOptions
+	for _, opt := range opts {
+		opt(&o)
+	}
+	return outputSchemaPrototype(p.prog, p.start, o.allRules)
+}
+
+// outputSchemaPrototype exports the start rule of prog, the rules it calls or whose values its
+// values contain, and the struct types they refer to; or every rule and type with allRules. It
+// has no effect on parsing or generation. A program loaded from a compiled grammar has no schema
+// (engine.Program.SchemaProgram).
+func outputSchemaPrototype(prog *engine.Program, start string, allRules bool) (*schema.Output, error) {
+	sp, err := prog.SchemaProgram(start)
+	if err != nil {
+		return nil, err
+	}
+	return ischema.Export(sp, start, allRules)
+}
