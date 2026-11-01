@@ -244,13 +244,15 @@
             "docs/cookbook/error-carets.md",
             "docs/cookbook/several-errors.md",
             "docs/cookbook/recover-statements.md",
-            "docs/cookbook/slow-grammar.md"
+            "docs/cookbook/slow-grammar.md",
+            "docs/cookbook/linear-rewrites.md"
           ],
           "first": [
             "docs/cookbook/error-carets.md",
             "docs/cookbook/several-errors.md",
             "docs/cookbook/recover-statements.md",
-            "docs/cookbook/slow-grammar.md"
+            "docs/cookbook/slow-grammar.md",
+            "docs/cookbook/linear-rewrites.md"
           ]
         },
         {

@@ -410,6 +410,7 @@ func Controls() []Control {
 			Sizes:  double(250), ShortSizes: double(100), Order: Linear, Class: ClassExp,
 		},
 	}
+	cs = append(cs, rewriteControls()...)
 	for i := range cs {
 		if cs[i].BecomesLinear && becomesLinearLanded {
 			// The growth becomes linear, but the classifier counts cycle members as not memoized,

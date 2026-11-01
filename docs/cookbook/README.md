@@ -56,6 +56,7 @@ times differ from machine to machine.
 | [Report several errors in one run](several-errors.md) | `#recover`: a tree of what could be read, the errors, and what to watch for in the `skip` |
 | [Keep going after a bad statement in nested blocks](recover-statements.md) | Recovery at the statement rule shared by every block: errors from all levels and the statements that were fine |
 | [Find out why a grammar is slow](slow-grammar.md) | `zp profile` on a 20,000-line input: which rule wastes input, the change that fixes it, and the profile that proves it |
+| [Rewrite a slow pattern to linear cost](linear-rewrites.md) | For each growth class: a minimal grammar, its measured cost, the linear rewrite, and what the rewrite changes |
 
 ## Build Tools
 
