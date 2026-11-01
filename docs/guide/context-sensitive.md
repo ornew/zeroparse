@@ -65,35 +65,51 @@ zp parse -g truthy.zp -s compared -f sexpr -i 'a'
 zp: 1:1: syntax error: expected "x"
 ```
 
-**Compare text, not nodes.** `==` on nodes compares identity, and two captures are different nodes even when they
-cover the same text. Use `text(x)` (the matched text) or `len(x)`:
+**Compare text, not nodes.** `==` and `!=` compare two numbers, two strings or two booleans, and anything with `nil`.
+A node is not comparable, because two captures are different nodes even when they cover the same text, so comparing
+them is an error. Use `text(x)` (the matched text) or `len(x)`:
 
 ```zp
 // identity.zp
 @start(default)
-rule by_identity = "<" a:name "></" b:name {$a == $b} ">"
-@start
 rule by_text = "<" a:name "></" b:name {text($a) == text($b)} ">"
 rule name = [a-z]+ #atomic
 ```
 
 ```bash
-zp parse -g identity.zp -s by_identity -i '<a></a>'
-```
-
-```text
-zp: 1:7: syntax error: expected [a-z]
-```
-
-```bash
-zp parse -g identity.zp -s by_text -f sexpr -i '<a></a>'
+zp parse -g identity.zp -f sexpr -i '<a></a>'
 ```
 
 ```text
 ("<" "a" "></" "a" ">")
 ```
 
-The first command shows the third consequence: **a failed predicate says nothing**. The farthest-failure rule of the
+```bash
+zp parse -g identity.zp -i '<a></b>'
+```
+
+```text
+zp: 1:7: syntax error: expected [a-z]
+```
+
+A grammar that compares the nodes is rejected when it is compiled:
+
+```zp
+// nodes.zp
+@start(default)
+rule by_node = "<" a:name "></" b:name {$a == $b} ">"
+rule name = [a-z]+ #atomic
+```
+
+```bash
+zp parse -g nodes.zp -i '<a></a>'
+```
+
+```text
+zp: nodes.zp:3:44: invalid operands node[string] and node[string] for ==: nodes and other structured values cannot be compared; use text(x), or .Start and .End
+```
+
+The second command shows the third consequence: **a failed predicate says nothing**. The farthest-failure rule of the
 [error guide](error-messages.md#what-is-not-in-the-list) records no expected item for it, so the message points at
 whatever else failed furthest (here, the name rule looking for one more letter). Put `@error(message="...")` on the
 predicate, as in the recipes below.
@@ -771,7 +787,7 @@ zp: 1:5: nested too deeply
 | Pitfall | What happens | What to do |
 |:--|:--|:--|
 | A predicate that is not a comparison, such as `{ len($s) }` | Any value other than `false` succeeds, so the check never fails | Compare: `{ len($s) > 0 }` |
-| `{ $a == $b }` on captures | Compares node identity; always false for two captures | `{ text($a) == text($b) }` |
+| `{ $a == $b }` on captures | A compile-time error: nodes cannot be compared | `{ text($a) == text($b) }` |
 | A misspelled variable name | The predicate fails silently; no error is reported | Check the names; the failed predicate gives only a bare `syntax error` |
 | `$label` of the rule body used in a repetition's predicate | A compile error: the capture is not visible in a repetition element | Copy it into a variable (`{ v := text($label) }`) before the repetition |
 | Expecting a callee's `{ x := ... }` to be visible after it returns | It is not; the caller sees its own `x` | Return data in the tree (capture and action) |

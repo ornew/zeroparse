@@ -94,7 +94,8 @@ each walk as evaluated in full in both parses.
 
 ## Assumptions
 
-The proof relies on the following, which the specification does not state.
+The proof relies on the following. The specification does not state (A1), (A2) and
+(A4); it states (A3), which is cited here.
 
 - **(A1) Recording in a lookahead.** Inside a lookahead or the `skip` of an
   Operators Rule, an evaluation records neither expected items nor its
@@ -104,16 +105,14 @@ The proof relies on the following, which the specification does not state.
   farthest failure there.
 - **(A2) Reuse across lookahead states.** Condition (L), which the reference
   implementation applies and the specification does not mention.
-- **(A3) Node equality.** `==` and `!=` compare two nodes by a key, not by
-  identity: a node of a rule by its rule and its range, and any other node, of
-  a terminal, a string, an error, a list or a hidden rule, by its kind and its
-  range. [Operators](../language/actions.md#operators-and-functions) states
-  that nodes compare by identity, which memoization decides; this proof
-  assumes the comparison by key that the chapter is to state instead. The key
-  of a node is part of the value, so equality is a function of the values
-  compared, and by (I1) of the theorem a comparison decides alike in both
-  parses. A comparison with `nil` depends only on whether a value is `nil`,
-  which is also part of the value.
+- **(A3) Comparisons.** `==` and `!=` never compare nodes: they compare two
+  `int`, two `string` or two `bool` values, and any value with `nil`, and every
+  other comparison is an error
+  ([Operators](../language/actions.md#operators-and-functions)). A comparison
+  of two scalars depends only on the values, and a comparison with `nil` only
+  on whether a value is `nil`, which is part of the value. By (I1) of the
+  theorem a comparison therefore decides alike in both parses. An error is
+  raised for the same operands in both, so it is the run-time error of $s$.
 - **(A4) Cycles.** Condition (C), the revision of the second item of
   [Evaluations of Rules](../runtime/parsing.md#evaluations-of-rules) that
   covers every rule of the cycle other than the growing leader. That item
@@ -164,8 +163,8 @@ is a node of the kind error whose text is its message
 cannot read that text: `text` does not accept a value of the type `error`, so
 `text($x)` on an error value is a compile-time error, and the type `error`
 declares no field ([Built-In Functions](../language/actions.md#built-in-functions)).
-By (A3), `==` compares an error node by its kind and range, which do not
-depend on $\lambda$, and never reads its message. So $s$, $q$,
+By (A3), `==` does not compare an error node, so a comparison never reads its
+message either. So $s$, $q$,
 the run-time error and the examined range are the same for both states, each
 `#recover` recovers in both or in neither, and $\varepsilon$ has the same
 length. When $\varepsilon$ is empty, no recovery took place on the path that
@@ -239,7 +238,8 @@ following.
 1. *A terminal, an anchor, a predicate or an action.* These read the same state
    in both parses, so they have the same outcome and examine the same input.
    The values they read are equal by (I1), though they may be different nodes,
-   and by (A3) equality is a function of the values compared.
+   and by (A3) a comparison depends only on scalar values and on whether a
+   value is `nil`.
 2. *A combinator.* A sequence, choice, repetition, option, lookahead, cut,
    capture or `#recover` combines the outcomes of its parts by the rules of
    [Rule Expressions](../language/parser-expressions.md) and records them in
@@ -281,7 +281,7 @@ of the same expression in the same state. $\square$
 
 **Values.** The two parses return equal values: the same nodes with the same
 kinds, ranges, children and fields. Whether two calls return the same node
-or equal nodes is not part of the outcome
+is not part of the outcome, and no action can observe it, by (A3)
 ([Memoization](../runtime/parsing.md#memoization)).
 
 **Leaders and members.** A rule of a cycle that the growth of a leader reaches

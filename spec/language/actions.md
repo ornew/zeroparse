@@ -331,7 +331,7 @@ comparison result an operand of another comparison.
 |:--|:--|:--|:--|
 | 1 | `\|\|` | `bool`, `bool` | `bool` |
 | 2 | `&&` | `bool`, `bool` | `bool` |
-| 3 | `==`, `!=`, `<`, `<=`, `>`, `>=` | Equality: any values; ordering: two `int` or two `string` values | `bool` |
+| 3 | `==`, `!=`, `<`, `<=`, `>`, `>=` | Equality: two `int`, two `string` or two `bool` values, or any value and `nil`; ordering: two `int` or two `string` values | `bool` |
 | 4 | `+` | `int`, `int` or `string`, `string` | `int` or `string` |
 | 4 | `-` | `int`, `int` | `int` |
 | 5 | `*`, `/`, `%` | `int`, `int` | `int` |
@@ -358,11 +358,25 @@ value directly: `$xs[0]`, `f(x)[0]` and `xs[0][1]` index, while in a Rule
 Expression `name [a-z]` with a space is a name and a character class, and
 `name[a-z]` is an error.
 
-`==` and `!=` compare integers, strings and booleans by value, `nil` with
-`nil`, and nodes by identity. Values of different types compare unequal;
-other runtime value kinds, including functions, do not compare equal. Because
-nodes compare by identity, separate calls at the same position are not
-necessarily equal: memoization determines whether a result node is reused.
+`==` and `!=` compare two integers, two strings or two booleans by value, and any value with
+`nil`: `nil == nil` is true, and a node, struct, list or tuple is not equal to `nil`. Every other
+comparison is an error: a node, a list node, a struct, a tuple or a list compared with anything
+but `nil`, and two values of different types, such as a node and a string or an `int` and a
+`string`. A comparison that the static types show to be one is a compile-time error; a value whose
+type is not known statically, or that may be `nil`, is checked when the comparison runs, where it is
+a runtime action error, which follows the surrounding action as described in
+[Types and Errors](#types-and-errors). Nodes are not compared because
+neither their identity nor a range with a type says that two values are equal: whether two calls of
+a rule return one node depends on [memoization](../runtime/parsing.md#memoization), and results
+of one range can differ in their fields. Compare what a node matched with `text(x)`, its position
+with `.Start` and `.End`, and its content through its fields:
+
+```zp
+rule tag = "<" a:name "></" b:name {text($a) == text($b)} ">"
+rule same_span = &(a:name) b:name {$a.Start == $b.Start && $a.End == $b.End}
+rule name = [a-z]+ #atomic
+```
+
 Strings are ordered lexicographically. Comparisons return `bool`.
 
 ### Built-In Functions

@@ -270,10 +270,8 @@ observable consequences, and no others.
 
 - **It never changes the result of a parse.** The value, the recovered errors
   and the syntax error are the same with and without memoization. Memoization
-  changes only the cost.
-- **Node identity is unspecified.** Whether two calls of a rule at the same
-  position return the same node, or equal nodes, depends on memoization. To
-  compare what two nodes matched, compare their text or their fields (see
+  changes only the cost. Whether two calls of a rule at one position return one
+  node is not observable, because `==` and `!=` do not compare nodes (see
   [Operators](../language/actions.md#operators-and-functions)).
 - **Rules that read variables are memoized per combination of values.** The
   result of a rule that reads [variables](../language/predicates.md#variables) directly or

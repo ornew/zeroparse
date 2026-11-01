@@ -87,7 +87,7 @@ because `content*` stops at the end of the input and `close_tag` cannot match.
 
 - A predicate that is not a comparison, such as `{len($s)}`, succeeds for every value except `false`. Compare
   explicitly.
-- `{ $a == $b }` on two captures compares nodes, not text. Compare `text($a) == text($b)`.
+- `{ $a == $b }` on two captures is a compile-time error, because nodes cannot be compared. Compare `text($a) == text($b)`.
 - A misspelled variable name makes the predicate fail silently, so check the names first when a predicate never
   succeeds.
 
