@@ -115,6 +115,17 @@ func TestClassifyComplexity(t *testing.T) {
 		// the value of r includes the value of its own recursion.
 		{"list built by right recursion after its user", "rule main = s $$\nrule s []string = \"\\\"\" t:r => concat(list(\"q\"), $t)\nrule r []string = m / l\nrule m []string = e:i \",\" t:r => concat(list($e), $t)\nrule l []string = e:i \"\\\"\" => list($e)\nrule i string = x:(\"(\" s \")\" / [a-z]+) => text($x)\n", ClassPoly, 2},
 		{"tail passed on by right recursion after its user", "rule main = s $$\nrule s []string = \"\\\"\" t:r => $t\nrule r []string = m / l\nrule m []string = i \",\" t:r => $t\nrule l []string = e:i \"\\\"\" => list($e)\nrule i string = x:(\"(\" s \")\" / [a-z]+) => text($x)\n", ClassLinear, 0},
+		// A lambda over a list with at most a constant number of elements runs at most that many
+		// times: its copies from outside it and of a fold accumulator are a constant number of
+		// copies. Over a list that is not bounded, or inside a lambda over one, they are not.
+		{"doubling fold over a bounded list", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(text($a), $b, (acc, y) => acc + acc + text($a))\n", ClassLinear, 0},
+		{"doubling fold over a list", "rule main = a:\"x\"* b:\"y\"* => foldl(text($a), $b, (acc, y) => acc + acc)\n", ClassExp, 0},
+		{"bounded map copying a value from outside", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => map($b, (y) => text($a) + text(y))\n", ClassLinear, 0},
+		{"map copying a value from outside", "rule main = a:\"x\"* b:\"y\"* => map($b, (y) => text($a) + text(y))\n", ClassUnknown, 0},
+		{"bounded fold inside a map", "rule main = a:\"x\"* zs:(b:\"y\" #repeat(,1) \"z\")* => map($zs, (z) => foldl(\"\", z.$b, (acc, y) => acc + text($a)))\n", ClassUnknown, 0},
+		{"bounded fold over the elements of a map", "rule main = a:\"x\"* zs:(b:\"y\" #repeat(,1) \"z\")* => map($zs, (z) => foldl(\"\", z.$b, (acc, y) => acc + text(y)))\n", ClassLinear, 0},
+		{"bounded fold that adds a recursive list on each step", "rule main = l $$\nrule l []string = x:\"a\" t:l? b:\"y\" #repeat(,2) => foldl(list(), $b, (acc, y) => concat(acc, $t))\n", ClassExp, 0},
+		{"bounded fold of a list built by right recursion", "rule main = l $$\nrule l []string = x:\"a\" t:l? b:\"y\" #repeat(,1) => foldl($t, $b, (acc, y) => concat(acc, list(text(y))))\n", ClassPoly, 2},
 		// Comparing two strings examines the shorter one: against a literal it is bounded, between
 		// two values of the recursion it is not.
 		{"comparison with a literal", "rule main = l $$\nrule l string = (\"(\" x:l \")\" {$x != \"\"} => $x) / a\nrule a string = \"a\" => \"a\"\n", ClassLinear, 0},

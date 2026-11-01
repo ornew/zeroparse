@@ -333,7 +333,7 @@ grow.zp:4:18: warning: s := s + s can at least double the size of s on each recu
 Each call of `main` sees the value that the call before it bound, so after n characters `s` holds 2^n characters. A
 binding that adds a bounded piece, such as `indent := indent + "  "`, is not reported, nor is one whose value no later
 evaluation of it sees: a binding after the recursive call, or one in another alternative of the choice. Only `string`
-variables are checked; growth through `int` variables, and a fold accumulator that doubles, are matters of cost, which
+variables are checked; growth through `int` variables, and a fold accumulator that doubles on each element of a list without a constant bound on its length, are matters of cost, which
 [`super-linear`](#super-linear) reports.
 
 ### `unused-capture`

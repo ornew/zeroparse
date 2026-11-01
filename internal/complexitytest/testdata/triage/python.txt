@@ -1,4 +1,4 @@
-# python: exponential (degree 0), 148 witnesses, 198 reasons
+# python: exponential (degree 0), 148 witnesses, 190 reasons
 
 ## whitespace (70) -> F97
 254:7 indentation: the cost can grow as n^2: after an iteration of the repetition at 254:6 in rule indentation fails, what follows the repetition ([ \t]* "\u{c}")* can start again inside the input that the repetition [ \t]* at 254:7 in rule indentation examined; this repeats in the recursion of rule indented_block
@@ -160,16 +160,6 @@
 403:148 try_stmt: map($xs, (x) => x.$h) at 403:148 in rule try_stmt copies, for each element, a value from outside its lambda that is not bounded by a constant
 403:179 try_stmt: concat($e) at 403:179 in rule try_stmt copies, for each element, a value from outside its lambda that is not bounded by a constant
 403:202 try_stmt: concat($f) at 403:202 in rule try_stmt copies, for each element, a value from outside its lambda that is not bounded by a constant
-
-## bounded-lambda-copies (8) -> F102
-575:60 params: concat($g1nd, map($g1wd, (y) => y.$p)) at 575:60 in rule params copies, for each element, a value from outside its lambda that is not bounded by a constant
-575:74 params: map($g1wd, (y) => y.$p) at 575:74 in rule params copies, for each element, a value from outside its lambda that is not bounded by a constant
-625:60 lambda_params: concat($g1nd, map($g1wd, (y) => y.$p)) at 625:60 in rule lambda_params copies, for each element, a value from outside its lambda that is not bounded by a constant
-625:74 lambda_params: map($g1wd, (y) => y.$p) at 625:74 in rule lambda_params copies, for each element, a value from outside its lambda that is not bounded by a constant
-804:98 brace_items: concat(list($f), map($dr, (y) => y.$k)) at 804:98 in rule brace_items copies, for each element, a value from outside its lambda that is not bounded by a constant
-804:115 brace_items: map($dr, (y) => y.$k) at 804:115 in rule brace_items copies, for each element, a value from outside its lambda that is not bounded by a constant
-804:147 brace_items: concat(list(x.$v), map($dr, (y) => y.... at 804:147 in rule brace_items copies, for each element, a value from outside its lambda that is not bounded by a constant
-804:166 brace_items: map($dr, (y) => y.$v) at 804:166 in rule brace_items copies, for each element, a value from outside its lambda that is not bounded by a constant
 
 ## module-whitespace (4) -> F97
 204:6 main: an iteration of the repetition at 204:6 in rule main contains the repetition [ \t\u{c}]* at 258:14 in rule blank and is not committing against what follows the repetition blank*

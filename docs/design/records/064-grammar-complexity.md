@@ -411,8 +411,11 @@ The groups are addressed by these mechanisms:
   `list($m)`). The profile shows a constant number of evaluations per byte and at most four evaluations of a memoized
   rule per position at every nesting depth, so no exponential input exists. Memoizing across variable values that a
   rule does not read would lower a constant, not the order.
-- **Single-element fold refinement of the classifier.** A fold or map over a list of at most one element copies a
-  bounded amount.
+- **Lambdas over bounded lists.** A fold or map over a list with a constant bound on its number of elements runs its
+  lambda a constant number of times, so condition 4 checks its copies as copies outside the lambda
+  ([Lemma 7](../../../spec/proofs/linear-cost.md#lemma-7-lambdas-over-bounded-lists)). Python's parameter lists and
+  dictionary displays fold over the `/` marker and a `#repeat(,1)` value, and they carry no cause; a bounded fold inside
+  a map over a list that is not bounded still copies its outer values once for each element of that list.
 - **Recovery-skip refinement of the classifier.** A `#recover` skip is not a scanning source once repetition-run reuse
   records the ends of skips per position.
 - **Constant-cost text in the cost model.** The cost model guarantees that the text of a node costs a constant in a
@@ -467,7 +470,6 @@ The groups are addressed by these mechanisms:
 | python | except-star-handlers | 3 | grammar rewrite | 2 | 1.91 | n² |
 | python | fold-copies | 16 | in-place fold accumulators | 4 | 2.00 | n² |
 | python | nested | 183 | open | 10 | 1.03 | n |
-| python | bounded-lambda-copies | 8 | single-element fold refinement | 3 | 0.98 | n |
 | python | module-whitespace | 4 | token-scan refinement | 1 | 1.00 | n |
 | python | tokens | 20 | token-scan refinement | 6 | 1.00 | n |
 | python | whitespace | 70 | token-scan refinement | 5 | 1.00 | n |

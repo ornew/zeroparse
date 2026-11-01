@@ -287,6 +287,28 @@ func Controls() []Control {
 			},
 			Sizes: double(250), ShortSizes: double(100), Order: Poly(2), Class: ClassPoly,
 		},
+		// A lambda over a list with at most a constant number of elements runs at most that many
+		// times, so its copies from outside it, and the copies of a fold accumulator, are linear;
+		// inside a lambda over a list that is not bounded, the same fold runs once for each of its
+		// elements.
+		{
+			Name: "Doubling fold over a bounded list", Family: "bounded lambda",
+			Source: "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(text($a), $b, (acc, y) => acc + acc + text($a))\n",
+			Input:  func(n int) string { return rep("x", n) + "yy" },
+			Sizes:  double(250), ShortSizes: double(100), Order: Linear, Class: ClassLinear, Positive: true,
+		},
+		{
+			Name: "Bounded map copying a value from outside", Family: "bounded lambda",
+			Source: "rule main = a:\"x\"* b:\"y\" #repeat(,2) => map($b, (y) => text($a) + text(y))\n",
+			Input:  func(n int) string { return rep("x", n) + "yy" },
+			Sizes:  double(250), ShortSizes: double(100), Order: Linear, Class: ClassLinear, Positive: true,
+		},
+		{
+			Name: "Bounded fold inside a map that is not bounded", Family: "bounded lambda",
+			Source: "rule main = a:\"x\"* zs:(b:\"y\" #repeat(,1) \"z\")* => map($zs, (z) => foldl(\"\", z.$b, (acc, y) => acc + text($a)))\n",
+			Input:  func(n int) string { return rep("x", n) + rep("yz", n) },
+			Sizes:  double(250), ShortSizes: double(100), Order: Poly(2), Class: ClassUnknown,
+		},
 	}
 	for i := range cs {
 		if cs[i].BecomesLinear && becomesLinearLanded {

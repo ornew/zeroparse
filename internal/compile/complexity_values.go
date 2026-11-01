@@ -2,6 +2,7 @@ package compile
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"sort"
 	"strings"
@@ -18,6 +19,9 @@ type termCtx struct {
 	holder grammar.Expr     // the inline action that holds the term, or nil
 	params map[string]param // the parameters of the enclosing lambdas
 	lambda bool             // inside a lambda
+	// repeat reports a lambda that runs once for each element of a list whose number of elements
+	// is not bounded by a constant, or such a lambda around it.
+	repeat bool
 }
 
 type param struct {
@@ -41,7 +45,7 @@ type content struct {
 	vars      bool           // the value of a variable
 	rec       map[string]int // captures that hold a call on a recursion with the rule, with counts
 	acc       map[string]int // fold accumulators, with counts
-	outer     bool           // from outside the innermost lambda, and unbounded
+	outer     bool           // from outside a lambda that repeats, and unbounded
 }
 
 // bounded reports whether the value is bounded in size by a constant of the grammar.
@@ -65,6 +69,44 @@ func (c *content) add(d content) {
 		}
 		c.acc[n] += v
 	}
+}
+
+// join returns what either c or d can hold: a part of either, with the larger count.
+func (c content) join(d content) content {
+	j := content{unbounded: c.unbounded || d.unbounded, vars: c.vars || d.vars, outer: c.outer || d.outer}
+	j.rec, j.acc = maxCounts(c.rec, d.rec), maxCounts(c.acc, d.acc)
+	return j
+}
+
+// atMostTwo caps the counts of c at 2: a count only says whether a part is copied more than once.
+func (c content) atMostTwo() content {
+	c.rec, c.acc = maxCounts(c.rec, nil), maxCounts(c.acc, nil)
+	for _, m := range []map[string]int{c.rec, c.acc} {
+		for n, v := range m {
+			m[n] = min(v, 2)
+		}
+	}
+	return c
+}
+
+func (c content) equal(d content) bool {
+	return c.unbounded == d.unbounded && c.vars == d.vars && c.outer == d.outer &&
+		maps.Equal(c.rec, d.rec) && maps.Equal(c.acc, d.acc)
+}
+
+// maxCounts returns a new map with the larger count of each name in a or b, or nil for none.
+func maxCounts(a, b map[string]int) map[string]int {
+	if len(a) == 0 && len(b) == 0 {
+		return nil
+	}
+	m := maps.Clone(a)
+	if m == nil {
+		m = map[string]int{}
+	}
+	for n, v := range b {
+		m[n] = max(m[n], v)
+	}
+	return m
 }
 
 // lighter reports whether c weighs less than d as a bound on a size: it has fewer counts of fold
@@ -230,28 +272,49 @@ func (k *classifier) stringIn(t Ty, seen map[string]bool) bool {
 }
 
 // lambdaCtx returns the context of the body of the lambda that is argument i of call.
+//
+// A lambda over a list whose number of elements is bounded by a constant c runs at most c times
+// for each evaluation of the call, so its copies are those of c copies of its body outside the
+// lambda: it does not repeat, a copy from outside it is not reported for each element, and the
+// accumulator of a fold holds what the initial value and the body can hold, at most a constant
+// multiple of their sizes.
 func (k *classifier) lambdaCtx(call *grammar.Call, i int, lam *grammar.Lambda, tc termCtx) termCtx {
 	params := map[string]param{}
 	for n, p := range tc.params {
 		params[n] = p
 	}
 	fold := call.Func == "foldl" || call.Func == "foldr"
-	// An element of the list argument can hold anything that the list can.
+	list := 0
+	if fold {
+		list = 1
+	}
+	var listArg grammar.Term
+	if len(call.Args) > list {
+		listArg = call.Args[list]
+	}
+	bounded := listArg != nil && k.sizeOf(listArg, tc, listSize).bounded()
+	// An element of the list argument can hold anything that the list can. The elements of a list
+	// that is not bounded are distinct parts of it, each seen once; the elements of a bounded list
+	// are seen again whenever an enclosing lambda repeats.
 	var elem content
 	var elems []grammar.Expr
-	if list := 0; !fold || len(call.Args) > 1 {
-		if fold {
-			list = 1
+	if listArg != nil {
+		if bounded {
+			elem = k.sizeOf(&grammar.Member{X: listArg}, tc, textSize)
+		} else {
+			elem = k.elemSize(listArg, tc)
 		}
-		if len(call.Args) > list {
-			elem = k.elemSize(call.Args[list], tc)
-			elems = k.elemExprs(call.Args[list], tc)
-		}
+		elems = k.elemExprs(listArg, tc)
+	}
+	var init content
+	if fold && bounded && len(call.Args) > 0 {
+		init = k.sizeOf(call.Args[0], tc, textSize).join(k.sizeOf(call.Args[0], tc, listSize)).atMostTwo()
 	}
 	for j, n := range lam.Params {
 		p := param{}
 		if fold && j == 0 {
-			p.acc = true
+			p.acc = !bounded
+			p.elem = init
 			p.int = len(call.Args) > 0 && k.isInt(call.Args[0], tc)
 		} else {
 			p.elem, p.elems = elem, elems
@@ -259,16 +322,31 @@ func (k *classifier) lambdaCtx(call *grammar.Call, i int, lam *grammar.Lambda, t
 		params[n] = p
 	}
 	tc.params, tc.lambda = params, true
+	tc.repeat = tc.repeat || !bounded
+	if fold && bounded && len(lam.Params) > 0 {
+		// The accumulator also holds what the body builds from it and from the other parameters,
+		// after any number of steps: the parts and their counts, capped at 2, only grow, so
+		// they reach a fixed point. The fold runs at most c times, so this can only overstate.
+		for {
+			acc := params[lam.Params[0]]
+			next := acc.elem.join(k.sizeOf(lam.Body, tc, textSize).atMostTwo())
+			if next.equal(acc.elem) {
+				break
+			}
+			acc.elem = next
+			params[lam.Params[0]] = acc
+		}
+	}
 	return tc
 }
 
 // elemSize describes what the size of an element of the list t can depend on: anything that the
 // captures and variables that t reads can hold.
 func (k *classifier) elemSize(t grammar.Term, tc termCtx) content {
-	saved := tc.lambda
-	tc.lambda = false
+	saved, savedRepeat := tc.lambda, tc.repeat
+	tc.lambda, tc.repeat = false, false
 	c := k.sizeOf(&grammar.Member{X: t}, tc, textSize)
-	tc.lambda = saved
+	tc.lambda, tc.repeat = saved, savedRepeat
 	c.outer = false
 	return c
 }
@@ -357,10 +435,10 @@ func (k *classifier) sizeOf(t grammar.Term, tc termCtx, mode sizeMode) content {
 		for _, e := range exprs {
 			c.add(k.exprSize(e, tc, mode, "$"+t.Name))
 		}
-		c.outer = tc.lambda && c.unbounded
+		c.outer = tc.repeat && c.unbounded
 	case *grammar.IndexRef:
 		c = k.deepSize(k.byName[tc.rule].Expr, tc, fmt.Sprintf("$%d", t.Index))
-		c.outer = tc.lambda && c.unbounded
+		c.outer = tc.repeat && c.unbounded
 	case *grammar.Member:
 		exprs, param, ok := k.termExprs(t, tc)
 		if !ok {
@@ -373,7 +451,7 @@ func (k *classifier) sizeOf(t grammar.Term, tc termCtx, mode sizeMode) content {
 		for _, e := range exprs {
 			c.add(k.exprSize(e, tc, mode, name))
 		}
-		c.outer = tc.lambda && !param && c.unbounded
+		c.outer = tc.repeat && !param && c.unbounded
 	case *grammar.Binary:
 		switch {
 		case t.Op == "+":
@@ -449,7 +527,7 @@ func (k *classifier) sizeOfAny(t grammar.Term, tc termCtx) content {
 			}
 		})
 		c.unbounded = true
-		c.outer = tc.lambda && outer
+		c.outer = tc.repeat && outer
 	}
 	return c
 }

@@ -181,7 +181,8 @@ nor one in a different alternative of a choice from the call, as in
 bindings before the next is tried. Bindings of `int` and `bool` variables are
 not reported; their effect on the number of combinations of values is a matter
 of cost, which `super-linear` reports. A fold accumulator that doubles, as
-`acc + acc` or `concat(acc, acc)` does in the lambda of `foldl`, is not a
+`acc + acc` or `concat(acc, acc)` does in the lambda of `foldl` over a list
+that is not [bounded](parsing.md#conditions-for-linear-cost), is not a
 binding (and a variable never holds a list); `super-linear` reports it as
 exponential, as it reports every growing binding.
 

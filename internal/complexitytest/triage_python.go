@@ -68,13 +68,6 @@ func triagePython() []TriageGroup {
 				{Name: "many except* handlers", Build: list("try:\n    pass\n", "except* E:\n    pass\n", "", ""), Sizes: doubling(300, 3), Order: Poly(2)},
 				{Name: "many except handlers", Build: list("try:\n    pass\n", "except E:\n    pass\n", "", ""), Sizes: doubling(300, 3), Order: Linear},
 			}},
-		{Grammar: "python", ID: "bounded-lambda-copies", Rules: []string{"params", "lambda_params", "brace_items"}, Pattern: `copies, for each element`,
-			Shape:  "a fold over a list of at most one element (the / marker of a parameter list, the #repeat(,1) value of a dictionary display) copies a list from outside its lambda",
-			Assign: "F102", Order: Linear, Families: []TriageFamily{
-				{Name: "parameters with a slash", Build: func(n int) string { return "def f(" + list("", "a%d", ", ", "")(n) + ", /, b=1):\n    pass\n" }, Sizes: doubling(500, 3), Order: Linear},
-				{Name: "lambda parameters with a slash", Build: func(n int) string { return "f = lambda " + list("", "a%d", ", ", "")(n) + ", /: 0\n" }, Sizes: doubling(500, 3), Order: Linear},
-				{Name: "large dictionary", Build: func(n int) string { return "x = {" + list("", "%d: 1", ", ", "")(n) + "}\n" }, Sizes: doubling(500, 3), Order: Linear},
-			}},
 		{Grammar: "python", ID: "module-whitespace", Rules: []string{"main", "first_stmts", "module_end"}, Pattern: `contains the repetition`,
 			Shape:  "the blank lines and whitespace at the start and end of a module against the same whitespace after them",
 			Assign: "F97", Order: Linear, Families: []TriageFamily{

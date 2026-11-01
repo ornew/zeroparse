@@ -10,8 +10,8 @@ splits the cost into the parts that the specification counts and bounds each
 part by one lemma, so that a new condition is added as a lemma, or as a case of
 one, without changing the others.
 
-Lemmas 1 and 2 are proved, and the theorem is proved from the others. Lemmas
-3 to 6 are given as outlines: each states its claim, the conditions it uses,
+Lemmas 1, 2 and 7 are proved, and the theorem is proved from the others.
+Lemmas 3 to 6 are given as outlines: each states its claim, the conditions it uses,
 and the steps that its proof must still make precise, listed under
 [Open Steps](#open-steps) with the step that the theorem needs besides them.
 
@@ -177,8 +177,10 @@ predicates build is at most a constant times $K(L + 1)\hat{n}$.
 A copy of a value that does not include the value of a call on its own
 recursion, nor a fold accumulator, does not add up over the levels of a
 recursion; when it is unbounded it is a scanning source, which Lemma 4 counts.
-A copy in the lambda of `map`, `filter`, `foldl` or `foldr` runs once per
-element and copies at most a constant from outside the lambda. A copy of the
+A copy in the lambda of `map`, `filter`, `foldl` or `foldr` over a list that
+is not bounded runs once per element and copies at most a constant from
+outside the lambda; over a bounded list, Lemma 7 makes the copies of the call
+those of a constant number of copies outside the lambda. A copy of the
 value of a variable costs at most $L$. Condition 1 keeps the value of a
 variable from growing from its own earlier value, so the number of
 combinations at a position is $K$, a constant when every binding is a literal.
@@ -189,6 +191,57 @@ it is a step of constant cost, apart from work of at most a constant times
 $\hat{n}$ in the whole parse, which the constant of the theorem absorbs. A
 stream pays the length of each text besides, as
 [Lemma 4 of that proof](constant-cost-text.md#lemma-4-streams) states.
+
+## Lemma 7 (Lambdas Over Bounded Lists)
+
+Let a call of `map`, `filter`, `foldl` or `foldr` satisfy condition 4 and
+have a [bounded](../runtime/parsing.md#conditions-for-linear-cost) list, with at most
+$m$ elements, where $m$ is a constant. In one evaluation of the call, let $I$
+be the size of the initial value of a fold ($I = 0$ otherwise), $E$ the total
+size of the elements, and $S$ the total size of the values that the lambda
+reads other than its parameters, each measured as condition 4 measures what a
+copy of it copies. Then the call evaluates the lambda at most
+$m$ times, the first parameter of a fold has size at most $a^m (I + E + S + d)$,
+and the copying operations of the lambda cost at most $c (I + E + S + 1)$, for
+constants $a$, $c$ and $d$.
+
+*Proof.* By [Built-In Functions](../language/actions.md#built-in-functions),
+the call evaluates its lambda once for each element of the list, so at most
+$m$ times. Let $r$ be the number of references to parameters, captures and
+variables in the lambda, and $d$ the total size of its literals; both are
+constants. A value that the lambda builds is made of the values that it
+references and of its literals, so its size is at most $r$ times the largest
+value that it references, plus $d$. This holds as well when the lambda
+contains a call with a lambda of its own, by induction on the nesting of
+lambdas: over a bounded list, by this lemma for the inner call, with larger
+constants; over a list that is not bounded, the inner lambda copies nothing
+from outside it that is not bounded by a constant, nor its fold accumulator,
+by condition 4, so the value of the inner call is at most a constant times the
+sizes of its list and its initial value, which the lambda references. One evaluation of the lambda references
+the first parameter, an element and the values counted in $S$, so with $A$ the
+size of the first parameter and $B = E + S + d$, its value has size at most
+$r(A + B) + d \le r A + (r + 1) B$, and its copying operations, each of which
+costs at most a constant times the sizes that it copies, cost at most a
+constant times $A + B$.
+
+In a fold, let $A_j$ be the size of the first parameter after $j$ steps, so
+$A_0 = I$ and $A_{j+1} \le r A_j + (r + 1) B$. With $a = 2r + 1$, induction
+gives $A_j \le a^j (I + B)$: the case $j = 0$ holds, and
+$A_{j+1} \le r a^j (I + B) + (r + 1) B \le (2r + 1) a^j (I + B)$. So
+$A_j \le a^m (I + B)$ for $j \le m$. The first parameter of a `map` or a
+`filter` is an element, of size at most $E$. Summing the copying operations
+over at most $m$ evaluations gives at most a constant times
+$m (a^m (I + B) + B)$, which is $c (I + E + S + 1)$ for a constant $c$.
+$\square$
+
+The copies of such a call are therefore those of a constant number of copies,
+in the context of the call, of the initial value, the list and the values from
+outside the lambda. This is how condition 4 checks them: they repeat once for
+each element only when a lambda around the call is over a list that is not
+bounded, and the first parameter of the fold includes what the initial value
+and the value of the lambda include, so that a copy of it that includes the
+value of a call on the recursion is checked as such a copy. The proof does not
+need the bound $a^m$ to be small, only to be a constant.
 
 ## Theorem (Linear Cost)
 

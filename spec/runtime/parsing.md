@@ -751,24 +751,34 @@ necessary.
    these bodies again at that position.
 4. **Copies.** No copying operation copies a string or list whose size can
    include the size of the value of a call on a recursion with the rule that
-   performs the operation, nor a fold accumulator. The size is the one that the
-   operation copies: the characters of a string, or the elements of a list. A
-   value includes the value of such a call when it is the value of the call,
-   passes it on, as `$x` does, is an element of it, as `$x[0]` is, or is built
-   from it by `+`, `text`, `concat`, `map` or `filter`. So the text of a capture of the recursion includes the
-   text of the calls nested in it, which counts where the text is joined or
-   compared, while a list of nodes of the recursion, as
+   performs the operation, nor a fold accumulator: the first parameter of the
+   lambda of `foldl` or `foldr` over a list that is not bounded. A list is
+   **bounded** when its number of elements is bounded by a constant of the
+   grammar, as the list of a repetition with an upper bound, such as
+   `x:a #repeat(,2)`, a `list(...)`, and the `concat`, `map` or `filter` of
+   bounded lists are. The size is the one that the operation copies: the
+   characters of a string, or the elements of a list. A value includes the
+   value of such a call when it is the value of the call, passes it on, as `$x`
+   does, is an element of it, as `$x[0]` is, or is built from it by `+`,
+   `text`, `concat`, `map` or `filter`, or by a fold over a bounded list whose
+   initial value or lambda includes it. So the text of a capture of the
+   recursion includes the text of the calls nested in it, which counts where
+   the text is joined or compared, while a list of nodes of the recursion, as
    built by `list($x)`, has one element per node whatever the node contains;
    `concat(list($x), $t)` with `t` the list of the rule's own recursion
    includes it. A value of a rule on a cycle of such values, and the value of
    an Operators Rule, are taken to include it. A copy whose size does not include
    such a value does not add up over the levels of the recursion; when it is
    not bounded by a constant, it is a scanning source, which condition 2
-   covers. A copying operation in the
-   lambda of `map`, `filter`, `foldl` or `foldr` runs once for each element, as
-   in a repetition: it copies nothing from outside the lambda that is not
-   bounded in size by a constant of the grammar. A copying operation that
-   copies the value of a variable is linear given an environment bound.
+   covers. A copying operation in the lambda of `map`, `filter`, `foldl` or
+   `foldr` over a list that is not bounded runs once for each element, as in a
+   repetition: it copies nothing from outside the lambda that is not bounded in
+   size by a constant of the grammar. The lambda over a bounded list runs at
+   most a constant number of times, so its copying operations are checked as
+   copies outside it, in the lambdas around it, and the first parameter of a
+   fold over it holds what the initial value and the value of the lambda hold,
+   at most a constant multiple of their sizes. A copying operation that copies
+   the value of a variable is linear given an environment bound.
 5. **Left recursion in lookaheads and recoveries.** No rule grows inside a
    lookahead, or recovers an error while it grows, at a position where another
    rule grows and while its growth reads the growing result of that rule.
