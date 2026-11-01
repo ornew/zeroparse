@@ -1,6 +1,7 @@
 <section class="hero">
   <div class="hero-text">
-    <h1 class="tagline">{{.Tagline}}</h1>
+    <svg class="hero-mark" viewBox="0 0 52.5 48" fill="currentColor" aria-hidden="true"><g transform="translate(8.46 0) skewX(-10)"><path fill-rule="evenodd" d="M0 0H44V48H0ZM8 9V39H36V9Z"/><path d="M28.8 0H40.8L15.2 48H3.2Z"/></g></svg>
+    <h1 class="tagline">{{range $i, $p := .Phrases}}{{if $i}} {{end}}<span>{{$p}}</span>{{end}}</h1>
     <p class="subtitle">{{.Subtitle}}</p>
     {{range .Intro}}<div class="intro">{{.}}</div>{{end}}
     <p class="cta">

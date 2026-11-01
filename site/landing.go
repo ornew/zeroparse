@@ -21,6 +21,7 @@ import (
 // landingData is the data of the landing template.
 type landingData struct {
 	Tagline     string
+	Phrases     []string // the sentences of the tagline, each kept on one line where it fits
 	Subtitle    string
 	Intro       []template.HTML
 	Features    []feature
@@ -93,6 +94,7 @@ func (s *Site) renderLanding() error {
 	if d.Tagline == "" || len(d.Features) == 0 || d.Example == "" || d.ExampleIn == "" {
 		return fmt.Errorf("README.md: could not find the tagline, the features under Why ZeroParse, a zp code block or a bash block with -i '...' for the landing page")
 	}
+	d.Phrases = taglinePhrases(d.Tagline)
 	d.Snippets = template.HTML(snippets.String())
 	d.Sections = template.HTML(sections.String())
 	d.Playground = "playground/"
@@ -164,4 +166,16 @@ func (s *Site) landingIntro(d *landingData, m *markdown, n ast.Node, snippets *s
 	case *ast.Blockquote:
 		snippets.WriteString(m.render(n))
 	}
+}
+
+// taglinePhrases splits a tagline after each sentence, so that "One Grammar. Every Parser." breaks
+// between its sentences rather than inside one.
+func taglinePhrases(t string) []string {
+	var out []string
+	for _, f := range strings.SplitAfter(t, ". ") {
+		if f = strings.TrimSpace(f); f != "" {
+			out = append(out, f)
+		}
+	}
+	return out
 }

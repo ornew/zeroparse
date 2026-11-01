@@ -508,6 +508,10 @@ pre.decl { font-size: 13.5px; }
   padding: 56px 0 32px;
 }
 .tagline { font-size: clamp(2.2rem, 4.6vw, 3.4rem); line-height: 1.04; margin: 0 0 16px; letter-spacing: -0.03em; font-weight: 800; font-style: italic; text-transform: uppercase; }
+/* Each sentence of the tagline is a unit, so a narrow screen breaks between sentences; a sentence wider than the
+   column still wraps inside its box. */
+.tagline span { display: inline-block; }
+.hero-mark { display: block; height: clamp(56px, 8vw, 88px); width: auto; margin: 0 0 24px; }
 .subtitle { font-size: 1.25rem; color: var(--fg); font-weight: 600; margin: 0 0 16px; }
 .intro p { color: var(--fg-soft); font-size: 1.05rem; margin: 0 0 16px; }
 .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
