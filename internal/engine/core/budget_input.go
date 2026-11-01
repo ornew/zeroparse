@@ -41,6 +41,7 @@ func NewControlledTextInput(s string, unit PositionUnit, offsets bool, sc *scrat
 	// Each of the two passes charges one unit per byte of the source, in chunks of one poll
 	// interval, before the bytes of a chunk are decoded: cancellation is observed as often as
 	// when each byte is charged alone.
+	offsets = offsets && len(s) <= offsLimit
 	n, valid := 0, true
 	for off, charged := 0, 0; off < len(s); {
 		if off >= charged {
@@ -73,9 +74,10 @@ func NewControlledTextInput(s string, unit PositionUnit, offsets bool, sc *scrat
 		}
 		off += size
 	}
-	in.Src, in.SrcOK = s, valid && len(s) <= 1<<31-1
+	in.Src, in.SrcOK = s, valid && len(s) <= offsLimit
 	if !in.SrcOK {
 		in.Offs = nil
 	}
+	in.setWideSource(s, valid)
 	return in
 }

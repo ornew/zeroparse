@@ -379,7 +379,7 @@ func (p *Parser) Spend() {
 const sourceChunk = int(budgetCheckInterval)
 
 func (p *Parser) setControlledSource(s string) {
-	n, valid := 0, len(s) <= 1<<31-1
+	n, valid := 0, true
 	// Outside a Document, charge the control directly: SpendRead is too large to inline.
 	c := p.Control
 	if p.Document != nil {
@@ -420,8 +420,9 @@ func (p *Parser) setControlledSource(s string) {
 		p.In = make([]rune, n)
 	}
 	p.n = n
+	tabled := valid && len(s) <= offsLimit
 	var offs []int32
-	if valid {
+	if tabled {
 		if cap(p.offs) >= n+1 {
 			offs = p.offs[:n+1]
 		} else {
@@ -438,7 +439,7 @@ func (p *Parser) setControlledSource(s string) {
 		if c != nil {
 			for off < charged && s[off] < utf8.RuneSelf {
 				p.In[i] = rune(s[off])
-				if valid {
+				if tabled {
 					offs[i] = int32(off)
 				}
 				off++
@@ -454,14 +455,17 @@ func (p *Parser) setControlledSource(s string) {
 			p.SpendRead(uint64(size))
 		}
 		p.In[i] = r
-		if valid {
+		if tabled {
 			offs[i] = int32(off)
 		}
 		off += size
 	}
-	p.src, p.offs, p.decoded = "", nil, false
+	p.src, p.offs, p.wide, p.decoded = "", nil, nil, false
 	if valid {
-		p.src, p.offs = s, offs
+		p.src = s
+		if tabled {
+			p.offs = offs
+		}
 	}
 }
 

@@ -1391,9 +1391,12 @@ type Parser struct {
 	// src and offs give token text without copying in CodePoints mode: offs[i] is the byte offset
 	// of code point i (len(in)+1 entries). For invalid UTF-8, offs is nil until the first text
 	// replaces src by the decoded input (with U+FFFD substituted) and builds its table; decoded
-	// records that this was tried, since a decoded input too large for the table keeps copying.
+	// records that this was tried. A valid source too large for int32 offsets (offsLimit) keeps
+	// src with offs nil, and its first text builds the table wide of int offsets instead, so text
+	// stays constant-cost at any size.
 	src     string
 	offs    []int32
+	wide    []int
 	decoded bool
 	Pos     int
 
@@ -2246,6 +2249,10 @@ func (p *Parser) SetCaptureOrdinary(slot int, v *Node) {
 	p.Frame.Vals[slot] = v
 }
 
+// offsLimit is the largest source whose offset table holds int32 offsets; a variable so that
+// tests can exercise the wide table without gigabytes of input.
+var offsLimit = 1<<31 - 1
+
 // setSource decodes the input s into code points and, if s is valid UTF-8, records the offset
 // table for token text, all in one pass (a U+FFFD that decodes from three bytes is valid).
 func (p *Parser) setSource(s string) {
@@ -2261,13 +2268,16 @@ func (p *Parser) setSource(s string) {
 		p.In = make([]rune, n)
 	}
 	p.n = n
+	tabled := len(s) <= offsLimit
 	offs := p.offs[:0]
-	if cap(offs) >= n+1 {
+	if !tabled {
+		offs = nil
+	} else if cap(offs) >= n+1 {
 		offs = offs[:n+1]
 	} else {
 		offs = make([]int32, n+1)
 	}
-	valid := len(s) <= 1<<31-1
+	valid := true
 	i := 0
 	for off, r := range s {
 		if r == utf8.RuneError && valid {
@@ -2276,13 +2286,20 @@ func (p *Parser) setSource(s string) {
 			}
 		}
 		p.In[i] = r
-		offs[i] = int32(off)
+		if tabled {
+			offs[i] = int32(off)
+		}
 		i++
 	}
-	offs[n] = int32(len(s))
-	p.decoded = false
-	if valid {
-		p.src, p.offs = s, offs
+	p.decoded, p.wide = false, nil
+	if !valid {
+		p.src, p.offs = "", nil
+		return
+	}
+	p.src = s
+	if tabled {
+		offs[n] = int32(len(s))
+		p.offs = offs
 	} else {
 		p.offs = nil
 	}
@@ -2293,17 +2310,22 @@ func (p *Parser) setSource(s string) {
 // the first text, and costs the length of the input; a recognition that takes no text never pays
 // it.
 func (p *Parser) decodeSource() {
-	var s string
-	if p.Control != nil {
-		s = p.detachedText(0, p.n)
+	s := p.src
+	if s == "" {
+		if p.Control != nil {
+			s = p.detachedText(0, p.n)
+		} else {
+			s = string(p.In[:p.n])
+		}
+	}
+	wide := len(s) > offsLimit
+	var offs []int32
+	var woffs []int
+	if wide {
+		woffs = make([]int, 0, p.n+1)
 	} else {
-		s = string(p.In[:p.n])
+		offs = make([]int32, 0, p.n+1)
 	}
-	if len(s) > 1<<31-1 {
-		p.decoded = true
-		return
-	}
-	offs := make([]int32, 0, p.n+1)
 	for off := 0; off < len(s); {
 		if p.Control != nil {
 			p.Control.Charge(uint64(min(spendValueChunk, len(s)-off)))
@@ -2311,7 +2333,11 @@ func (p *Parser) decodeSource() {
 		end := min(off+spendValueChunk, len(s))
 		for off < end {
 			_, size := utf8.DecodeRuneInString(s[off:])
-			offs = append(offs, int32(off))
+			if wide {
+				woffs = append(woffs, off)
+			} else {
+				offs = append(offs, int32(off))
+			}
 			off += size
 		}
 		// The last character may end past the chunk; charge the rest, so the table costs its bytes.
@@ -2320,6 +2346,10 @@ func (p *Parser) decodeSource() {
 		}
 	}
 	// An interrupted decoding leaves the parser untouched, so the next text retries it.
+	if wide {
+		p.src, p.wide, p.decoded = s, append(woffs, len(s)), true
+		return
+	}
 	p.src, p.offs, p.decoded = s, append(offs, int32(len(s))), true
 }
 
@@ -2567,6 +2597,9 @@ func (p *Parser) Text(start, end int) string {
 	}
 	if p.offs != nil {
 		return p.src[p.offs[start]:p.offs[end]]
+	}
+	if p.wide != nil {
+		return p.src[p.wide[start]:p.wide[end]]
 	}
 	if p.Control != nil {
 		return p.detachedText(start, end)

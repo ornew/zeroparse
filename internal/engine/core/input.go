@@ -112,12 +112,15 @@ type Input struct {
 	// recognition often never does. For input containing invalid UTF-8, text in code points returns
 	// strings with U+FFFD substituted, so src is not used: the first text decodes the whole input
 	// into dec, with its offset table decOffs, and later texts slice it. decoded records that this
-	// was tried, since a decoded input too large for the table keeps copying.
+	// was tried. A source too large for int32 offsets (offsLimit) is not SrcOK: its first text
+	// builds the table decWide of int offsets instead, over dec, which already is the source
+	// itself when that is valid UTF-8, so text stays constant-cost at any size.
 	Src     string
 	SrcOK   bool
 	Offs    []int32
 	dec     string
 	decOffs []int32
+	decWide []int
 	decoded bool
 	// Lines holds the positions where lines start, for lineCol on fully loaded input (built on
 	// first use; nil until then).
@@ -127,11 +130,25 @@ type Input struct {
 	Pieces *documentPieces
 }
 
+// offsLimit is the largest source whose offset table holds int32 offsets; a variable so that
+// tests can exercise the wide table without gigabytes of input.
+var offsLimit = 1<<31 - 1
+
 // setSource records the whole input string s for use by text.
 func (in *Input) setSource(s string) {
 	in.Src, in.Offs = s, nil
-	in.dec, in.decOffs, in.decoded = "", nil, false
-	in.SrcOK = in.Unit == Bytes || utf8.ValidString(s) && len(s) <= 1<<31-1
+	in.dec, in.decOffs, in.decWide, in.decoded = "", nil, nil, false
+	valid := in.Unit == Bytes || utf8.ValidString(s)
+	in.SrcOK = valid && len(s) <= offsLimit
+	in.setWideSource(s, valid)
+}
+
+// setWideSource makes a valid code-point source too large for int32 offsets its own decoded
+// text, so that the first text builds the wide table without copying it.
+func (in *Input) setWideSource(s string, valid bool) {
+	if valid && in.Unit != Bytes && len(s) > offsLimit {
+		in.dec = s
+	}
 }
 
 // buildOffs builds the offset table of src (code points).
@@ -167,7 +184,7 @@ func (in *Input) Replace(start, end int, text string) (delta int) {
 	if !utf8.ValidString(text) {
 		enc = string(ins) // invalid bytes read as U+FFFD
 	}
-	if !in.SrcOK || len(in.Src)+len(enc) > 1<<31-1 {
+	if !in.SrcOK || len(in.Src)+len(enc) > offsLimit {
 		in.setSource(string(in.In))
 		return delta
 	}
@@ -210,6 +227,7 @@ func newTextInputIn(s string, unit PositionUnit, offsets bool, sc *scratch) Inpu
 	}
 	// Decode and check validity in one pass (a U+FFFD that decodes from three bytes is valid).
 	n := utf8.RuneCountInString(s)
+	offsets = offsets && len(s) <= offsLimit
 	var offs []int32
 	if sc != nil {
 		in.In = grow(sc.runes, n)
@@ -239,10 +257,11 @@ func newTextInputIn(s string, unit PositionUnit, offsets bool, sc *scratch) Inpu
 		}
 		i++
 	}
-	in.Src, in.SrcOK = s, valid && len(s) <= 1<<31-1
+	in.Src, in.SrcOK = s, valid && len(s) <= offsLimit
 	if in.SrcOK {
 		in.Offs = offs
 	}
+	in.setWideSource(s, valid)
 	return in
 }
 
@@ -496,6 +515,9 @@ func (in *Input) Text(start, end int) string {
 		if in.decOffs != nil {
 			return in.dec[in.decOffs[start]:in.decOffs[end]]
 		}
+		if in.decWide != nil {
+			return in.dec[in.decWide[start]:in.decWide[end]]
+		}
 	}
 	if in.SrcOK {
 		if in.Unit == Bytes {
@@ -522,14 +544,23 @@ func (in *Input) Text(start, end int) string {
 // table of the result, so that text slices it like a valid source. It runs once, on the first
 // text, and costs the length of the input; a recognition that takes no text never pays it.
 func (in *Input) decodeSource() {
-	var s string
-	if BudgetControlsEnabled && in.Control != nil {
-		s = in.detachedText(0, len(in.In))
-	} else {
-		s = string(in.In)
+	s := in.dec
+	if s == "" {
+		if BudgetControlsEnabled && in.Control != nil {
+			s = in.detachedText(0, len(in.In))
+		} else {
+			s = string(in.In)
+		}
 	}
-	if len(s) > 1<<31-1 {
-		in.decoded = true
+	if len(s) > offsLimit {
+		offs := make([]int, 0, len(in.In)+1)
+		for i := 0; i < len(s); {
+			offs = append(offs, i)
+			_, size := utf8.DecodeRuneInString(s[i:])
+			in.spendRead(uint64(size))
+			i += size
+		}
+		in.dec, in.decWide, in.decoded = s, append(offs, len(s)), true
 		return
 	}
 	offs := make([]int32, 0, len(in.In)+1)
