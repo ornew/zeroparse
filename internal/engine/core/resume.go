@@ -23,7 +23,8 @@ import (
 //
 // An element's result must depend only on the input it examined, as for a memo result: repetitions
 // whose elements have predicates or call rules that read variables are not resumed, nor is a run
-// that recovered errors or read the seed of a growing left recursion. Elements are
+// that recovered errors or read the seed of a growing left recursion, even of a growth that started
+// and ended within the run (readSeedIn). Elements are
 // moved past an edit only if their values contain no position values.
 
 // RunSite is a repetition that can be resumed (compiler.repeat).
@@ -70,6 +71,7 @@ type RunState struct {
 	done             bool // the old run ended where it stopped
 	moved            bool // old is the run that the edit moved here: none of it lies before the edit
 	rec0, seedReads0 int
+	gamma0, log0     int // for RunOpenGrowthsOnly: the growths open and the reads logged at the start
 	// The run is old[:k], then the new elements mid, then old[j:j+t] (the elements after the edit,
 	// moved), then the new elements post.
 	K, J, T   int
@@ -86,6 +88,7 @@ func (p *Parser) StartRun(r *RunState, id, min, max int, shiftable bool) {
 	start := p.Pos
 	*r = RunState{Key: RunKey{id, start}, min: min, max: max, shiftable: shiftable, J: -1,
 		edit: DocEdit{Start: int(^uint(0) >> 1), End: int(^uint(0) >> 1)}, rec0: len(p.Recovered), seedReads0: p.SeedReads,
+		gamma0: len(p.Gamma), log0: len(p.seedReadLog),
 		Mid: r.Mid[:0], Post: r.Post[:0]}
 	if rec := p.Runs[r.Key]; rec != nil {
 		r.Old = rec.Elems // the same repetition ran here earlier in this parse
@@ -214,9 +217,32 @@ func (p *Parser) EndElem(r *RunState, ok bool, v *value.Node) {
 	}
 }
 
+// RunMutation breaks the condition on seed reads under which a run is recorded, for the negative
+// controls of the tests that compare Document parses with fresh ones.
+var RunMutation = 0
+
+// RunOpenGrowthsOnly records a run that read only seeds of growths that started and ended within it.
+const RunOpenGrowthsOnly = 1
+
+// readSeedIn reports whether a call of the run r read the seed of a growth, directly or by reusing
+// a result that depends on one, including a growth that started and ended within the run: an
+// iteration that grew a leader where it started and read its seed would, resumed at the position of
+// an open growth of that leader, stand for an evaluation that reads that growth.
+func (p *Parser) readSeedIn(r *RunState) bool {
+	if RunMutation == RunOpenGrowthsOnly {
+		for _, i := range p.seedReadLog[r.log0:] {
+			if i < r.gamma0 {
+				return true
+			}
+		}
+		return false
+	}
+	return p.SeedReads != r.seedReads0
+}
+
 // FinishRun records the run of a repetition that matched, for the next parse.
 func (p *Parser) FinishRun(r *RunState) {
-	if r.Count < MinRecorded || len(p.Recovered) != r.rec0 || p.SeedReads != r.seedReads0 {
+	if r.Count < MinRecorded || len(p.Recovered) != r.rec0 || p.readSeedIn(r) {
 		return
 	}
 	var elems []RunElem

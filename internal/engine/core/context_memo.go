@@ -315,9 +315,18 @@ func (p *Parser) mergeDeps(ds []dep) {
 	}
 }
 
+// seedRead counts a read of the seed of a growth, or a reuse of a result that depends on seeds, of
+// the growths from Gamma[i] on.
+func (p *Parser) seedRead(i int) {
+	p.SeedReads++
+	if RunMutation == RunOpenGrowthsOnly {
+		p.seedReadLog = append(p.seedReadLog, i)
+	}
+}
+
 // noteSeedRead records that the evaluation read the seed of Gamma[i].
 func (p *Parser) noteSeedRead(i int) {
-	p.SeedReads++
+	p.seedRead(i)
 	if len(p.frames) == 0 || i >= p.frames[len(p.frames)-1].depth {
 		return
 	}

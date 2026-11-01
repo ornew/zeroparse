@@ -1,6 +1,6 @@
 # Documents
 
-Arata Furukawa · Last revised 2026-11-01
+Arata Furukawa · Last revised 2026-11-02
 
 This proof shows that a parse of a [Document](../runtime/documents.md) after
 any sequence of edits returns what a parse of the current text from scratch
@@ -265,7 +265,26 @@ So $B$ reads no growth open at its start. $\square$
 The argument uses the recording condition of (R) for the growths that start
 and end within the run: a run that grew a leader within its first iteration
 and read that leader's current result is not recorded, and that is the case
-that reusing it at the position of an open growth would get wrong.
+that reusing it at the position of an open growth would get wrong. The
+condition is needed. In the grammar
+
+```zp
+rule main = r "!" / m "?"
+rule m = m "m" / l
+rule l = l "l" / m "k" / r
+rule r = x*
+rule x = l "c" / "c"
+```
+
+on the text `clc?`, `main` first evaluates `r` at 0 outside any growth, and
+its first iteration grows a leader of the cycle of `m`, `l`, `r` and `x` at 0
+and reads the current result of that growth. `main` then evaluates `m` at 0,
+which reaches `r` at 0 again within a growth at 0 that is open, so the first
+iteration reads the current result of that growth instead. Resuming the run
+recorded the first time there returns a syntax error at line 1, column 4,
+where $\mathcal{R}$ matches the whole text. The reference implementation
+records only runs of at least a minimum number of iterations, so this short
+example shows the mismatch only with that minimum set to 1, as its test does.
 
 ## Theorem (Document Parses Equal Fresh Parses)
 

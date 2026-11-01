@@ -148,6 +148,9 @@ type Parser struct {
 	// (context_memo.go). It only increases, so a repetition run that it does not change read
 	// none (FinishRun).
 	SeedReads int
+	// seedReadLog lists, under RunOpenGrowthsOnly, the index in Gamma of the outermost growth that
+	// each read may concern (seedRead).
+	seedReadLog []int
 	// Gamma holds the growths in progress, innermost last; those at one position are consecutive.
 	Gamma []growRec
 	// frames and deps record the dependencies of evaluations in a context, looks the sites of the
@@ -634,7 +637,7 @@ func (p *Parser) CallBegin(r *Rule, min int) (st CallState, v *value.Node, ok, h
 	}
 	if ctx && known && !p.strictCtx() {
 		if s := p.ctxFind(key.Pos, gp, ctxHeadKey{kind: ctxCall, id: int32(key.Rule), min: int32(key.Min), ms: key.MissingSilent, present: present}, key.Env); s != nil && p.reusable(s.e.silent, len(s.e.Errs)) {
-			p.SeedReads++
+			p.seedRead(gp)
 			p.replayDeps(key.Pos, gp, present, s.deps)
 			e := s.e
 			p.replayEntry(e)
@@ -824,7 +827,7 @@ func (p *Parser) GrowNext(g *GrowState) bool {
 	for {
 		id := p.Gamma[g.gi].id
 		if j := p.findJump(g, gp, id); j != nil {
-			p.SeedReads++
+			p.seedRead(gp)
 			p.replayDeps(g.start, gp, g.present, j.deps)
 			p.MergeExpected(j.far, j.exp)
 			p.touch(j.examined)
@@ -834,7 +837,7 @@ func (p *Parser) GrowNext(g *GrowState) bool {
 		}
 		h := ctxHeadKey{kind: ctxStep, id: int32(g.Key.Rule), min: int32(g.Key.Min), ms: g.Key.MissingSilent, present: g.present}
 		if s := p.ctxFind(g.start, gp, h, nil); s != nil && p.reusable(s.silent, len(s.e.Errs)) {
-			p.SeedReads++
+			p.seedRead(gp)
 			p.replayDeps(g.start, gp, g.present, s.deps)
 			p.MergeExpected(s.far, s.exp)
 			p.touch(s.examined)
