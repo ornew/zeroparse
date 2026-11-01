@@ -1,6 +1,7 @@
 package lsp
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"sort"
 	"strings"
@@ -231,23 +232,39 @@ func TestTextIndexMatchesNaive(t *testing.T) {
 
 // TestLongLine checks that a document with a long line is analyzed in about linear time. The
 // conversions used to walk the line from its start for every token, so a line of 64 KB took
-// seconds and one of 1 MB did not open.
+// seconds and one of 1 MB did not open. The check compares the time of a document with that of
+// one a quarter its size, measured one after the other: linear work takes about 4 times as long
+// and quadratic work about 16 times, whatever the load of the machine (a fixed limit on the time
+// failed under load). It keeps the best of three pairs, since load can change between the two.
 func TestLongLine(t *testing.T) {
 	c := newInitialized(t)
-	uri := "file:///long.zp"
 	const n = 1 << 17
-	text := "rule a = " + strings.Repeat(`"😀" b `, n) + "\nrule b = \"x\"" // 1 MB, 260,000 tokens
-	start := time.Now()
-	c.open(uri, text) // waits up to 10 seconds
-	var res struct {
-		Data []int `json:"data"`
+	analyze := func(uri string, n int) time.Duration {
+		text := "rule a = " + strings.Repeat(`"😀" b `, n) + "\nrule b = \"x\"" // 260,000 tokens for n = 1<<17
+		start := time.Now()
+		c.open(uri, text)
+		var res struct {
+			Data []int `json:"data"`
+		}
+		c.requestInto("textDocument/semanticTokens/full", docParams(uri), &res)
+		d := time.Since(start)
+		if len(res.Data) != 5*(2+2*n+3) {
+			t.Errorf("%d semantic token integers, want %d", len(res.Data), 5*(2+2*n+3))
+		}
+		return d
 	}
-	c.requestInto("textDocument/semanticTokens/full", docParams(uri), &res)
-	if len(res.Data) != 5*(2+2*n+3) {
-		t.Errorf("%d semantic token integers", len(res.Data))
+	best := 1e9
+	for i := range 3 {
+		small := analyze(fmt.Sprintf("file:///long-small-%d.zp", i), n/4)
+		large := analyze(fmt.Sprintf("file:///long-%d.zp", i), n)
+		best = min(best, float64(large)/float64(small))
+		t.Logf("pair %d: small %v large %v", i, small, large)
+		if best <= 10 {
+			break
+		}
 	}
-	if d := time.Since(start); d > 5*time.Second {
-		t.Errorf("took %v", d)
+	if best > 10 {
+		t.Errorf("a document 4 times as long took %.1f times as long (linear work takes 4)", best)
 	}
 	c.exit()
 }

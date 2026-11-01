@@ -23,6 +23,17 @@ type testClient struct {
 
 const timeout = 10 * time.Second
 
+// patience is how long the client waits for the server: the time left until the test deadline
+// (less a margin to report the failure), but at least timeout. A fixed wait fails a loaded
+// machine on work that the server finishes, while a server that never answers still fails the
+// test by its deadline.
+func (c *testClient) patience() time.Duration {
+	if d, ok := c.t.Deadline(); ok {
+		return max(time.Until(d)-timeout, timeout)
+	}
+	return timeout
+}
+
 func timeoutC() <-chan time.Time { return time.After(timeout) }
 
 // newServer starts a server and returns a client connected to it, without initializing it.
@@ -106,7 +117,7 @@ func (c *testClient) next() map[string]json.RawMessage {
 			c.t.Fatal("the server closed the connection")
 		}
 		return m
-	case <-time.After(timeout):
+	case <-time.After(c.patience()):
 		c.t.Fatal("timed out waiting for a message")
 	}
 	return nil
@@ -217,7 +228,7 @@ func (c *testClient) wait(want error) {
 		if err != want {
 			c.t.Fatalf("server stopped with %v, want %v", err, want)
 		}
-	case <-time.After(timeout):
+	case <-time.After(c.patience()):
 		c.t.Fatal("the server did not stop")
 	}
 }
