@@ -95,7 +95,7 @@ chapter states the guarantee and not this mechanism.
 
 ## Lemma 1 (Locality)
 
-*Let an evaluation in $\mathcal{R}$ of an expression at $p$ on a text $t$, in a
+Let an evaluation in $\mathcal{R}$ of an expression at $p$ on a text $t$, in a
 state that reads no growth open at its start, have the outcome $\omega$ and
 the examined range $[l, h)$. Let $t'$ be a text and $\delta$ an offset such
 that slot $i + \delta$ of $t'$ holds what slot $i$ of $t$ holds for every
@@ -104,7 +104,7 @@ position-free. When $\omega$ has recovered errors, let also $\delta = 0$ and
 $t'$ agree with $t$ on $[0, h)$. Then the evaluation of the same expression at
 $p + \delta$ on $t'$, in the same variables, captures, level and lookahead
 state, has the outcome $\omega$ shifted by $\delta$ and the examined range
-$[l + \delta, h + \delta)$.*
+$[l + \delta, h + \delta)$.
 
 *Proof.* By induction on the steps of the evaluation on $t$, matched one to
 one with those on $t'$. Each step that reads the input examines a slot $i$ in
@@ -126,14 +126,15 @@ induction hypothesis, their outcomes shifted by $\delta$. By
 [Lemma 1 of the memoization proof](memoization.md#lemma-1-context) the
 calls depend on nothing else. $\square$
 
-The condition on $[0, h)$ is needed. In $t = $ `x\nab`, replacing $[1, 2)$
-with `y` leaves the slots $[2, 4)$ in place, but an error recovered at
-position $3$ moves from line 2, column 2, to line 1, column 4.
+The condition on $[0, h)$ is needed. Let $t$ be the four characters `x`, a
+line feed, `a` and `b`. Replacing the line feed, $[1, 2)$, with `y` leaves the
+slots $[2, 4)$ in place, but an error recovered at position $3$ moves from
+line 2, column 2, to line 1, column 4.
 
 ## Lemma 2 (Carried Entries)
 
-*Let every entry be sound for $t_{k-1}$. After edit $k$ applied by (E), every
-entry that remains is sound for $t_k$.*
+Let every entry be sound for $t_{k-1}$. After edit $k$ applied by (E), every
+entry that remains is sound for $t_k$.
 
 *Proof.* Let an entry have key position $p$, outcome $\omega$ and recorded
 range $[l', h')$, which by soundness contains the range $[l, h)$ of the call
@@ -155,7 +156,7 @@ same order, so it gives the same entry. $\square$
 
 ## Lemma 3 (Resumed Runs)
 
-*In a parse of $t_k$, let a repetition at $p$ resume a record, and let every
+In a parse of $t_k$, let a repetition at $p$ resume a record, and let every
 evaluation that completed before it in this parse satisfy the invariant
 (I1) to (I3) of the
 [memoization theorem](memoization.md#theorem-memoization-never-changes-the-result).
@@ -163,7 +164,7 @@ Let the record have been stored in this parse, or in an earlier parse whose
 completed evaluations satisfied the invariant on its text. Then the repetition
 ends where it ends in $\mathcal{R}$, with the same value, and records into the
 enclosing evaluation the outcome that the iterations record in $\mathcal{R}$
-and a range that contains theirs.*
+and a range that contains theirs.
 
 *Proof.* When the record was stored, its iterations were evaluations of
 $\mathcal{M}$ that completed and recovered no error, and by (R) none of them
@@ -217,9 +218,9 @@ enclosing evaluation with the same record. $\square$
 
 ## Lemma 4 (Recorded Iterations Read No Open Growth)
 
-*Let an iteration $I$ of a record that (R) allows to be reused be evaluated in
+Let an iteration $I$ of a record that (R) allows to be reused be evaluated in
 $\mathcal{R}$ at its start $r$ when the run resumes. Then it reads no growth
-open at its start.*
+open at its start.
 
 *Proof.* Call $A$ the evaluation of $I$ in $\mathcal{R}$ on the text on which
 it was recorded, which reads no current result at all, as the proof of Lemma 3

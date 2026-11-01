@@ -60,8 +60,8 @@ of these: the local or scanned cost of one body evaluation, or one call.
 
 ## Lemma 1 (Local Cost)
 
-*The local cost of one body evaluation is at most a constant $c_0$ times
-$L + 1$.*
+The local cost of one body evaluation is at most a constant $c_0$ times
+$L + 1$.
 
 *Proof.* Outside its scanning sources, a body contains no repetition without
 an upper bound, no `#recover` skip, no operators of an Operators Rule, and no
@@ -190,10 +190,10 @@ stream pays the length of each text besides, as
 
 ## Theorem (Linear Cost)
 
-*When every rule that the start rule reaches satisfies conditions 1 to 5, every
+When every rule that the start rule reaches satisfies conditions 1 to 5, every
 parse from the start rule has a cost of at most $c \cdot K \cdot (L + 1) \cdot (n + 1)$
 for a constant $c$. When no variable holds a string and every binding binds a
-literal, $K$ is a constant and $L = 0$, so the cost is at most $c' \cdot (n + 1)$.*
+literal, $K$ is a constant and $L = 0$, so the cost is at most $c' \cdot (n + 1)$.
 
 *Proof, given Lemmas 3 to 6 and open step 7.* Each unit of $C$ is the local
 cost of a body evaluation, the scanned cost of one, or a call. By Lemma 1 the

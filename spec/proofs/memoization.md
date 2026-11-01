@@ -120,12 +120,12 @@ The proof relies on the following, which the specification does not state.
 
 ## Lemma 1 (Context)
 
-*In $\mathcal{R}$, let a call read no growth open at its start. Then its $s$,
+In $\mathcal{R}$, let a call read no growth open at its start. Then its $s$,
 its $q$, its run-time error, if any, and its examined range are functions of
 its key $\kappa$, and its outcome is a function $F(\kappa, \lambda)$ of its key
 and lookahead state. For the two lookahead states, $F(\kappa, 0)$ and
 $F(\kappa, 1)$ have recovered errors of the same number, and the same value
-when they have none.*
+when they have none.
 
 *Proof.* By induction on the nesting of evaluations, which is finite
 ([Termination](../runtime/parsing.md#termination)). The evaluation of the body
@@ -171,8 +171,8 @@ matched, so $v$ holds no error value and is the same. $\square$
 
 ## Lemma 2 (Reading an Open Growth)
 
-*If a call of $A$ at $p$ reads a growth of $L$ that was open at $p_L$ when the
-call started, then $p = p_L$ and $A$ is a rule of the cycle of $L$.*
+If a call of $A$ at $p$ reads a growth of $L$ that was open at $p_L$ when the
+call started, then $p = p_L$ and $A$ is a rule of the cycle of $L$.
 
 *Proof.* The call started while the growth was open, so it was made within
 the evaluation of $L$ at $p_L$, where no position is before $p_L$:
@@ -192,10 +192,10 @@ Lemma 1 gives for $\kappa$.
 
 ## Lemma 3 (Answering From a Sound Entry)
 
-*A call of key $\kappa$ in state $\lambda'$ that the conditions allow to be
+A call of key $\kappa$ in state $\lambda'$ that the conditions allow to be
 answered from a sound entry reads no growth open at its start, and recording
 the entry gives the outcome that the call has in $\mathcal{R}$, and a range
-that contains the range of the call in $\mathcal{R}$.*
+that contains the range of the call in $\mathcal{R}$.
 
 *Proof.* If the call read a growth open at its start, by Lemma 2 it would be a
 call, at the position of an open growth of a leader $L$, of a rule of the cycle
@@ -212,10 +212,10 @@ recording $\omega$ there does not. $\square$
 
 ## Theorem (Memoization Never Changes the Result)
 
-*Let $\mathcal{M}$ start with a table of sound entries, empty for an ordinary
+Let $\mathcal{M}$ start with a table of sound entries, empty for an ordinary
 parse. Then the parses $\mathcal{M}$ and $\mathcal{R}$ return the same value,
 the same recovered errors and the same syntax error, or abort with the same
-run-time error.*
+run-time error.
 
 *Proof.* Order the evaluations of $\mathcal{M}$, of expressions and of calls,
 by their completion, so that an evaluation comes after every evaluation nested

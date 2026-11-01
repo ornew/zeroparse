@@ -326,3 +326,34 @@ func TestNoCommandPrompts(t *testing.T) {
 		}
 	})
 }
+
+// emphasizedMathRe matches a *...* emphasis that holds $...$ math. GitHub does not render
+// math inside emphasis, although the site does.
+var emphasizedMathRe = regexp.MustCompile(`(?:^|[^*\\\w])\*[^*\s][^*]*\$[^$*]+\$[^*]*\*(?:[^*\w]|$)`)
+
+// TestNoMathInEmphasis rejects math inside emphasis in the paragraphs of the styled
+// documents, so that the math renders on GitHub too.
+func TestNoMathInEmphasis(t *testing.T) {
+	for _, p := range styledDocs(t) {
+		data, err := os.ReadFile(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rel, _ := filepath.Rel("..", p)
+		lines := maskCode(strings.Split(string(data), "\n"))
+		for i := 0; i < len(lines); {
+			if strings.TrimSpace(lines[i]) == "" {
+				i++
+				continue
+			}
+			start := i
+			for i < len(lines) && strings.TrimSpace(lines[i]) != "" {
+				i++
+			}
+			para := codeSpanRe.ReplaceAllString(strings.Join(lines[start:i], " "), "``")
+			if emphasizedMathRe.MatchString(para) {
+				t.Errorf("%s:%d: math inside *...* emphasis does not render on GitHub; remove the emphasis", filepath.ToSlash(rel), start+1)
+			}
+		}
+	}
+}

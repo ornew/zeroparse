@@ -56,10 +56,10 @@ those. These are the local and scanned cost of the
 
 ## Lemma 1 (Text Is a Constant Step)
 
-*In a parse of a whole input or of a Document, the cost of all the
+In a parse of a whole input or of a Document, the cost of all the
 evaluations of `text` is at most $c_t$ times their number plus $c_p \hat{n}$,
 and each evaluation is a step of constant cost of the evaluation that makes
-it.*
+it.
 
 *Proof.* By (G1) each evaluation of `text` costs at most $c_t$ besides the work
 of (G2), which adds up to at most $c_p \hat{n}$ in the parse. By (G3), a string that the caller later reads from a text value
@@ -73,10 +73,10 @@ unchanged and of `nil` returns `""`, which also cost a constant. $\square$
 
 ## Lemma 2 (Refined Reading Is Sound)
 
-*If every rule that the start rule reaches satisfies conditions 1 to 5 in the
+If every rule that the start rule reaches satisfies conditions 1 to 5 in the
 refined reading, then in a parse of a whole input or of a Document, the cost
 is at most the bound that the conditions give in the copying reading for a
-grammar in which every `text` is a constant step, plus $c_p \hat{n}$.*
+grammar in which every `text` is a constant step, plus $c_p \hat{n}$.
 
 *Proof.* Compare the copying reading on the grammar in which every `text` is a
 constant step, that is, an operation that is not a copying operation and

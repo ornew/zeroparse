@@ -66,11 +66,11 @@ $r_i, r_{i+1}, \dots$ in order.
 
 ## Lemma 1 (Exactness)
 
-*Every record stored at a position $r$ in the slots of $(\sigma, \lambda)$
+Every record stored at a position $r$ in the slots of $(\sigma, \lambda)$
 equals $\mathrm{Rest}(r)$. A walk that reuses the record at $r$ ends at the
 same position, leaves the enclosing result with the same outcome and range,
 and succeeds or fails exactly as the walk that evaluates the iterations from
-$r$ on.*
+$r$ on.
 
 *Proof.* By induction on the order in which records are stored.
 
@@ -107,10 +107,10 @@ and the order of the walks, never change the result of a parse.
 
 ## Lemma 2 (Cost)
 
-*In a parse with $W$ walks of $(\sigma, \lambda)$, the element of $\sigma$ is
+In a parse with $W$ walks of $(\sigma, \lambda)$, the element of $\sigma$ is
 evaluated at most $2(n + 1) + W (c_{\min} + 1)$ times in those walks, and they
 look up at most $n + 1 + W (c_{\min} + 1)$ slots and store at most
-$n + 1 + W c_{\min}$ records.*
+$n + 1 + W c_{\min}$ records.
 
 *Proof.* A slot moves only forward through the states fresh, visited and
 recorded within a parse: a plain walk marks only fresh slots visited, and
