@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gen/tsgen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gen/tsgen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 func runTypedTSFixture(t *testing.T, src, consumer string, opts gen.GenOptions, keep string) {

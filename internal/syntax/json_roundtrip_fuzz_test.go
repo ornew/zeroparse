@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 // jsonRoundTripForms hold comments in the places where a declaration, a field or

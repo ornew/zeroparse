@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/engine/core"
-	"github.com/ornew/zeroparse/internal/limits"
+	. "zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/engine/core"
+	"zeroparse.dev/zp/internal/limits"
 )
 
 // The grammar takes the text of every level of a nesting. An edit of the center splits the

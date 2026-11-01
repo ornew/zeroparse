@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 // commentOwners lists, for every node of g that owns comments, its path in the

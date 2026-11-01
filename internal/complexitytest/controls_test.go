@@ -5,9 +5,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/starttest"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/starttest"
 )
 
 // TestControls measures every control on every backend and checks its growth order. Controls

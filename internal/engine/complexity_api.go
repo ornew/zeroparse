@@ -3,8 +3,8 @@ package engine
 import (
 	"context"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
 )
 
 // Complexity is the classification of the cost of a grammar from one start rule (see

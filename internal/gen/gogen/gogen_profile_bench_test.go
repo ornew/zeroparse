@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // Export standalone controls; keep generated fixtures and results outside Git.

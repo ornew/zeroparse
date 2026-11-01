@@ -18,7 +18,7 @@ import (
 // The reference is generated from the Go source of the repository with go/doc, so that it always
 // matches the code it is built with; pkg.go.dev has the reference of published versions.
 
-const modulePath = "github.com/ornew/zeroparse"
+const modulePath = "zeroparse.dev/zp"
 
 // refPackage is a package documented in the reference.
 type refPackage struct {
@@ -105,7 +105,7 @@ func (s *Site) renderReference() error {
 	ib.WriteString(`<h1 id="api-reference">Go API Reference</h1>
 <p>The reference of the public Go API, generated from the source of this
 version of ZeroParse. The reference of released versions is also on
-<a href="https://pkg.go.dev/github.com/ornew/zeroparse">pkg.go.dev</a>.</p>
+<a href="https://pkg.go.dev/zeroparse.dev/zp">pkg.go.dev</a>.</p>
 <table><thead><tr><th>Package</th><th>Synopsis</th></tr></thead><tbody>
 `)
 	for _, rp := range refPackages {

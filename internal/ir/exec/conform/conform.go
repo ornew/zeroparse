@@ -12,9 +12,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/ornew/zeroparse/internal/ir/exec"
-	"github.com/ornew/zeroparse/internal/ir/exec/ops"
-	"github.com/ornew/zeroparse/internal/ir/exec/ref"
+	"zeroparse.dev/zp/internal/ir/exec"
+	"zeroparse.dev/zp/internal/ir/exec/ops"
+	"zeroparse.dev/zp/internal/ir/exec/ref"
 )
 
 // Impl is an implementation under test. Values returns the implementation's Values handle for the

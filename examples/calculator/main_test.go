@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 func TestEval(t *testing.T) {

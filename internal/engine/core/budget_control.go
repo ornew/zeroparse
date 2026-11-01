@@ -5,7 +5,7 @@ import (
 	"errors"
 	"unicode/utf8"
 
-	"github.com/ornew/zeroparse/internal/limits"
+	"zeroparse.dev/zp/internal/limits"
 )
 
 // BudgetCheckInterval is the spend between two observations of cancellation.

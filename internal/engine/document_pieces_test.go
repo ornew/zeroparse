@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/engine/core"
+	"zeroparse.dev/zp/internal/engine/core"
 )
 
 func TestDocumentPiecesMatchFlatEdits(t *testing.T) {

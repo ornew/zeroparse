@@ -9,9 +9,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/gen"
-	"github.com/ornew/zeroparse/internal/engine"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/gen"
+	"zeroparse.dev/zp/internal/engine"
 )
 
 func TestMissingTokensPublicOptions(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // TestMinimize injects each mismatch category into Documents whose text contains "é" or the invalid

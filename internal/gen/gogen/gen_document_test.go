@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 func TestGenerateDocumentNode(t *testing.T) {
@@ -40,7 +40,7 @@ func TestGenerateDocumentNode(t *testing.T) {
 		"batch/parser.go": string(ordinary),
 		"parser_test.go": `package fixture
 import (
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
   "context"
   "encoding/json"
   "fmt"

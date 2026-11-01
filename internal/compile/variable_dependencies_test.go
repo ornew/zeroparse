@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 // ruleVariablesDFS retains the previous per-root closure as an independent

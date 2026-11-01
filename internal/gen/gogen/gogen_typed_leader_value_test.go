@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // TestGeneratedTypedLeaderValues compares the values of typed parsers with the engine's for

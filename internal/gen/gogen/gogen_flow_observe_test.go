@@ -15,10 +15,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 // observeProbeMain is the consumer of the generated packages with the prefix PREFIX: for each input and entry
@@ -33,7 +33,7 @@ import (
 	"os"
 	"strings"
 
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
 IMPORTS)
 
 var entries = []struct{ parse, recognize func(string, ...zprt.ParseOption) error }{

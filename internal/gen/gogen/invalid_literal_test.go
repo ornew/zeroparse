@@ -9,11 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 // Go string literals preserve invalid bytes; JSON input fixtures would replace

@@ -6,7 +6,7 @@ import (
 	"sort"
 	"unicode"
 
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 // inf is the height or length of an expression that can never match.

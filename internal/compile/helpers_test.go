@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/syntax"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/syntax"
 )
 
 // The helpers of the tests that check the compile phase: they compile ZeroParse source with

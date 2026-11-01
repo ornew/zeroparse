@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 var zpBlock = regexp.MustCompile("(?ms)^([ \t]*)```zp[ \t]*\r?\n(.*?)^[ \t]*```[ \t]*$")

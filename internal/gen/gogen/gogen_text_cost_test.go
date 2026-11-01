@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 // The grammar takes the text of every level of a nesting: the texts sum to the square of the
@@ -58,7 +58,7 @@ import (
 	"strings"
 	"testing"
 
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
 )
 
 func leastBudget(t *testing.T, parse func(budget uint64) error) uint64 {

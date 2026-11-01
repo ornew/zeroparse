@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 // fixParsed rewrites the parts of src that need the grammar parsed: positional captures,

@@ -3,9 +3,9 @@ package apitest_test
 import (
 	"context"
 	"errors"
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/internal/engine/core"
 	"testing"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/internal/engine/core"
 )
 
 func TestDocumentVersionAndBatchAfterInterruption(t *testing.T) {

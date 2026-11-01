@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // typeCheck fails the test if src does not compile (it reports unused variables).

@@ -1,6 +1,6 @@
 package sample
 
-import "github.com/ornew/zeroparse"
+import "zeroparse.dev/zp"
 
 // F is the part of *testing.F that Seed uses. (Taking an interface keeps the testing package out of
 // programs that import sample without seeding fuzz tests.)

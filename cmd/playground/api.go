@@ -28,9 +28,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/gen"
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/gen"
+	"zeroparse.dev/zp/grammar"
 )
 
 // diagnostic is an error in a grammar. Line and Col are 1-based (Col counts code points) and are 0

@@ -132,7 +132,7 @@ encoding. Encoding and decoding failures leave the existing state/link intact an
 
 ### The Site Generator (`site/`)
 
-The generator is a Go program in its own module, `github.com/ornew/zeroparse/site`, with one dependency: the Markdown
+The generator is a Go program in its own module, `zeroparse.dev/zp/site`, with one dependency: the Markdown
 renderer [goldmark](https://github.com/yuin/goldmark).
 
 | Choice | Why |

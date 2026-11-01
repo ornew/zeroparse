@@ -1,6 +1,6 @@
 package document
 
-import "github.com/ornew/zeroparse/internal/engine/core"
+import "zeroparse.dev/zp/internal/engine/core"
 
 // equalChangeDiagnostics compares complete supported diagnostic values. Unknown
 // diagnostic types conservatively differ rather than running uncontrolled code.

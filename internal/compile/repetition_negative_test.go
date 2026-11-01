@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/bytecode"
+	"zeroparse.dev/zp/internal/bytecode"
 )
 
 // BenchmarkBytecodeLowering isolates construction of the module from an

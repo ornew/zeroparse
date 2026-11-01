@@ -7,8 +7,8 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/value"
 )
 
 func TestBytePositions(t *testing.T) {

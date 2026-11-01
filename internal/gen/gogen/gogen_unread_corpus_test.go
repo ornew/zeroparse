@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gen/gogen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gen/gogen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // localErrors type-checks the Go files of a generated package against empty stand-ins for its

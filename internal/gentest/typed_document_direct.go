@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compiletest"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp/internal/compiletest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 // DirectTypedDocument builds typed Document parsers generated with the options extra, which
@@ -113,7 +113,7 @@ rule main Text = v1:[aé😀]* #atomic => Text{S: text($v1)}`, []string{"", "aé
 
 const DirectTypedDocumentTests = `package PACKAGE
 import (
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
  "context"
  "encoding/json"
  "errors"

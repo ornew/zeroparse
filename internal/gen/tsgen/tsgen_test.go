@@ -2,15 +2,15 @@ package tsgen_test
 
 import (
 	"encoding/json"
-	"github.com/ornew/zeroparse/internal/syntax"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
+	"zeroparse.dev/zp/internal/syntax"
 
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // tsVariantLen is the length up to which TestGeneratedTSParsersMatchEngine also parses variants of

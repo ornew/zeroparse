@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/value"
 )
 
 var depthBackends = []Backend{Closure, Bytecode, BytecodeIterative}

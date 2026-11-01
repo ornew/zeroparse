@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/bytecode"
+	"zeroparse.dev/zp/internal/bytecode"
 )
 
 // TestModuleVariableValidation checks that a module whose code names a variable that its table

@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/sample"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/sample"
 )
 
 func TestSampleOperatorsRuleLongestCallerStops(t *testing.T) {

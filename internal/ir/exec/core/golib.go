@@ -5,10 +5,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/ornew/zeroparse/internal/ir/exec"
-	"github.com/ornew/zeroparse/internal/ir/exec/execgo"
-	"github.com/ornew/zeroparse/internal/ir/exec/ops"
-	"github.com/ornew/zeroparse/internal/ir/exec/pass"
+	"zeroparse.dev/zp/internal/ir/exec"
+	"zeroparse.dev/zp/internal/ir/exec/execgo"
+	"zeroparse.dev/zp/internal/ir/exec/ops"
+	"zeroparse.dev/zp/internal/ir/exec/pass"
 )
 
 //go:generate go run print_runtime.go

@@ -4,10 +4,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/starttest"
-	"github.com/ornew/zeroparse/sample"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/starttest"
+	"zeroparse.dev/zp/sample"
 )
 
 // TestSampleCorpus generates inputs for every grammar of the test corpus with package sample and checks

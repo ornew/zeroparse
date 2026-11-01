@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ornew/zeroparse/lint"
+	"zeroparse.dev/zp/lint"
 )
 
 type findingData struct {

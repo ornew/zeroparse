@@ -3,8 +3,8 @@ package engine
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // TestTextStructsAcrossBackends checks that the backends agree on the structs actions make from

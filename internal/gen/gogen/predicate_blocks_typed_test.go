@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // These declared typed-result fixtures force typed runtime execution; ordinary

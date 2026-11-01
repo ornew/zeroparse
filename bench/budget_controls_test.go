@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	gjson "github.com/ornew/zeroparse/internal/bench/gen/json"
-	gxml "github.com/ornew/zeroparse/internal/bench/gen/xml"
+	"zeroparse.dev/zp"
+	gjson "zeroparse.dev/zp/internal/bench/gen/json"
+	gxml "zeroparse.dev/zp/internal/bench/gen/xml"
 )
 
 // BenchmarkControlledParse uses finite but effectively inexhaustible counters

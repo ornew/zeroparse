@@ -9,7 +9,7 @@ import (
 	"unsafe"
 	"weak"
 
-	"github.com/ornew/zeroparse/internal/engine/core"
+	"zeroparse.dev/zp/internal/engine/core"
 )
 
 //go:noinline

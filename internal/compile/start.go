@@ -5,8 +5,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/bytecode"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/bytecode"
 )
 
 // resolveStarts reads the declaration attributes of rules and returns the

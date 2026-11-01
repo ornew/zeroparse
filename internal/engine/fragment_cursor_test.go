@@ -3,7 +3,7 @@ package engine
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/engine/core"
+	"zeroparse.dev/zp/internal/engine/core"
 )
 
 func TestFragmentCursorOriginalBytes(t *testing.T) {

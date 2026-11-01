@@ -6,10 +6,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/engine/core"
-	"github.com/ornew/zeroparse/internal/limits"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/engine/core"
+	"zeroparse.dev/zp/internal/limits"
+	"zeroparse.dev/zp/internal/value"
 )
 
 func TestBudgetActionArenaResetInterruption(t *testing.T) {

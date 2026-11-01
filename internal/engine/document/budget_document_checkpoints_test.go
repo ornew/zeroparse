@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/engine/core"
+	. "zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/engine/core"
 )
 
 func TestBudgetDocumentReuseCancellationAndFreshRetry(t *testing.T) {

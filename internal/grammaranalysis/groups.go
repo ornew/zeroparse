@@ -1,6 +1,6 @@
 package grammaranalysis
 
-import "github.com/ornew/zeroparse/grammar"
+import "zeroparse.dev/zp/grammar"
 
 // UngroupType removes source-only grouping without changing its input.
 func UngroupType(t grammar.TypeExpr) grammar.TypeExpr {

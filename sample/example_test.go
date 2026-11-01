@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/sample"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/sample"
 )
 
 const settings = `rule main = pair ("," " "? pair)*

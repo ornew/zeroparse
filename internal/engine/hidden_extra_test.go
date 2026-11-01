@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // The differential check of the splice cases detects a rule that makes its own node: the same

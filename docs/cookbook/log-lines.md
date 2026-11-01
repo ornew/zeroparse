@@ -48,7 +48,7 @@ rule millis Millis = ([0-9]+) #atomic
 ```
 
 Generate the parser with `-types` (Go types for the grammar's types and `ParseAST`) and `-recognize` (`Recognize`).
-The tool is recorded in the module with `go get -tool github.com/ornew/zeroparse/cmd/zp`, and `zp gen` creates the output
+The tool is recorded in the module with `go get -tool zeroparse.dev/zp/cmd/zp`, and `zp gen` creates the output
 directory:
 
 ```bash

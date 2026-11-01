@@ -1,6 +1,6 @@
 package core
 
-import "github.com/ornew/zeroparse/internal/value"
+import "zeroparse.dev/zp/internal/value"
 
 // EmitStream marks only caller execution. Reset before handling a returned
 // error or committing the prefix, so later VM faults retain their attribution.

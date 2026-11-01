@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/gen"
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/gen"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 // TestGenerateGoEmbeddedPackageBuilds generates a parser with the runtime embedded, as zp gen does

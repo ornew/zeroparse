@@ -3,8 +3,8 @@ package lint
 import (
 	"context"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/grammaranalysis"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/grammaranalysis"
 )
 
 // runContext is the cancellable form of runUnchecked, behind Config.RunUnchecked.

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gen/gogen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gen/gogen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // TestFlowLeadersPrintFromFlow checks that every leader takes the Flow route in the Node and

@@ -11,11 +11,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/bytecode"
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/bytecode"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // TestCompiledRoundTrip checks that a program loaded from a compiled grammar returns the same

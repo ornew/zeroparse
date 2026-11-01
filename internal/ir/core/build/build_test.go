@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/compiletest"
-	"github.com/ornew/zeroparse/internal/ir/core"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/compiletest"
+	"zeroparse.dev/zp/internal/ir/core"
 )
 
 func TestCoreBuildShapes(t *testing.T) {

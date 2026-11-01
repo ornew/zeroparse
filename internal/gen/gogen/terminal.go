@@ -6,10 +6,10 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/ir/core"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/ir/core"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // Value-free terminal expressions in lean typed Go parsers.

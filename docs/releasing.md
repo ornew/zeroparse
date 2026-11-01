@@ -59,7 +59,7 @@ API and generated Go with either runtime: the default `-runtime embed`, which co
 package, and `-runtime import`, which makes the consumer depend on the ZeroParse module. Generated Go is required to build
 with Go 1.27.1 or later; no lower version is promised.
 
-**Recording `zp` as a tool raises the module's `go` line to 1.27.1.** `go get -tool github.com/ornew/zeroparse/cmd/zp`
+**Recording `zp` as a tool raises the module's `go` line to 1.27.1.** `go get -tool zeroparse.dev/zp/cmd/zp`
 (`zeroparse.dev/zp/cmd/zp` once the repository has moved; see [Tagging a Release](#tagging-a-release)) adds
 the ZeroParse module as a dependency, and because that module requires Go 1.27.1, the `go` command raises the consumer
 module's `go` line to match (`go: upgraded go 1.23 => 1.27.1`). This is expected: the generated code needs the same
@@ -72,7 +72,7 @@ In the commands below, `vX.Y.Z` is the version being released, and the module pa
 
 1. Check that the release items of the [project strategy](strategy.md#wedge-and-sequencing) are done.
 2. For the first release only, move the repository to the `zeroparse` GitHub organization:
-   - transfer the repository from `github.com/ornew/zeroparse` to `github.com/zeroparse/zp`, and point the `origin`
+   - transfer the repository from `zeroparse.dev/zp` to `github.com/zeroparse/zp`, and point the `origin`
      remote of each checkout at the new address;
    - serve `go-import` and `go-source` meta tags from the site so that `zeroparse.dev/X` resolves to
      `github.com/zeroparse/X` for every repository of the organization;

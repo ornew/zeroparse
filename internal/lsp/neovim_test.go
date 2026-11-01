@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 // TestNeovimClient edits a grammar through Neovim's built-in client, with the synchronous and the

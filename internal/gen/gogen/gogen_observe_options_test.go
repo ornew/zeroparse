@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // TestGeneratedTraceOptionsNeedObservability checks that a parser generated without observability
@@ -52,7 +52,7 @@ import (
 	"strings"
 	"testing"
 
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
 )
 
 func TestTraceOptions(t *testing.T) {

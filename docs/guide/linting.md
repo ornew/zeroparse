@@ -130,7 +130,7 @@ stays free of estimates. The [`growing-variable`](#growing-variable) warning nee
 
 ## From Go
 
-Package `github.com/ornew/zeroparse/lint` lints from Go. A `lint.Config` holds the settings of a run, and its `Run`
+Package `zeroparse.dev/zp/lint` lints from Go. A `lint.Config` holds the settings of a run, and its `Run`
 method takes a context, a grammar AST and the start rule. It returns an error, and no findings, if the grammar
 does not compile or the context ends:
 

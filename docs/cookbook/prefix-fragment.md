@@ -47,7 +47,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 //go:embed expr.zp

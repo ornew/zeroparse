@@ -48,7 +48,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 //go:embed tokens.zp

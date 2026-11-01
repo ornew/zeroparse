@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/syntax"
+	"zeroparse.dev/zp/internal/syntax"
 )
 
 func BenchmarkDiagnosticFormatCancellation(b *testing.B) {

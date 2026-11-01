@@ -3,7 +3,7 @@ package document
 import (
 	"fmt"
 
-	"github.com/ornew/zeroparse/internal/engine/core"
+	"zeroparse.dev/zp/internal/engine/core"
 )
 
 // OutputChange describes whole-result equality, not a minimal tree difference.

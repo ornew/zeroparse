@@ -3,7 +3,7 @@ package compile
 import (
 	"slices"
 
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 // --- Exclusion by the leading text of a unit ---

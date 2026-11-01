@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 func TestPublicStreamDiagnosticCallbackOrderAndAbort(t *testing.T) {

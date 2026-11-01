@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 func rhsCheck(t *testing.T, rules string) (*info, *operatorsRuleCheck) {

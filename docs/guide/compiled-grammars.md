@@ -184,7 +184,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 func main() {
@@ -246,7 +246,7 @@ example.com/pairs
 └── compiled_test.go
 ```
 
-Record `zp` as a tool of the module (`go get -tool github.com/ornew/zeroparse/cmd/zp`), so that `go generate` runs the
+Record `zp` as a tool of the module (`go get -tool zeroparse.dev/zp/cmd/zp`), so that `go generate` runs the
 pinned version, and declare the step:
 
 ```go
@@ -267,7 +267,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 //go:embed pairs.zpc
@@ -315,7 +315,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // pairs.zpc is up to date with pairs.zp.

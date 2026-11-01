@@ -4,8 +4,8 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/grammaranalysis"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/grammaranalysis"
 )
 
 // Analysis is the result of static analysis across rules.

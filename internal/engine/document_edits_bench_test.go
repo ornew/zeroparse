@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
+	"zeroparse.dev/zp/internal/compile"
 )
 
 // BenchmarkDocumentOwnerCreation excludes compilation and parsing. It tracks

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/engine/core"
+	"zeroparse.dev/zp/internal/engine/core"
 )
 
 // Cancel only after a real grammar has produced a successful LR seed and a

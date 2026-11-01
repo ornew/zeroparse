@@ -9,10 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/syntax"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/syntax"
 )
 
 // parseNaturalStart parses src without starttest.MarkAll: only the rule main (or, without one, the

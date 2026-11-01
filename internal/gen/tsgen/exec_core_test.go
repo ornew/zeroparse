@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 // TestSubstituteMethods checks that the printed compositions replace the hand-written methods of

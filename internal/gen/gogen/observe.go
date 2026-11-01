@@ -3,8 +3,8 @@ package gogen
 import (
 	"fmt"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
 )
 
 func (g *Generator) tracePlainWrapper(r *compile.Rule, name string) string {

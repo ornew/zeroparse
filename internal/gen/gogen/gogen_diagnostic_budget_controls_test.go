@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 func TestGeneratedGoDiagnosticBudget(t *testing.T) {
@@ -56,7 +56,7 @@ rule letter Word = t:("z" / "a" / "é") #atomic => Word{Text: text($t)}`)
 
 const generatedGoDiagnosticConsumer = `package PACKAGE
 
-import zprt "github.com/ornew/zeroparse/runtime"
+import zprt "zeroparse.dev/zp/runtime"
 import("context";"errors";"fmt";"reflect";"slices";"strings";"testing")
 func diagnosticParser(limits Limits)*zprt.Parser{return &zprt.Parser{Control:zprt.X_newBudgetControl(nil,limits)}}
 func catchFatal(t *testing.T,f func())(err error){t.Helper();defer func(){if v:=recover();v!=nil{fatal,ok:=v.(zprt.X_fatal);if !ok{panic(v)};err=fatal.X_err}}();f();return nil}

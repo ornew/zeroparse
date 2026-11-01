@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ornew/zeroparse/internal/gen/gogen"
+	"zeroparse.dev/zp/internal/gen/gogen"
 )
 
 // CanonicalValueSource is the Go code of the generated program that turns a typed value into the

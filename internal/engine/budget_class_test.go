@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/bytecode"
-	"github.com/ornew/zeroparse/internal/engine/core"
-	"github.com/ornew/zeroparse/internal/limits"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/bytecode"
+	"zeroparse.dev/zp/internal/engine/core"
+	"zeroparse.dev/zp/internal/limits"
+	"zeroparse.dev/zp/internal/value"
 )
 
 const budgetClassRangeCount = 2048

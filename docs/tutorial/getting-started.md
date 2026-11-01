@@ -19,14 +19,14 @@ ZeroParse has two parts: the Go library, and the `zp` command-line tool that run
 command-line tool is the quickest way to experiment, so install it first.
 
 ```bash
-go install github.com/ornew/zeroparse/cmd/zp@latest    # command-line tool
+go install zeroparse.dev/zp/cmd/zp@latest    # command-line tool
 ```
 
 Running `zp` without arguments lists its commands, among them `parse`, `test`, `fmt`, `lint`, `gen` and `compile`. To use the library
 from your own program, add it to your module:
 
 ```bash
-go get github.com/ornew/zeroparse                        # library
+go get zeroparse.dev/zp                        # library
 ```
 
 Create a directory for the tutorial files:
@@ -136,7 +136,7 @@ The same grammar from a Go program. Create a module and `main.go`:
 
 ```bash
 go mod init example.com/hello
-go get github.com/ornew/zeroparse
+go get zeroparse.dev/zp
 ```
 
 ```go
@@ -147,7 +147,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 const src = `@start

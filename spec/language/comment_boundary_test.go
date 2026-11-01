@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/gen"
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/gen"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 const commentOwnerExample = "// orphan\n\n// foo\npackage foo // trailing\n// trailing\n\n// B2\n// B2\n\n// B1\n// B1\nrule B = \"b\" // trailing\n// trailing\n"

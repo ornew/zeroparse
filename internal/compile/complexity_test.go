@@ -9,8 +9,8 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/ornew/zeroparse/internal/starttest"
-	"github.com/ornew/zeroparse/internal/syntax"
+	"zeroparse.dev/zp/internal/starttest"
+	"zeroparse.dev/zp/internal/syntax"
 )
 
 // complexityMemoSources are grammars with the shapes that decide memoization: left-recursion

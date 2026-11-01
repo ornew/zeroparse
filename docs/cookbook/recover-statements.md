@@ -50,7 +50,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 //go:embed script.zp

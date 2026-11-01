@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/bytecode"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/bytecode"
 )
 
 // FieldType is a declared struct field type that a constructor checks a dynamically typed value

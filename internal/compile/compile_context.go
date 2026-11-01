@@ -3,8 +3,8 @@ package compile
 import (
 	"context"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/grammaranalysis"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/grammaranalysis"
 )
 
 // Cancellation is the panic value that unwinds a cancelled compilation with its error. The

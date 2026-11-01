@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/editfuzz"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/editfuzz"
 )
 
 const limitsGrammar = "@start\nrule main = [a-z]* $$"

@@ -3,7 +3,7 @@ package compile
 import (
 	"slices"
 
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 // checkLeftRecursionBindings rejects a binding of a variable that a left-recursion cycle reads

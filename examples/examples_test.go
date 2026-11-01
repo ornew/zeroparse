@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 var update = flag.Bool("update", false, "update golden files")

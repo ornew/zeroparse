@@ -5,13 +5,13 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/ir/core"
-	irbuild "github.com/ornew/zeroparse/internal/ir/core/build"
-	"github.com/ornew/zeroparse/internal/ir/flow"
-	flowlower "github.com/ornew/zeroparse/internal/ir/flow/lower"
-	"github.com/ornew/zeroparse/internal/limits"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/ir/core"
+	irbuild "zeroparse.dev/zp/internal/ir/core/build"
+	"zeroparse.dev/zp/internal/ir/flow"
+	flowlower "zeroparse.dev/zp/internal/ir/flow/lower"
+	"zeroparse.dev/zp/internal/limits"
 )
 
 // Generator is the state that the Go and TypeScript generators share: the program and rule being

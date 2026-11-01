@@ -19,7 +19,7 @@
 // unreachable.
 package flow
 
-import "github.com/ornew/zeroparse/internal/ir/core"
+import "zeroparse.dev/zp/internal/ir/core"
 
 // Func is a function of Flow IR: the body of a rule variant.
 type Func struct {

@@ -15,7 +15,7 @@ language server does.
 The language server is the `zp` command:
 
 ```sh
-go install github.com/ornew/zeroparse/cmd/zp@latest
+go install zeroparse.dev/zp/cmd/zp@latest
 ```
 
 VS Code must find `zp` on its `PATH`, or set `zp.server.path` to the command.

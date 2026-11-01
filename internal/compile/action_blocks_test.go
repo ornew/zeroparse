@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/starttest"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/starttest"
 )
 
 func TestActionBlocksUnsupported(t *testing.T) {

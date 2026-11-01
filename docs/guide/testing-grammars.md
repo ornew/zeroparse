@@ -80,7 +80,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 //go:embed pairs.zp
@@ -328,7 +328,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // checkInput checks what must hold for every input, valid or not.
@@ -426,7 +426,7 @@ package pairs_test
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse/sample"
+	"zeroparse.dev/zp/sample"
 )
 
 // TestGeneratedInputs runs the checks on inputs generated from the grammar, and requires that they exercise
@@ -565,7 +565,7 @@ import (
 	"math/rand/v2"
 	"testing"
 
-	"github.com/ornew/zeroparse/sample"
+	"zeroparse.dev/zp/sample"
 )
 
 // TestDocumentMatchesFreshParse edits generated inputs at random and checks that reparsing the document gives the
@@ -615,8 +615,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/sample"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/sample"
 )
 
 // TestLoadedMatchesCompiled checks that a grammar saved and loaded again behaves like the one compiled from source.

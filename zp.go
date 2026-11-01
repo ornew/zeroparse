@@ -8,11 +8,11 @@ import (
 	"context"
 	"io"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/limits"
-	"github.com/ornew/zeroparse/internal/syntax"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/limits"
+	"zeroparse.dev/zp/internal/syntax"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // Node is a value of a parse result: a node of the input with a range and a string, tuple or list

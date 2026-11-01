@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 func TestGeneratedTypedDocumentPublicationClone(t *testing.T) {
@@ -42,7 +42,7 @@ rule token Token = t:("x") #atomic => Token{Text: text($t)}`)
 		"go.mod": gentest.GoMod("gentest"),
 		"doc/parser_test.go": `package doc
 import (
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
  "gentest/doc/types"
  "context"
  "errors"

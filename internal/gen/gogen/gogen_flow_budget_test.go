@@ -14,8 +14,8 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // The Node and recognizer tables of a parser with budget controls are printed from Flow IR, which makes

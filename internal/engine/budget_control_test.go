@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ornew/zeroparse/internal/engine/core"
-	"github.com/ornew/zeroparse/internal/limits"
+	"zeroparse.dev/zp/internal/engine/core"
+	"zeroparse.dev/zp/internal/limits"
 )
 
 func catchFatal(t *testing.T, f func()) error {

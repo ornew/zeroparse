@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/internal/engine"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/internal/engine"
 )
 
 func TestBudgetDocumentPublicDefaultsAndOptionsOnce(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 type legacyResult struct {

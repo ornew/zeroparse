@@ -14,17 +14,17 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ornew/zeroparse/internal/gen"
+	"zeroparse.dev/zp/internal/gen"
 )
 
 // The Go runtime of generated parsers is the package runtime of this module
-// (github.com/ornew/zeroparse/runtime). Generated code reaches it through the exported names that are
+// (zeroparse.dev/zp/runtime). Generated code reaches it through the exported names that are
 // documented there as for generated parsers. A generated package either imports the runtime from
 // this module or carries a copy of its files (embed mode), which the generator reads from the
 // source registered with SetRuntimeSource.
 
 // runtimeImportPath is the import path of the runtime package in this module.
-const runtimeImportPath = "github.com/ornew/zeroparse/runtime"
+const runtimeImportPath = "zeroparse.dev/zp/runtime"
 
 // runtimeAlias is the name generated code gives to the runtime package, and typesAlias the name
 // it gives to the types package of a typed parser.
@@ -40,7 +40,7 @@ var runtimeSrc struct {
 }
 
 // SetRuntimeSource registers the files of the runtime package (the directory runtime of this
-// module, in fsys's root) that Generate copies and reads. Package github.com/ornew/zeroparse/gen
+// module, in fsys's root) that Generate copies and reads. Package zeroparse.dev/zp/gen
 // registers its embedded copy when it is imported.
 func SetRuntimeSource(fsys fs.FS) {
 	runtimeSrc.mu.Lock()
@@ -74,7 +74,7 @@ func loadRuntime() (*runtimeInfo, error) {
 		return runtimeSrc.info, nil
 	}
 	if runtimeSrc.fsys == nil {
-		return nil, fmt.Errorf("the runtime source is not registered: import github.com/ornew/zeroparse/gen, or call gogen.SetRuntimeSource")
+		return nil, fmt.Errorf("the runtime source is not registered: import zeroparse.dev/zp/gen, or call gogen.SetRuntimeSource")
 	}
 	entries, err := fs.ReadDir(runtimeSrc.fsys, ".")
 	if err != nil {

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/editfuzz"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/editfuzz"
 )
 
 const editFuzzGrammar = "@start\nrule main = (word / other)* $$\nrule word = [a-z]+ #atomic\nrule other = .\n"

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // ZP_TYPED_RECOVERY_DIR retains generated modules for separately built,
@@ -96,7 +96,7 @@ func BenchmarkTypedRecoveryGeneration(b *testing.B) {
 const typedRecoveryWorkloadFixture = `package lrfixture
 
 import (
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
     "encoding/json"
     "fmt"
     "strings"

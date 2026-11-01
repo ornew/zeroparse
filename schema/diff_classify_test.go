@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/ornew/zeroparse/schema"
+	"zeroparse.dev/zp/schema"
 )
 
 func shapeOf(kind string) schema.Shape { return schema.Shape{Kind: kind} }

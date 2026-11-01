@@ -3,8 +3,8 @@ package engine
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/syntax"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/syntax"
 )
 
 // A terminal type rewritten by zp fix holds the text the terminal held: want is the text of

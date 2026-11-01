@@ -23,8 +23,8 @@ rule ws = [ \t\n]*
 Install the library and the command-line tool with:
 
 ```bash
-go get github.com/ornew/zeroparse
-go install github.com/ornew/zeroparse/cmd/zp@latest
+go get zeroparse.dev/zp
+go install zeroparse.dev/zp/cmd/zp@latest
 ```
 
 From a checkout of the repository, `go run ./cmd/zp ...` is equivalent to `zp ...`.
@@ -63,7 +63,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 //go:embed pairs.zp

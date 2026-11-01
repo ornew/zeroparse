@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/gen"
+	"zeroparse.dev/zp/gen"
 )
 
 func TestRuntimeMode(t *testing.T) {

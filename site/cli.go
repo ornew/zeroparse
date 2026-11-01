@@ -176,7 +176,7 @@ func (s *Site) renderCLI(p *Page) (string, []Heading, error) {
 	esc := template.HTMLEscapeString
 	r := &refRenderer{s: s, page: p, fset: fset, files: files, pkg: pkg, dir: "cmd/zp"}
 	r.b.WriteString("<h1 id=\"top\">CLI Reference</h1>\n")
-	r.b.WriteString(`<pre><code class="language-bash">go install github.com/ornew/zeroparse/cmd/zp@latest</code></pre>` + "\n")
+	r.b.WriteString(`<pre><code class="language-bash">go install zeroparse.dev/zp/cmd/zp@latest</code></pre>` + "\n")
 	r.heading(2, "overview", "Overview")
 	r.b.WriteString(r.docHTML(pkg.Doc))
 	r.heading(2, "usage", "Usage")

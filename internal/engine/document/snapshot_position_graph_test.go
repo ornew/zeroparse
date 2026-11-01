@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/limits"
+	"zeroparse.dev/zp/internal/limits"
 )
 
 func TestSnapshotPositionOverlayZeroAndOverflow(t *testing.T) {

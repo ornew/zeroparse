@@ -23,7 +23,7 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // Version is the version of the Sequence format that this package reads and writes.

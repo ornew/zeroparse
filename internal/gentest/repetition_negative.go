@@ -3,9 +3,9 @@ package gentest
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/compiletest"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/compiletest"
 )
 
 // GrammarWithNegativeMaximum parses src and sets the maximum of its repetitions to maximum, which the syntax cannot write.

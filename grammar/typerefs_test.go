@@ -4,8 +4,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/grammar"
 )
 
 func TestTypeRefs(t *testing.T) {

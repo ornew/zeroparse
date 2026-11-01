@@ -73,8 +73,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/editfuzz"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/editfuzz"
 )
 
 //go:embed nested.zp

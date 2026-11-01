@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 func TestGenerateTypedDocument(t *testing.T) {
@@ -35,7 +35,7 @@ func TestGenerateTypedDocument(t *testing.T) {
 		"parser.go": string(code),
 		"parser_test.go": `package fixture
 import (
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
  "context"
  "errors"
  "reflect"
@@ -314,7 +314,7 @@ rule main ErrDocumentBusy = t:("a") #atomic => ErrDocumentBusy{Text: text($t)}`)
 		"go.mod": gentest.GoMod("observedcollision"),
 		"fixture/parser_test.go": `package fixture
 
-import zprt "github.com/ornew/zeroparse/runtime"
+import zprt "zeroparse.dev/zp/runtime"
 import ("errors"; "testing"; "observedcollision/fixture/types")
 func TestCollision(t *testing.T) {
  d, err := NewDocument("a")

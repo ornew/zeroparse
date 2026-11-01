@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // ZP_TYPED_LR_DIR preserves both same-generator routes for prebuilt paired
@@ -114,7 +114,7 @@ func testGeneratedTypedBodyWorkload(t *testing.T, src, fixture, dir, marker stri
 const typedLRActionWorkloadFixture = `package lrfixture
 
 import (
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -177,7 +177,7 @@ func BenchmarkTypedLR(b *testing.B) {
 const typedLRWorkloadFixture = `package lrfixture
 
 import (
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
 	"encoding/json"
 	"fmt"
 	"strings"

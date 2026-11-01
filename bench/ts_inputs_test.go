@@ -1,10 +1,10 @@
 package bench
 
 import (
-	"github.com/ornew/zeroparse/internal/bench/inputs"
 	"os"
 	"path/filepath"
 	"testing"
+	"zeroparse.dev/zp/internal/bench/inputs"
 )
 
 // TestExportTSInputs writes the inputs of the plain-parse TypeScript throughput script

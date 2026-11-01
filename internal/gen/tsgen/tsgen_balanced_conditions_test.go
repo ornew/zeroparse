@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
+	"zeroparse.dev/zp/internal/gen"
 )
 
 func TestGeneratedTSWideCharacterClasses(t *testing.T) {

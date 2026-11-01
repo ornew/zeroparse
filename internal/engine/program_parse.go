@@ -6,11 +6,11 @@ import (
 	"math"
 	"runtime"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/engine/core"
-	"github.com/ornew/zeroparse/internal/engine/vm"
-	"github.com/ornew/zeroparse/internal/limits"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/engine/core"
+	"zeroparse.dev/zp/internal/engine/vm"
+	"zeroparse.dev/zp/internal/limits"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // Parse parses the whole input with the rule start.

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // TestCanonicalValues checks the canonical forms on hand-written values: a pair of values that

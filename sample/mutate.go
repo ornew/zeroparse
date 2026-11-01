@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // Invalid is a near-miss invalid input: an input that the parser accepts, changed by one mutation so

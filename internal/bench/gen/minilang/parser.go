@@ -4,8 +4,8 @@
 package minilang
 
 import (
-	types "github.com/ornew/zeroparse/internal/bench/gen/minilang/types"
-	rt "github.com/ornew/zeroparse/runtime"
+	types "zeroparse.dev/zp/internal/bench/gen/minilang/types"
+	rt "zeroparse.dev/zp/runtime"
 )
 
 // Parse parses the whole input with the rule main. Options select position units, depth, cancellation and budget limits.

@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/bytecode"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/bytecode"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // TestModuleCompilesCorpus checks that every test grammar compiles to bytecode and that all

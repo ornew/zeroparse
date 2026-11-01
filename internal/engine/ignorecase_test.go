@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/bytecode"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/bytecode"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // ignoreCaseCase is one parse of a grammar whose main rule has case-insensitive literals. The

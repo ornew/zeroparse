@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ornew/zeroparse/lint"
+	"zeroparse.dev/zp/lint"
 )
 
 type lspLintPollContext struct {

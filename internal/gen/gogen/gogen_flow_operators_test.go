@@ -3,10 +3,10 @@ package gogen_test
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gen/gogen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gen/gogen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // The lines of an Operators Rule in the Node and recognizer tables are printed from Flow IR. The tests

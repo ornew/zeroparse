@@ -9,7 +9,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/syntax"
+	"zeroparse.dev/zp/internal/syntax"
 )
 
 func renderFixture(fields int) string {

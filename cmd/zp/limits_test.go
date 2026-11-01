@@ -5,7 +5,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 func TestLimitFlagParsing(t *testing.T) {

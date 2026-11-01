@@ -31,7 +31,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 func main() {
@@ -149,7 +149,7 @@ func loadResults(goPath string) (data, tsData, sizeData []byte, err error) {
 
 // repoRoot returns the root of the repository (the directory of the module's go.mod).
 func repoRoot() (string, error) {
-	out, err := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "github.com/ornew/zeroparse").Output()
+	out, err := exec.Command("go", "list", "-m", "-f", "{{.Dir}}", "zeroparse.dev/zp").Output()
 	if err != nil {
 		return "", fmt.Errorf("finding the repository (run inside it): %w", err)
 	}

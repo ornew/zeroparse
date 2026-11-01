@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/ir/exec"
-	"github.com/ornew/zeroparse/internal/ir/exec/ref"
+	"zeroparse.dev/zp/internal/ir/exec"
+	"zeroparse.dev/zp/internal/ir/exec/ref"
 )
 
 var allOps = []string{"memo.lookup", "memo.lookupGrowing", "memo.store", "memo.seed", "memo.reseed", "memo.finishSeed",

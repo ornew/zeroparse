@@ -1,6 +1,6 @@
 package complexitytest
 
-import "github.com/ornew/zeroparse/internal/engine"
+import "zeroparse.dev/zp/internal/engine"
 
 // The classes that the complexity classifier assigns to a start rule.
 const (

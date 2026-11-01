@@ -9,8 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/schema"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/schema"
 )
 
 // schemaDiffOutput is the JSON document that zp schema diff -f json prints.

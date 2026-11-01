@@ -1,8 +1,8 @@
 package tsgen
 
 import (
-	"github.com/ornew/zeroparse/internal/ir/core"
-	flowlower "github.com/ornew/zeroparse/internal/ir/flow/lower"
+	"zeroparse.dev/zp/internal/ir/core"
+	flowlower "zeroparse.dev/zp/internal/ir/flow/lower"
 )
 
 // Outlining of the generated TypeScript.

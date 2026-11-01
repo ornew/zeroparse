@@ -3,7 +3,7 @@ package sample
 import (
 	"unicode/utf8"
 
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 // Kinds of generated values (see val).

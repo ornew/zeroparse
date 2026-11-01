@@ -1,6 +1,6 @@
 package compile
 
-import "github.com/ornew/zeroparse/grammar"
+import "zeroparse.dev/zp/grammar"
 
 // defaultValueGrammar returns g without the value actions and without the declared types of rules,
 // so that every rule makes the default value of its expression (Options.DefaultValue). Predicates

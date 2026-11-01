@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gen/gogen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gen/gogen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // routeInputs are the inputs of each route grammar, by file name without the extension.

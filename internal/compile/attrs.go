@@ -1,6 +1,6 @@
 package compile
 
-import "github.com/ornew/zeroparse/grammar"
+import "zeroparse.dev/zp/grammar"
 
 func validArg(attr, arg string) bool {
 	switch attr {

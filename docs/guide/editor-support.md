@@ -18,7 +18,7 @@ This guide explains what the server does, how to set up an editor, and its limit
 The server is part of the `zp` command:
 
 ```bash
-go install github.com/ornew/zeroparse/cmd/zp@latest
+go install zeroparse.dev/zp/cmd/zp@latest
 zp lsp     # speaks LSP on standard input and output; editors start it for you
 ```
 

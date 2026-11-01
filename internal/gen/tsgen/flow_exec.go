@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ornew/zeroparse/internal/ir/exec"
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
-	"github.com/ornew/zeroparse/internal/ir/exec/exects"
-	"github.com/ornew/zeroparse/internal/ir/exec/lower"
-	"github.com/ornew/zeroparse/internal/ir/exec/pass"
-	"github.com/ornew/zeroparse/internal/ir/flow"
+	"zeroparse.dev/zp/internal/ir/exec"
+	"zeroparse.dev/zp/internal/ir/exec/core"
+	"zeroparse.dev/zp/internal/ir/exec/exects"
+	"zeroparse.dev/zp/internal/ir/exec/lower"
+	"zeroparse.dev/zp/internal/ir/exec/pass"
+	"zeroparse.dev/zp/internal/ir/flow"
 )
 
 // Rules printed from Exec IR.

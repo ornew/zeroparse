@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/internal/starttest"
-	"github.com/ornew/zeroparse/sample"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/internal/starttest"
+	"zeroparse.dev/zp/sample"
 )
 
 // exampleParsers compiles every grammar in examples/.

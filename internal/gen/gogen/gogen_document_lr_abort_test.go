@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // TestGeneratedDocumentLeftRecursionAbortedGrowth is the generated Document
@@ -118,7 +118,7 @@ func matchesTyped(t *testing.T, d *Document, unit PositionUnit) {
 const generatedDocumentGrowthConsumer = `package fixture
 
 import (
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
 	"context"
 	"encoding/json"
 	"errors"

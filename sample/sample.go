@@ -33,9 +33,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/engine"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/engine"
 )
 
 // Defaults of the options.

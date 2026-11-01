@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/grammar"
 )
 
 // literalNameSources declare a name that would hide the literal true, false or nil.

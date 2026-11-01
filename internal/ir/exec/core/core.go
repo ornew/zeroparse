@@ -10,8 +10,8 @@
 package core
 
 import (
-	. "github.com/ornew/zeroparse/internal/ir/exec"
-	"github.com/ornew/zeroparse/internal/ir/exec/ops"
+	. "zeroparse.dev/zp/internal/ir/exec"
+	"zeroparse.dev/zp/internal/ir/exec/ops"
 )
 
 // docMode selects the Document bookkeeping of a memoized call.

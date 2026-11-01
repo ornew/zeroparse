@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/limits"
+	"zeroparse.dev/zp/internal/limits"
 )
 
 // catchFatal runs f and returns the error of the Fatal panic it raises, or nil.

@@ -4,9 +4,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/spec/language/internal/sourceast"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/spec/language/internal/sourceast"
 )
 
 func TestCanonicalTypeDeclarationSpans(t *testing.T) {

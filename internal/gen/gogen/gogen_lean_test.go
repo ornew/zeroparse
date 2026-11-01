@@ -9,11 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gen/gogen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gen/gogen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // External rule-table entry and nested direct calls must count the same rule
@@ -85,7 +85,7 @@ rule left = left "+" "é" / "é"
 		}
 	}
 	tests := `package depth
-import("fmt";"testing";zprt "github.com/ornew/zeroparse/runtime")
+import("fmt";"testing";zprt "zeroparse.dev/zp/runtime")
 func TestRoutesAndReuse(t *testing.T) {
  cases:=[]struct{name,input string; unit PositionUnit; want string}{` + rows.String() + `}
  for repeat:=0;repeat<3;repeat++ { for _,c:=range cases {

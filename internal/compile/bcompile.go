@@ -4,8 +4,8 @@ import (
 	"slices"
 	"unicode/utf8"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/bytecode"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/bytecode"
 )
 
 // BytecodeModule is Module.

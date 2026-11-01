@@ -31,7 +31,7 @@ This document describes the repository layout and architecture, how to run tests
 | `internal/limits/` | Budget limits of a parse invocation, the error of an exhausted limit and overflow-safe budget arithmetic, shared by the parser, the Document and package `query` |
 | `internal/bytecode/` | The bytecode instruction set and module, its disassembly, the encoding of modules in compiled grammars and the validation of loaded modules |
 | `internal/gen/` | What the Go and TypeScript generators share: generation options, the runtime mode of generated Go parsers, generated files, and the generator state both print with (the program and rule being printed, the expectation table, shared names, the Flow IR state of recognizer rules and the action value resolver) |
-| `runtime/` | Runtime package of generated Go parsers, imported by them or copied into them (`github.com/ornew/zeroparse/runtime`) |
+| `runtime/` | Runtime package of generated Go parsers, imported by them or copied into them (`zeroparse.dev/zp/runtime`) |
 | `internal/gen/gogen/` | Go generator: prints the parser, its types package and the runtime copy from the compiled program and Flow IR, and leaves out what the entry points cannot reach |
 | `internal/gen/tsgen/` | TypeScript generator: prints the parser, its types and its runtime files from the compiled program and Flow IR |
 | `internal/gen/tsgen/tsrt/` | Source of `runtime.ts`, the runtime that generated TypeScript parsers import (joined from `runtime.ts`, `budget.ts`, `trace.ts` and `profile.ts`) |
@@ -148,7 +148,7 @@ The top-level tests of `internal/engine` call `t.Parallel()`. A test stays seque
 Engine tests write grammars in ZeroParse source and compare results using the S-expression form of nodes (`Node.String`).
 The `check` helper also verifies that the result is the same with memoization disabled, with every backend (closure, recursive bytecode, iterative bytecode), with both position units, in recognition-only mode, and with tracing on.
 
-The behavior of package `zp` is tested from outside it by `internal/apitest`; the root package holds only its documentation examples. Measure its coverage with `go test -coverpkg=github.com/ornew/zeroparse ./internal/apitest`.
+The behavior of package `zp` is tested from outside it by `internal/apitest`; the root package holds only its documentation examples. Measure its coverage with `go test -coverpkg=zeroparse.dev/zp ./internal/apitest`.
 
 `internal/gen/gogen/gogen_pool_lifecycle_test.go` checks generated Node and typed parser cleanup after oversized
 inputs, retained results, and error/retry reuse in both position units.

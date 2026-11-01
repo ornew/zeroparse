@@ -3,9 +3,9 @@ package gogen_test
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/gen/gogen"
-	zprt "github.com/ornew/zeroparse/runtime"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/gen/gogen"
+	zprt "zeroparse.dev/zp/runtime"
 )
 
 // TestClassBits builds the runtime's Class from the generator's tables for classes whose ranges

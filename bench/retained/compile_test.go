@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // BenchmarkCompileCorpus complements post-GC retained heap with compilation

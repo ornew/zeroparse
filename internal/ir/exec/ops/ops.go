@@ -9,7 +9,7 @@
 // models compute.
 package ops
 
-import "github.com/ornew/zeroparse/internal/ir/exec"
+import "zeroparse.dev/zp/internal/ir/exec"
 
 // Features of the parser VM.
 const (

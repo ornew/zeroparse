@@ -3,8 +3,8 @@ package tsgen_test
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // The grammar takes the text of every level of a nesting: the texts sum to the square of the

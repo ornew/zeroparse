@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
+	"zeroparse.dev/zp/internal/compile"
 )
 
 func TestErrorAttribute(t *testing.T) {

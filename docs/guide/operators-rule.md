@@ -16,7 +16,7 @@ text is in [Operators Rule](../../spec/language/operators-rule.md) and
 [design record 005](../design/records/005-operators-rule.md) and [design record 003](../design/records/003-packrat-parsing.md).
 
 To follow along, put each grammar in the file named on its first line and run the commands shown (`zp` is the tool
-from `go install github.com/ornew/zeroparse/cmd/zp@latest`, or `go run ./cmd/zp` in a checkout). The Operators Rule and the
+from `go install zeroparse.dev/zp/cmd/zp@latest`, or `go run ./cmd/zp` in a checkout). The Operators Rule and the
 left-recursive calculator are the files `calc.zp` and `calc_lr.zp` in
 [`examples/calculator`](../../examples/calculator) (without their header comments); the chain variant is written out
 below.

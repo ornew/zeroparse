@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/internal/value"
 )
 
 func TestTraversalPublicFacade(t *testing.T) {

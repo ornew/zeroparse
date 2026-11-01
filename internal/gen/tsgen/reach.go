@@ -3,10 +3,10 @@ package tsgen
 import (
 	"fmt"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/ir/core"
-	irbuild "github.com/ornew/zeroparse/internal/ir/core/build"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/ir/core"
+	irbuild "zeroparse.dev/zp/internal/ir/core/build"
 )
 
 // A generated parser prints only the rules that a parse can enter: the start rules, which parseRule

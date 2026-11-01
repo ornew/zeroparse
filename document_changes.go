@@ -1,6 +1,6 @@
 package zp
 
-import "github.com/ornew/zeroparse/internal/engine"
+import "zeroparse.dev/zp/internal/engine"
 
 // DocumentChangeKind distinguishes source operations, captured outcomes and
 // lost history requiring a full refresh.

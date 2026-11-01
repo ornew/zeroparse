@@ -5,7 +5,7 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 // endKind says what an evaluation examines after the last item of a continuation.

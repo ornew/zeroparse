@@ -1,11 +1,11 @@
 package vm
 
 import (
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/bytecode"
-	"github.com/ornew/zeroparse/internal/engine/core"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/bytecode"
+	"zeroparse.dev/zp/internal/engine/core"
 
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // NewIterative prepares a module for execution with the iterative model.

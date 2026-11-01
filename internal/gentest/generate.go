@@ -6,10 +6,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gen/gogen"
-	"github.com/ornew/zeroparse/internal/gen/tsgen"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gen/gogen"
+	"zeroparse.dev/zp/internal/gen/tsgen"
 )
 
 // Compile compiles grammars for the generators, as the root package's compiler for them does. The

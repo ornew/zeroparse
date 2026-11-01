@@ -3,9 +3,9 @@ package engine
 import (
 	"fmt"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/engine/core"
-	"github.com/ornew/zeroparse/internal/engine/document"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/engine/core"
+	"zeroparse.dev/zp/internal/engine/document"
 )
 
 // NewDocument creates a Document that parses text with the rule start. Positions are in code

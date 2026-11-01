@@ -3,7 +3,7 @@ package apitest_test
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // startAPISource has the default start rule main, which matches "aa", and the

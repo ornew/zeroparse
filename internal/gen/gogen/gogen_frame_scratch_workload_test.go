@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 const nodeFrameScratchGrammar = `type Tok = { Text string }
@@ -111,7 +111,7 @@ rule main Tok = t:(("é" / "�")* $$) #atomic => Tok{Text: text($t)}`, `func fr
 
 const frameScratchFixture = `package framefixture
 
-import zprt "github.com/ornew/zeroparse/runtime"
+import zprt "zeroparse.dev/zp/runtime"
 import("crypto/sha256";"encoding/json";"fmt";"strings";"sync";"testing")
 const captureCase = CAPTURE_CASE
 func frameJSON(n *Node,err error)string {out:=map[string]any{"node":n};if err!=nil {out["err"]=err.Error()};b,_:=json.Marshal(out);return string(b)}

@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/syntax"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/syntax"
+	"zeroparse.dev/zp/internal/value"
 )
 
 func TestStreamCaptureRecognition(t *testing.T) {

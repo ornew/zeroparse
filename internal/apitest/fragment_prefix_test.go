@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 func TestParsePrefixRuleSemantics(t *testing.T) {

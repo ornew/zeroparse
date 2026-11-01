@@ -14,9 +14,9 @@ import (
 	"math"
 	"strings"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/internal/engine/core"
-	"github.com/ornew/zeroparse/internal/starttest"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/internal/engine/core"
+	"zeroparse.dev/zp/internal/starttest"
 )
 
 // Backends are the backends whose cost is measured.

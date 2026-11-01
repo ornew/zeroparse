@@ -4,7 +4,7 @@ import (
 	"context"
 	"unicode/utf8"
 
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 // This file exposes the lexer and an error-tolerant parse to tools that work on source as it is

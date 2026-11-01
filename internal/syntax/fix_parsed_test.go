@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/starttest"
-	"github.com/ornew/zeroparse/internal/syntax"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/starttest"
+	"zeroparse.dev/zp/internal/syntax"
 )
 
 // Fix rewrites positional captures to named captures that produce the same results. The engine

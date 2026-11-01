@@ -5,7 +5,7 @@ import (
 	"slices"
 	"unicode/utf8"
 
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 // The generator walks the grammar AST and writes a candidate input, making a random decision at each

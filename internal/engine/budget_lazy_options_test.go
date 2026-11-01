@@ -3,12 +3,12 @@
 package engine
 
 import (
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/limits"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/limits"
 
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
+	"zeroparse.dev/zp/internal/compile"
 )
 
 func TestBudgetLazyClosureSavedFlagsAndOptions(t *testing.T) {

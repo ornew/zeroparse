@@ -11,10 +11,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/bytecode"
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/gentest"
-	ischema "github.com/ornew/zeroparse/internal/schema"
+	"zeroparse.dev/zp/internal/bytecode"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/gentest"
+	ischema "zeroparse.dev/zp/internal/schema"
 )
 
 // schemaJSON exports the schema of p for start, or every rule with allRules, as canonical JSON.

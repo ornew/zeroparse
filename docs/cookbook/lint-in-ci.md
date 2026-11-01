@@ -21,7 +21,7 @@ example.com/project
 Record `zp` as a tool of the module, so that the version is pinned and nothing has to be installed:
 
 ```bash
-go get -tool github.com/ornew/zeroparse/cmd/zp
+go get -tool zeroparse.dev/zp/cmd/zp
 ```
 
 The script runs the checks on every grammar and reports all failures, not only the first:

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 func TestGeneratedDocumentObservation(t *testing.T) {
@@ -93,7 +93,7 @@ func TestGeneratedDocumentObservation(t *testing.T) {
 
 const generatedDocumentObservationConsumer = `package PACKAGE
 
-import zprt "github.com/ornew/zeroparse/runtime"
+import zprt "zeroparse.dev/zp/runtime"
 
 import(
  "context"

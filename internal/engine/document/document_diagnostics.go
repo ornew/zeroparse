@@ -1,6 +1,6 @@
 package document
 
-import "github.com/ornew/zeroparse/internal/engine/core"
+import "zeroparse.dev/zp/internal/engine/core"
 
 // copyDocumentDiagnostics publishes owned recovered errors without exposing
 // memoized error objects or their mutable slice containers. Ordinary failures

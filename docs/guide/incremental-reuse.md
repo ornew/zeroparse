@@ -68,7 +68,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // A 1,000-line document of lines like "item_a = 0".

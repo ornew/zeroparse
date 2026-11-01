@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ornew/zeroparse/internal/ir/exec"
-	"github.com/ornew/zeroparse/internal/ir/exec/exects"
-	"github.com/ornew/zeroparse/internal/ir/exec/ops"
-	"github.com/ornew/zeroparse/internal/ir/exec/pass"
+	"zeroparse.dev/zp/internal/ir/exec"
+	"zeroparse.dev/zp/internal/ir/exec/exects"
+	"zeroparse.dev/zp/internal/ir/exec/ops"
+	"zeroparse.dev/zp/internal/ir/exec/pass"
 )
 
 // TSMethod is a printed method of the TypeScript runtime's Parser class.

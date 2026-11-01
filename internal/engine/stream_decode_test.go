@@ -10,10 +10,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/engine/core"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/engine/core"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // failOnRead lets decode read buffered bytes but reports every attempt to

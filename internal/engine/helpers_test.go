@@ -8,15 +8,15 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/engine/closure"
-	"github.com/ornew/zeroparse/internal/engine/core"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/limits"
-	"github.com/ornew/zeroparse/internal/starttest"
-	"github.com/ornew/zeroparse/internal/syntax"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/engine/closure"
+	"zeroparse.dev/zp/internal/engine/core"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/limits"
+	"zeroparse.dev/zp/internal/starttest"
+	"zeroparse.dev/zp/internal/syntax"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // parseLegacyTest parses ZeroParse source with syntax.ParseLegacy and marks its start rules as

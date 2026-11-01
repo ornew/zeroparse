@@ -3,7 +3,7 @@ package engine
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // The locals of an Operators Rule's actions read a scalar as its value, as an ordinary capture

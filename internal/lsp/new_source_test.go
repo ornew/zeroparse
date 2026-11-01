@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/syntax"
+	"zeroparse.dev/zp/internal/syntax"
 )
 
 func TestNewSourceServices(t *testing.T) {

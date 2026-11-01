@@ -3,11 +3,11 @@ package engine_test
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/starttest"
-	"github.com/ornew/zeroparse/internal/value"
-	"github.com/ornew/zeroparse/query"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/starttest"
+	"zeroparse.dev/zp/internal/value"
+	"zeroparse.dev/zp/query"
 )
 
 // queryShapeCase nests unions, optional values and lists of declared types.

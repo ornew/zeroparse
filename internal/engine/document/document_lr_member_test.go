@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	. "github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/engine/document"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/compile"
+	. "zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/engine/document"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // memberDocumentDiffers parses each input of the case with a Document on every backend: twice

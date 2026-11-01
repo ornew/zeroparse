@@ -20,7 +20,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 //go:embed csv.zp

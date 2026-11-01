@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/limits"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/limits"
+	"zeroparse.dev/zp/internal/value"
 )
 
 func TestBudgetStreamReferenceAdmission(t *testing.T) {

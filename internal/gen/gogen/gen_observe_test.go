@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 func TestGeneratedNodeTrace(t *testing.T) {
@@ -88,7 +88,7 @@ rule part = "é"`, "éé", `last:=events[len(events)-1];expectedEnd:=2;if unit==
 
 const generatedNodeTraceConsumer = `package PACKAGE
 
-import zprt "github.com/ornew/zeroparse/runtime"
+import zprt "zeroparse.dev/zp/runtime"
 import("context";"encoding/json";"errors";"fmt";"reflect";"sync";"testing";reference "tracefixture/reference_PACKAGE")
 func TestTrace(t *testing.T){
  for _,unit:=range []PositionUnit{CodePoints,Bytes}{

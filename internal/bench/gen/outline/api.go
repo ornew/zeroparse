@@ -5,7 +5,7 @@ package outline
 import (
 	"context"
 
-	rt "github.com/ornew/zeroparse/runtime"
+	rt "zeroparse.dev/zp/runtime"
 )
 
 var _ context.Context

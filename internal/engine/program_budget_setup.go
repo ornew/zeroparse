@@ -3,9 +3,9 @@ package engine
 import (
 	"fmt"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/engine/core"
-	"github.com/ornew/zeroparse/internal/engine/vm"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/engine/core"
+	"zeroparse.dev/zp/internal/engine/vm"
 )
 
 // admitParse validates fixed metadata and resolves the limits (core.ResolveLimits) for the input text (empty for a stream) before caller Context methods. Callers

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/limits"
+	"zeroparse.dev/zp/internal/limits"
 )
 
 // scanGrammar scans the rest of the input from every position of a scan from every position, so its

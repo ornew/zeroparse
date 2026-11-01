@@ -3,9 +3,9 @@ package lint
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/starttest"
-	"github.com/ornew/zeroparse/internal/syntax"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/starttest"
+	"zeroparse.dev/zp/internal/syntax"
 )
 
 func TestMissingTokenDoesNotProveAChoiceShadowed(t *testing.T) {

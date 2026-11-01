@@ -4,8 +4,8 @@
 package outline
 
 import (
-	types "github.com/ornew/zeroparse/internal/bench/gen/outline/types"
-	rt "github.com/ornew/zeroparse/runtime"
+	types "zeroparse.dev/zp/internal/bench/gen/outline/types"
+	rt "zeroparse.dev/zp/runtime"
 )
 
 // Parse parses the whole input with the rule main. Options select position units, depth, cancellation and budget limits.

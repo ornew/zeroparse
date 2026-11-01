@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/syntax"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/syntax"
 )
 
 // An action error names the inline action by the rule that holds it, and the explicit rule by its

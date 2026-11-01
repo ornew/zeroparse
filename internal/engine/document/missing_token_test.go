@@ -3,7 +3,7 @@ package document_test
 import (
 	"testing"
 
-	. "github.com/ornew/zeroparse/internal/engine"
+	. "zeroparse.dev/zp/internal/engine"
 )
 
 func TestMissingTokensDocumentChangesRejectionPreservesBaseline(t *testing.T) {

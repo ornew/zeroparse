@@ -4,8 +4,8 @@ import (
 	"context"
 	"slices"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/engine"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/engine"
 )
 
 // A Rewrite is a change to the source of a grammar that fixes a finding without changing what the

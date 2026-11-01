@@ -1,9 +1,9 @@
 package compile
 
 import (
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/grammaranalysis"
 	"strings"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/grammaranalysis"
 )
 
 // normalizeAttributes builds the executable grammar without changing the

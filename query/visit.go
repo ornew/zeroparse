@@ -3,7 +3,7 @@ package query
 import (
 	"sort"
 
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // graphVisit is the adapter boundary for a future common graph walker. Each event contains a

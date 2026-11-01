@@ -45,7 +45,7 @@ Record `zp` as a tool of the module, so that `go generate` runs the version you 
 
 ```bash
 go mod init example.com/ship
-go get -tool github.com/ornew/zeroparse/cmd/zp
+go get -tool zeroparse.dev/zp/cmd/zp
 ```
 
 Then the program, with the `go:generate` line that makes the parser (`-types` adds Go types and `ParseAST`):
@@ -104,8 +104,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/gen"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/gen"
 )
 
 //go:embed version.zp

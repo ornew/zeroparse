@@ -30,7 +30,7 @@ rule num = [0-9]+ #atomic
 rule ws = (&[ \t\r\n] .)*
 ```
 
-Generate the module next to the tool. The `zp` command comes from `go install github.com/ornew/zeroparse/cmd/zp@latest`:
+Generate the module next to the tool. The `zp` command comes from `go install zeroparse.dev/zp/cmd/zp@latest`:
 
 ```bash
 zp gen -lang ts -types -g settings.zp -o settings

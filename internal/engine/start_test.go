@@ -5,11 +5,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/bytecode"
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/syntax"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/bytecode"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/syntax"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // compileStarts compiles source as written, without marking start rules for the test.

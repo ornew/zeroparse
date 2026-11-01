@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 func main() {

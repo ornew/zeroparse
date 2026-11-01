@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 // TestSkipSites checks which repetitions are skip-run sites: each condition of skip_sites.go

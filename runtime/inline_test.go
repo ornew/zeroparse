@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 // hotInline lists the methods and functions that generated parsers call on their hot paths. A

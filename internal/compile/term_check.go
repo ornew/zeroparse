@@ -1,6 +1,6 @@
 package compile
 
-import "github.com/ornew/zeroparse/grammar"
+import "zeroparse.dev/zp/grammar"
 
 // nodeMembers are the members of a node, and the removed ones that the checker reports: they are
 // not captures, which are read with x.$name.

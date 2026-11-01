@@ -2,7 +2,7 @@
 
 package document
 
-import "github.com/ornew/zeroparse/internal/engine/core"
+import "zeroparse.dev/zp/internal/engine/core"
 
 const snapshotPositionOverlayEnabled = false
 

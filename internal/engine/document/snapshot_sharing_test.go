@@ -9,10 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/engine/document"
+	"zeroparse.dev/zp/internal/engine/document"
 
-	. "github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/engine/core"
+	. "zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/engine/core"
 )
 
 func TestSnapshotSharedChildRunsAfterMiddleEdit(t *testing.T) {

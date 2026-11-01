@@ -69,7 +69,7 @@ printf 'a=1\nbb=22\nccc=x\n' | zp parse -g kv.zp -stream
 zp: 3:5: syntax error: expected [0-9]
 ```
 
-From Go (in a module that requires `github.com/ornew/zeroparse`):
+From Go (in a module that requires `zeroparse.dev/zp`):
 
 ```go
 package main
@@ -78,7 +78,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 const grammar = `package kv
@@ -185,7 +185,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // run feeds the chunks to the parser through a pipe, 200 ms apart, and prints when each element arrives.
@@ -298,7 +298,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 func compile(src string) *zp.Parser {
@@ -481,7 +481,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // Two grammars for the same input: the elements are either tuple nodes or structs built by an action.

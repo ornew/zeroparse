@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 const fingerprintFormat = "cst-value-graph-v2"

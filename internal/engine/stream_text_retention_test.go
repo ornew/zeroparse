@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // Report live memory after the parser has gone, with either one early row

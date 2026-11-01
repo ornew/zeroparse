@@ -1,9 +1,9 @@
 package core
 
 import (
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // OperatorsRule is a compiled Operators Rule expression. Binding levels are numbered from 1 in declaration

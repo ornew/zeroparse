@@ -37,7 +37,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 //go:embed calls.zp

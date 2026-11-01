@@ -1,6 +1,6 @@
 package compile
 
-import "github.com/ornew/zeroparse/grammar"
+import "zeroparse.dev/zp/grammar"
 
 // resumable reports whether a repetition with the element e can be resumed. An element whose
 // captures are written to the enclosing scope (those inside &, when the element has no captures of

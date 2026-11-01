@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/ornew/zeroparse/internal/engine"
+	. "zeroparse.dev/zp/internal/engine"
 )
 
 func TestNullableRepetitionResumedMinimum(t *testing.T) {

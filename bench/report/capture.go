@@ -10,8 +10,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/ornew/zeroparse/internal/bench/inputs"
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp/internal/bench/inputs"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 // tsWorkload is a workload measured on the generated TypeScript parser: the grammar and the input
@@ -231,7 +231,7 @@ go 1.27.1
 require %[1]s v0.0.0
 
 replace %[1]s => %[2]s
-`, "github.com/ornew/zeroparse", root)
+`, "zeroparse.dev/zp", root)
 	src := `package main
 
 import (

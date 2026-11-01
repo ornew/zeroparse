@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/limits"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/limits"
+	"zeroparse.dev/zp/internal/value"
 )
 
 func memoStorageParser(t *MemoTable, limits limits.Limits) *Parser {

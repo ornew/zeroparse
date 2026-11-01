@@ -10,9 +10,9 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/lint"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/lint"
 )
 
 // lintOutput is the JSON document that zp lint -f json prints.

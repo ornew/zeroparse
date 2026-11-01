@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	ir "github.com/ornew/zeroparse/internal/ir/exec"
-	"github.com/ornew/zeroparse/internal/ir/exec/printtest"
+	ir "zeroparse.dev/zp/internal/ir/exec"
+	"zeroparse.dev/zp/internal/ir/exec/printtest"
 )
 
 var testTarget = &Target{

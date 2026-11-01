@@ -5,7 +5,7 @@ import (
 	"sort"
 	"testing"
 
-	. "github.com/ornew/zeroparse/internal/ir/exec"
+	. "zeroparse.dev/zp/internal/ir/exec"
 )
 
 // storesFunc returns a function of the test module with the locals names, all ints, and the body.

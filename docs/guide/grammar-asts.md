@@ -20,7 +20,7 @@ if errors.As(err, &problem) {
 }
 ```
 
-Import `errors`, `fmt` and `github.com/ornew/zeroparse/grammar` for this snippet.
+Import `errors`, `fmt` and `zeroparse.dev/zp/grammar` for this snippet.
 `Path` uses JSON field names and zero-based indexes. `Pos` is the closest known
 diagnostic position. Source-parsed grammars carry source spans and comment
 ownership in `SourceInfo`; hand-built nodes may leave those fields zero-valued.

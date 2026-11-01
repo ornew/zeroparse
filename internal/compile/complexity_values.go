@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 // termCtx is the context of a value expression in the walk.

@@ -14,9 +14,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gen/gogen"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gen/gogen"
 )
 
 // The generated fixtures are built in two forms: with budget controls, so that the tests of
@@ -194,7 +194,7 @@ func writeRuntimeCopy(dir string, patch func(name, src string) string, extra map
 			panic(err)
 		}
 	}
-	must(os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module github.com/ornew/zeroparse\n\ngo 1.27.1\n"), 0o644))
+	must(os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module zeroparse.dev/zp\n\ngo 1.27.1\n"), 0o644))
 	rt := filepath.Join(dir, "runtime")
 	must(os.MkdirAll(rt, 0o755))
 	src := filepath.Join(moduleRoot(), "runtime")
@@ -225,7 +225,7 @@ func GoMod(module string) string {
 
 // GoModAt returns the go.mod of a test module that imports the runtime from the module in dir.
 func GoModAt(module, dir string) string {
-	return "module " + module + "\n\ngo 1.27.1\n\nrequire github.com/ornew/zeroparse v0.0.0\n\nreplace github.com/ornew/zeroparse => " + dir + "\n"
+	return "module " + module + "\n\ngo 1.27.1\n\nrequire zeroparse.dev/zp v0.0.0\n\nreplace zeroparse.dev/zp => " + dir + "\n"
 }
 
 // WriteGenerated writes the files of a generated package into dir. A go.mod for the module is

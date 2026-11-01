@@ -1,8 +1,8 @@
 package engine
 
 import (
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
 )
 
 // Options configures compilation.

@@ -14,9 +14,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 // documentProbeMain is the consumer of the generated packages with the prefix PREFIX. For each input it creates a
@@ -33,7 +33,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
 IMPORTS)
 
 type doc struct {

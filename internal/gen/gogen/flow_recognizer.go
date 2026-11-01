@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/ir/flow"
-	flowlower "github.com/ornew/zeroparse/internal/ir/flow/lower"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/ir/flow"
+	flowlower "zeroparse.dev/zp/internal/ir/flow/lower"
 )
 
 // Value-free rules of the Node runtime printed from Flow IR.

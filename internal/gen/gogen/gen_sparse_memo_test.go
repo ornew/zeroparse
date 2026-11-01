@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // ZP_SPARSE_MEMO_GENERATED_DIR preserves the generated fixture for
@@ -77,7 +77,7 @@ func testGeneratedSparseMemo(t *testing.T) {
 const sparseMemoGeneratedFixture = `package memofixture
 
 import (
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
     "crypto/sha256"
     "encoding/json"
     "fmt"

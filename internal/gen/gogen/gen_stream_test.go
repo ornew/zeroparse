@@ -16,12 +16,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/ir/exec/core"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // streamRun is one stream parse of a differential test. The reader returns
@@ -1021,7 +1021,7 @@ rule stmt S = n:[a-z]+ #atomic ";" => S{N: $n}`)
 const generatedRecoveringStreamConsumer = `package recovering
 
 import (
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
 	"errors"
 	"io"
 	"runtime"
@@ -1252,7 +1252,7 @@ func TestParseStreamASTBudgetControls(t *testing.T) {
 const generatedStreamConsumer = `package fixture
 
 import (
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
 	"context"
 	"errors"
 	"io"
@@ -1386,7 +1386,7 @@ func TestMemoryIsBounded(t *testing.T) {
 const generatedStreamListsConsumer = `package lists
 
 import (
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
 	"io"
 	"runtime"
 	"testing"
@@ -1452,7 +1452,7 @@ func TestMemoryIsBounded(t *testing.T) {
 const generatedStreamMemoConsumer = `package memo
 
 import (
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
 	"io"
 	"runtime"
 	"testing"

@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // explainCmd parses the input and, for each syntax error, prints the rule calls that recorded

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 // SetGoFlags sets the GOFLAGS of the test process, which the go commands it runs inherit, for
@@ -40,7 +40,7 @@ func SetGoCache() (remove func()) {
 // against the hand-written runtime.
 func CheckRuntimeTag(t *testing.T) {
 	t.Helper()
-	cmd := exec.Command("go", "list", "-f", "{{join .GoFiles \" \"}}", "github.com/ornew/zeroparse/runtime")
+	cmd := exec.Command("go", "list", "-f", "{{join .GoFiles \" \"}}", "zeroparse.dev/zp/runtime")
 	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=local")
 	out, err := cmd.CombinedOutput()
 	if err != nil {

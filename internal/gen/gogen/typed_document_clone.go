@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/gen"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/gen"
 )
 
 // documentClone emits the CloneAST path, which copies the private values retained

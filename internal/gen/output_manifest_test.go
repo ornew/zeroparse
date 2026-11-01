@@ -11,9 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // manifestFile is the checked-in manifest of the generated output of manifestGrammars in every

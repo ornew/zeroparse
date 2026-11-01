@@ -1,10 +1,10 @@
 package engine
 
 import (
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
-	ischema "github.com/ornew/zeroparse/internal/schema"
-	"github.com/ornew/zeroparse/schema"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
+	ischema "zeroparse.dev/zp/internal/schema"
+	"zeroparse.dev/zp/schema"
 )
 
 // The engine does not import the generators or the output schema; packages gen and zp join them

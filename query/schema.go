@@ -3,7 +3,7 @@ package query
 import (
 	"fmt"
 
-	"github.com/ornew/zeroparse/schema"
+	"zeroparse.dev/zp/schema"
 )
 
 // Schema is an output schema validated once for compiling many queries. It owns a deep copy of

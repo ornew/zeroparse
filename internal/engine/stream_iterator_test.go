@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/value"
 )
 
 type demandReader struct {

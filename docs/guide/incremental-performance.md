@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // Three grammars for a file of "key = value" lines.
@@ -201,7 +201,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // Run it from the root of the repository: go run ./jsondoc testdata/grammars/json/json.zp

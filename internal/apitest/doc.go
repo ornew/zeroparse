@@ -3,5 +3,5 @@
 // and to count how often options apply, so that the root holds only the API source and its
 // documentation examples. Measure the coverage of package zp with
 //
-//	go test -coverpkg=github.com/ornew/zeroparse ./internal/apitest
+//	go test -coverpkg=zeroparse.dev/zp ./internal/apitest
 package apitest

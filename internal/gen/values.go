@@ -4,8 +4,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
 )
 
 // Vrule is a reference to a rule whose Go type is that of its value in the value model; the rule's

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/schema"
+	"zeroparse.dev/zp/schema"
 )
 
 func diffSchema(types []schema.Type, rules []schema.Rule) *schema.Output {

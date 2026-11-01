@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/internal/engine/core"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/internal/engine/core"
 )
 
 func writeFixtureFile(t *testing.T, dir, name, body string) string {

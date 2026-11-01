@@ -1,6 +1,6 @@
 package compile
 
-import "github.com/ornew/zeroparse/grammar"
+import "zeroparse.dev/zp/grammar"
 
 // Copies use private destination storage, so cancellation never changes the
 // source AST. Allocations themselves remain nonpreemptible.

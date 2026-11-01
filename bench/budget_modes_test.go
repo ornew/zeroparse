@@ -6,7 +6,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // BenchmarkBudgetControlModes separates warm context polling from finite counters. The inactive and

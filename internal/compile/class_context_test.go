@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 func TestFirstTerminalContextFacts(t *testing.T) {

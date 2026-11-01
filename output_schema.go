@@ -1,9 +1,9 @@
 package zp
 
 import (
-	"github.com/ornew/zeroparse/internal/engine"
-	ischema "github.com/ornew/zeroparse/internal/schema"
-	"github.com/ornew/zeroparse/schema"
+	"zeroparse.dev/zp/internal/engine"
+	ischema "zeroparse.dev/zp/internal/schema"
+	"zeroparse.dev/zp/schema"
 )
 
 // ErrSchemaUnavailable reports that checked grammar metadata is unavailable.

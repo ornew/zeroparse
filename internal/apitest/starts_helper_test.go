@@ -1,8 +1,8 @@
 package apitest_test
 
 import (
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/internal/starttest"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/internal/starttest"
 )
 
 // compileTestSource compiles ZeroParse source as zp.CompileSource does, for a test whose subject is

@@ -5,7 +5,7 @@ import (
 	"io"
 	"runtime/debug"
 
-	"github.com/ornew/zeroparse/internal/lsp"
+	"zeroparse.dev/zp/internal/lsp"
 )
 
 // lspCmd runs the language server on standard input and output until the client exits.

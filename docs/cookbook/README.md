@@ -17,7 +17,7 @@ Every program is a `main` package that you can run as it is. Put the files in a 
 ```bash
 mkdir recipe && cd recipe
 go mod init example.com/recipe
-go get github.com/ornew/zeroparse
+go get zeroparse.dev/zp
 go run .
 ```
 

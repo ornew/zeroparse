@@ -1,6 +1,6 @@
 package core
 
-import "github.com/ornew/zeroparse/internal/value"
+import "zeroparse.dev/zp/internal/value"
 
 // Tracing reports every rule call of a parse to a function (ParseOptions.Trace). It is built
 // around the one function all backends call for a rule (Parser.Call), so that an ordinary parse

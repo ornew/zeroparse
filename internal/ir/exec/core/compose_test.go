@@ -6,10 +6,10 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/ir/exec"
-	"github.com/ornew/zeroparse/internal/ir/exec/ops"
-	"github.com/ornew/zeroparse/internal/ir/exec/pass"
-	"github.com/ornew/zeroparse/internal/ir/exec/ref"
+	"zeroparse.dev/zp/internal/ir/exec"
+	"zeroparse.dev/zp/internal/ir/exec/ops"
+	"zeroparse.dev/zp/internal/ir/exec/pass"
+	"zeroparse.dev/zp/internal/ir/exec/ref"
 )
 
 // The tests of this file run the compositions on a model of the operations: the reference model of

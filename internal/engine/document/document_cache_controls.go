@@ -4,8 +4,8 @@ import (
 	"unsafe"
 	"weak"
 
-	"github.com/ornew/zeroparse/internal/engine/core"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/engine/core"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // CacheStats describes retained incremental history. EstimatedBytes includes

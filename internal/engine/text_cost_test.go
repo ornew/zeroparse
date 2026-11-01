@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/engine/core"
-	"github.com/ornew/zeroparse/internal/limits"
+	"zeroparse.dev/zp/internal/engine/core"
+	"zeroparse.dev/zp/internal/limits"
 )
 
 // nestedTextGrammar takes the text of every level of a nesting: the texts sum to the square of

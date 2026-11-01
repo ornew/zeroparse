@@ -1,10 +1,10 @@
 package engine
 
 import (
-	"github.com/ornew/zeroparse/internal/engine/core"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/engine/core"
+	"zeroparse.dev/zp/internal/value"
 
-	"github.com/ornew/zeroparse/internal/compile"
+	"zeroparse.dev/zp/internal/compile"
 )
 
 // PrefixResult records the successful cursor independently of the rule's value.

@@ -13,10 +13,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/gen"
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/gen"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 var updateTriage = flag.Bool("update-triage", false, "rewrite the cause lists in testdata/triage")
@@ -258,7 +258,7 @@ import (
 	"errors"
 	"os"
 
-	rt "github.com/ornew/zeroparse/runtime"
+	rt "zeroparse.dev/zp/runtime"
 	p "triage/p"
 )
 
@@ -370,7 +370,7 @@ func generatedSteps(t, top *testing.T, name, path string, inputs []string, lenie
 		for _, f := range files {
 			write("p/"+f.Path, f.Content)
 		}
-		write("go.mod", []byte("module triage\n\ngo 1.27.1\n\nrequire github.com/ornew/zeroparse v0.0.0\n\nreplace github.com/ornew/zeroparse => "+root+"\n"))
+		write("go.mod", []byte("module triage\n\ngo 1.27.1\n\nrequire zeroparse.dev/zp v0.0.0\n\nreplace zeroparse.dev/zp => "+root+"\n"))
 		write("main.go", []byte(generatedDriverMain))
 		out := filepath.Join(dir, "driver")
 		cmd := exec.Command("go", "build", "-o", out, ".")

@@ -6,7 +6,7 @@ package csvstream
 import (
 	"io"
 
-	rt "github.com/ornew/zeroparse/runtime"
+	rt "zeroparse.dev/zp/runtime"
 )
 
 // Parse parses the whole input with the rule main. Options select position units, depth, cancellation and budget limits.

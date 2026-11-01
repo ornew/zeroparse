@@ -3,7 +3,7 @@ package tsgen_test
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
+	"zeroparse.dev/zp/internal/gen"
 )
 
 // TestGeneratedCheckTypeName checks that a grammar type named like the generated check type

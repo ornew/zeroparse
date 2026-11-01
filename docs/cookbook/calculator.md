@@ -49,7 +49,7 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 //go:embed calc.zp

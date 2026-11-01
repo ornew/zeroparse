@@ -11,11 +11,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/value"
-	zprt "github.com/ornew/zeroparse/runtime"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/value"
+	zprt "zeroparse.dev/zp/runtime"
 )
 
 // Exercise the exported APIs against the same hand-built DAG, including nil,
@@ -140,7 +140,7 @@ func testGeneratedTreeTraversal(t *testing.T) {
 	// The traversal itself is the runtime's and is tested there; this checks that the generated
 	// package declares the colliding grammar types beside the runtime's names and walks a tree.
 	var consumer strings.Builder
-	consumer.WriteString("package tree\n\nimport (\n\t\"testing\"\n\n\t\"gentest/tree/types\"\n\tzprt \"github.com/ornew/zeroparse/runtime\"\n)\n\nfunc TestWalk(t *testing.T) {\n")
+	consumer.WriteString("package tree\n\nimport (\n\t\"testing\"\n\n\t\"gentest/tree/types\"\n\tzprt \"zeroparse.dev/zp/runtime\"\n)\n\nfunc TestWalk(t *testing.T) {\n")
 	for _, name := range names {
 		fmt.Fprintf(&consumer, "\t_ = types.%s{Value: 1}\n", name)
 	}

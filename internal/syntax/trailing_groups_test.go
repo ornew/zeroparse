@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 // Every comment on the line of a node's last token trails it when a line break

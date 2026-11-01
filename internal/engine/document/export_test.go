@@ -1,8 +1,8 @@
 package document
 
 import (
-	"github.com/ornew/zeroparse/internal/engine/core"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/engine/core"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // The external tests of this package parse with the engine's programs, which import this

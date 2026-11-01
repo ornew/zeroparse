@@ -1,8 +1,8 @@
 package compile
 
 import (
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/grammaranalysis"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/grammaranalysis"
 )
 
 func predicateBlock(e *grammar.Predicate, block *grammar.Block, control *Control) grammar.Expr {

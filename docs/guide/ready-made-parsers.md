@@ -19,11 +19,11 @@ it differs from the reference implementation; this guide covers what they have i
 
 ## Install
 
-The parsers are packages of the one Go module `zeroparse.dev/alpha-parsers`. They depend only on the standard library and the ZeroParse runtime package (`github.com/ornew/zeroparse/runtime`, which itself needs
+The parsers are packages of the one Go module `zeroparse.dev/alpha-parsers`. They depend only on the standard library and the ZeroParse runtime package (`zeroparse.dev/zp/runtime`, which itself needs
 nothing else), not on the ZeroParse engine and not on the language's own implementation (DuckDB's parser does not need DuckDB):
 
 Until ZeroParse publishes a release, the alpha-parsers module is used from a checkout and joined with the
-`github.com/ornew/zeroparse` module by a `go.work` file or `replace` directives, so `go get zeroparse.dev/alpha-parsers/json`
+`zeroparse.dev/zp` module by a `go.work` file or `replace` directives, so `go get zeroparse.dev/alpha-parsers/json`
 does not work from another module yet. Use a parser from a checkout of the alpha-parsers repository, in one of two ways.
 
 With a `go.work` file next to your module's `go.mod`:
@@ -39,10 +39,10 @@ or with `replace` directives in your own `go.mod`, which the `go.mod` of alpha-p
 require zeroparse.dev/alpha-parsers/json v0.0.0
 
 replace zeroparse.dev/alpha-parsers => /path/to/alpha-parsers
-replace github.com/ornew/zeroparse => /path/to/zp
+replace zeroparse.dev/zp => /path/to/zp
 ```
 
-(`/path/to/zp` is the full path of your checkout; `go.mod` does not expand `~`.) Run `go mod tidy` afterwards to record the requirement of the `github.com/ornew/zeroparse` module. Then import the parser:
+(`/path/to/zp` is the full path of your checkout; `go.mod` does not expand `~`.) Run `go mod tidy` afterwards to record the requirement of the `zeroparse.dev/zp` module. Then import the parser:
 
 ```go
 import "zeroparse.dev/alpha-parsers/json"
@@ -494,7 +494,7 @@ The same grammar works with `NewDocument` for incremental parsing of an edited t
 ([testing grammars](testing-grammars.md)). The engine gives the same trees as the generated parser, because the parser
 is generated from the same grammar and tested against it on every backend
 ([alpha-parsers/README.md](https://github.com/zeroparse/alpha-parsers/blob/main/README.md#development)). The price is the engine's speed against generated code
-([code generation](code-generation.md#why-generate)) and a dependency on `github.com/ornew/zeroparse`.
+([code generation](code-generation.md#why-generate)) and a dependency on `zeroparse.dev/zp`.
 
 ## When to Write Your Own
 

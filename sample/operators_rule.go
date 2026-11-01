@@ -1,6 +1,6 @@
 package sample
 
-import "github.com/ornew/zeroparse/grammar"
+import "zeroparse.dev/zp/grammar"
 
 // A Operators Rule expression is emitted as a flat chain while immutable scopes track the parser's recursive
 // prefix and infix RHS frames. Returning to a parent restores its own nonassociative restriction.

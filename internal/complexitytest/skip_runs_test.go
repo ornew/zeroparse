@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/internal/engine/core"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/internal/engine/core"
 )
 
 // skipRunControls returns the E8 controls whose walks a parse without skip-run records repeats.

@@ -16,8 +16,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/engine"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/engine"
 )
 
 // Severity tells how likely a finding is to be a mistake.

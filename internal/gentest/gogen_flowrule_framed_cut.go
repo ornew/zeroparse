@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compiletest"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compiletest"
 )
 
 func TypedFramedCutCases(t *testing.T) []Case {

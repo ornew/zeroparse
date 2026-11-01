@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	ischema "github.com/ornew/zeroparse/internal/schema"
-	"github.com/ornew/zeroparse/schema"
+	"zeroparse.dev/zp/internal/compile"
+	ischema "zeroparse.dev/zp/internal/schema"
+	"zeroparse.dev/zp/schema"
 )
 
 func TestOutputSchemaPrototype(t *testing.T) {

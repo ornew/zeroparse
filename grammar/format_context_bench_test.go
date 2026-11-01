@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/syntax"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/syntax"
 )
 
 var formatBenchmarkOutput string

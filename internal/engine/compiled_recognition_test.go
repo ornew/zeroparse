@@ -10,11 +10,11 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/bytecode"
-	"github.com/ornew/zeroparse/internal/engine/core"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/limits"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/bytecode"
+	"zeroparse.dev/zp/internal/engine/core"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/limits"
 )
 
 // moduleRuleNames returns the names of the rules of m in order, each once: value-free twins follow

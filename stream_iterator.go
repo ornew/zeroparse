@@ -3,7 +3,7 @@ package zp
 import (
 	"io"
 
-	"github.com/ornew/zeroparse/internal/engine"
+	"zeroparse.dev/zp/internal/engine"
 )
 
 // StreamIterator delivers one committed stream element per Next call.

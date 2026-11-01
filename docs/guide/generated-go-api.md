@@ -1,6 +1,6 @@
 # The Generated Go API
 
-A Go parser written by [`zp gen`](code-generation.md) has a small API: `parser.go` defines the functions that parse, `api.go` re-exports the types and options of the runtime package (the copy in `internal/runtime`, or `github.com/ornew/zeroparse/runtime` with `-runtime import`) under their own names, and, with `-types`, `types/types.go` defines the Go types of the grammar. This guide describes
+A Go parser written by [`zp gen`](code-generation.md) has a small API: `parser.go` defines the functions that parse, `api.go` re-exports the types and options of the runtime package (the copy in `internal/runtime`, or `zeroparse.dev/zp/runtime` with `-runtime import`) under their own names, and, with `-types`, `types/types.go` defines the Go types of the grammar. This guide describes
 it, the call options that all entry points share, and recognition. Options that add typed values, incremental documents
 and streams have their own guides:
 
@@ -104,7 +104,7 @@ Compared with the engine's API:
 
 | Part | Contents |
 |:--|:--|
-| Runtime | The parser state, memoization, left recursion, Operators Rule loop, attribute handling and the built-in functions of actions. It is **the same for every grammar**: the package `github.com/ornew/zeroparse/runtime`, which the generated package imports (`-runtime import`) or carries a copy of in `internal/runtime` (`-runtime embed`, the default). |
+| Runtime | The parser state, memoization, left recursion, Operators Rule loop, attribute handling and the built-in functions of actions. It is **the same for every grammar**: the package `zeroparse.dev/zp/runtime`, which the generated package imports (`-runtime import`) or carries a copy of in `internal/runtime` (`-runtime embed`, the default). |
 | `api.go` | The names of the runtime that the users of the parser need (`Node`, `SyntaxError`, the options and so on), as aliases and wrappers. It is the same for grammars generated with the same options. |
 | `types/types.go` | With `-types`, the package `<module>/types`: a Go type for each type of the grammar, `TNode`, `Error` and the tuple types. |
 | Rule table | For each rule, the results of the engine's static analysis (memoized? left-recursion leader? capture names?). |

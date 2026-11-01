@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // snapshotPhaseContext changes state only while the freezer is on the stack.

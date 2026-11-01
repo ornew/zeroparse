@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // TsReservedTypes are the names types.ts declares itself, or imports. A grammar type with one of

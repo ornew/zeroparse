@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/starttest"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/starttest"
 )
 
 var differentialGrammars = flag.Int("differential", 600, "number of random grammars TestLinearClaims generates")

@@ -3,7 +3,7 @@ package apitest_test
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 func TestPublicDocumentCacheControls(t *testing.T) {

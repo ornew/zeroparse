@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 func TestNodeTypesAcrossBackends(t *testing.T) {

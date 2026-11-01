@@ -13,7 +13,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/ornew/zeroparse/internal/gen"
+	"zeroparse.dev/zp/internal/gen"
 )
 
 // typesPackageName is the name of the package, a subpackage of the parser package, that declares

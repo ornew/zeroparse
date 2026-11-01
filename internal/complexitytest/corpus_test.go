@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/bench/inputs"
+	"zeroparse.dev/zp/internal/bench/inputs"
 )
 
 // corpusCap bounds the budget of one corpus parse; a linear grammar stays far below it.

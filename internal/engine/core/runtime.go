@@ -6,8 +6,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // SharedProgram is the part of a program that the parses of every backend read: the static

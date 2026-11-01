@@ -13,7 +13,7 @@ go work init .
 go work use ~/src/zeroparse ~/src/alpha-parsers
 ```
 
-Until ZeroParse publishes a release, the alpha-parsers module is used from a checkout, joined with the `github.com/ornew/zeroparse` module by `go.work` or `replace`, so `go get` cannot fetch it. The [install notes](../guide/ready-made-parsers.md#install) show the `replace` form too.
+Until ZeroParse publishes a release, the alpha-parsers module is used from a checkout, joined with the `zeroparse.dev/zp` module by `go.work` or `replace`, so `go get` cannot fetch it. The [install notes](../guide/ready-made-parsers.md#install) show the `replace` form too.
 
 ```go
 // main.go

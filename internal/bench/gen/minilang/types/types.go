@@ -4,7 +4,7 @@
 package types
 
 import (
-	rt "github.com/ornew/zeroparse/runtime"
+	rt "zeroparse.dev/zp/runtime"
 )
 
 // TNode is a node whose Value has type T: a string node (TNode[string]) holds the text a

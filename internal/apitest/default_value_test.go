@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/grammar"
 )
 
 // stripActions returns g written without value actions and rule types, which it removes from the

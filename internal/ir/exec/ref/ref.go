@@ -11,8 +11,8 @@ import (
 	"math"
 	"math/bits"
 
-	"github.com/ornew/zeroparse/internal/ir/exec"
-	"github.com/ornew/zeroparse/internal/ir/exec/ops"
+	"zeroparse.dev/zp/internal/ir/exec"
+	"zeroparse.dev/zp/internal/ir/exec/ops"
 )
 
 // Config sets up the components of a model.

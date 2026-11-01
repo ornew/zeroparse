@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ornew/zeroparse/internal/ir/exec"
+	"zeroparse.dev/zp/internal/ir/exec"
 )
 
 // Target is how printed code reaches the parser state and the operations of one TypeScript

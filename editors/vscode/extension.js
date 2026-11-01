@@ -119,7 +119,7 @@ async function start() {
     const message = err instanceof Error ? err.message : String(err);
     vscode.window.showErrorMessage(
       `ZeroParse: could not start the language server with "${command} lsp": ${message}. ` +
-        'Install zp with "go install github.com/ornew/zeroparse/cmd/zp@latest", ' +
+        'Install zp with "go install zeroparse.dev/zp/cmd/zp@latest", ' +
         'or set zp.server.path to the zp command.',
     );
     await stop();

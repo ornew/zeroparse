@@ -3,10 +3,10 @@ package closure
 import (
 	"fmt"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/engine/core"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/engine/core"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // Machine is the state of the closure backend's evaluator for one parse, beside the parser

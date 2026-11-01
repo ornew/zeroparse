@@ -3,9 +3,9 @@ package engine
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/limits"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/limits"
 )
 
 // TestLeftRecursionGuardIgnoresVariables checks that a left-recursive re-entry at the same

@@ -12,10 +12,10 @@ import (
 	"testing"
 	"text/template"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/gen"
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/ir/exec/core"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/gen"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/ir/exec/core"
 )
 
 func sourceGrammar(t *testing.T) (*zp.Parser, string) {

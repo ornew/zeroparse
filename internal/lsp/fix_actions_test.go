@@ -3,10 +3,10 @@ package lsp
 import (
 	"context"
 	"encoding/json"
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/lint"
 	"strings"
 	"testing"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/lint"
 )
 
 // fixActions opens src with a client that takes versioned edits and returns, for each lint

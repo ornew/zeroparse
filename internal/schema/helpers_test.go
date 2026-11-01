@@ -1,6 +1,6 @@
 package schema
 
-import "github.com/ornew/zeroparse/schema"
+import "zeroparse.dev/zp/schema"
 
 // validInMemoryOutputSchema is a minimal valid schema built in memory. Package schema's tests
 // have the same helper; this copy serves the export tests here.

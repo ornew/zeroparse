@@ -15,8 +15,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/gen"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/gen"
 )
 
 // generation is a zp gen command of generate.go.

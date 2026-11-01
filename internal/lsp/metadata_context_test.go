@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/syntax"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/syntax"
 )
 
 type metadataPredicateContext struct {

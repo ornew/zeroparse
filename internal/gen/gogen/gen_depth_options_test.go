@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // Differentially exercise every rule-call owner, including first-character
@@ -96,7 +96,7 @@ rule n Word = t:(("(" n ")" / "é") #recover(skip="?")) #atomic => Word{Text: te
 				}
 			}
 			harness := `package ` + pkg + `
-import("fmt";"strings";"sync";"testing";zprt "github.com/ornew/zeroparse/runtime")
+import("fmt";"strings";"sync";"testing";zprt "zeroparse.dev/zp/runtime")
 func TestLimitsAndReuse(t *testing.T) {
  rows:=[]struct{name,input string;unit PositionUnit;limit int;want,recWant string}{` + rows.String() + `}
  for repeat:=0;repeat<3;repeat++ {for _,c:=range rows {

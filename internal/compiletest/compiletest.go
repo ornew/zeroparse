@@ -7,10 +7,10 @@ package compiletest
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/starttest"
-	"github.com/ornew/zeroparse/internal/syntax"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/starttest"
+	"zeroparse.dev/zp/internal/syntax"
 )
 
 // Parse parses ZeroParse source for a test whose subject is not start rules: unless the source has

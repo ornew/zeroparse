@@ -1,7 +1,7 @@
 package compile
 
 import (
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 // ExprBuilder builds the executable form M of a program's rule bodies while the compiler walks them

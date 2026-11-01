@@ -3,10 +3,10 @@ package query_test
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/internal/starttest"
-	"github.com/ornew/zeroparse/query"
-	"github.com/ornew/zeroparse/schema"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/internal/starttest"
+	"zeroparse.dev/zp/query"
+	"zeroparse.dev/zp/schema"
 )
 
 // compileTestSource compiles ZeroParse source as zp.CompileSource does, for a test whose subject is

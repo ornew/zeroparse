@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gen/tsgen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gen/tsgen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // execGenerate generates the TypeScript parser of the grammar source with the options, joined into

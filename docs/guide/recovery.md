@@ -220,7 +220,7 @@ them.
 ## Using the Errors From Go
 
 The following program parses three inputs with the finished `toy.zp` and handles each outcome. Run it in the directory
-that contains `toy.zp` (the module that contains it must depend on `github.com/ornew/zeroparse`).
+that contains `toy.zp` (the module that contains it must depend on `zeroparse.dev/zp`).
 
 ```go
 // main.go
@@ -231,7 +231,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // errorNodes collects the error values of a tree.

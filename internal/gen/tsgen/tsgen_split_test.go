@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gen/tsgen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gen/tsgen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // tsStrictFlags are the strictest checks there are, so that generated code compiles in any project;

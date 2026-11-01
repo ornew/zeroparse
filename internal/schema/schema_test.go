@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/compiletest"
-	"github.com/ornew/zeroparse/schema"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/compiletest"
+	"zeroparse.dev/zp/schema"
 )
 
 // compileError compiles src, which must not compile, and returns the error.

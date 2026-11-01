@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // DefaultMaxAttempts is the number of candidate replays that Minimize tries when maxAttempts is zero.

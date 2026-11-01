@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/bytecode"
+	"zeroparse.dev/zp/internal/bytecode"
 )
 
 // TestSpecInstructionSetVersion checks that spec/bytecode/README.md states the instruction-set version the

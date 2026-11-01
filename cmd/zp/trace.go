@@ -8,7 +8,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // traceCmd prints the rule calls of a parse as an indented call tree, or as JSON lines.

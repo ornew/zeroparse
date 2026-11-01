@@ -9,7 +9,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/ornew/zeroparse/internal/fixture"
+	"zeroparse.dev/zp/internal/fixture"
 )
 
 func testCmd(args []string, stdout io.Writer) error {

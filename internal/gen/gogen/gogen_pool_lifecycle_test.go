@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // ZP_TYPED_POOL_DIR preserves this generated fixture for standalone heap and
@@ -100,7 +100,7 @@ rule small A = ("b") #atomic`)
 const untypedPoolFixture = `package main
 
 import (
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -182,7 +182,7 @@ func TestUntypedPoolRetention(t *testing.T) {
 const typedPoolFixture = `package poolfixture
 
 import (
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
 	"fmt"
 	"runtime"
 	"strings"

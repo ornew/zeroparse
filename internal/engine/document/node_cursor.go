@@ -3,8 +3,8 @@ package document
 import (
 	"fmt"
 
-	"github.com/ornew/zeroparse/internal/engine/core"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/engine/core"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // Cursor filters edge-oriented node visits using spans in Unit. Unit must match

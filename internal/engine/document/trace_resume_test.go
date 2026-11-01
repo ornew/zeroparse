@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/ornew/zeroparse/internal/engine"
+	. "zeroparse.dev/zp/internal/engine"
 )
 
 const traceResumeGrammar = `rule main = lines $$

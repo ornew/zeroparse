@@ -211,7 +211,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 const grammar = `@start
@@ -289,7 +289,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 func js(n *zp.Node) string {

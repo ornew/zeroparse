@@ -13,8 +13,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/grammar"
 )
 
 // FormatVersion is the only fixture format version understood by this package.

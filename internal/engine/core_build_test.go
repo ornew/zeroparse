@@ -4,11 +4,11 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
-	"github.com/ornew/zeroparse/internal/ir/core"
-	irbuild "github.com/ornew/zeroparse/internal/ir/core/build"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
+	"zeroparse.dev/zp/internal/ir/core"
+	irbuild "zeroparse.dev/zp/internal/ir/core/build"
 )
 
 // coreCorpusProgram compiles a corpus grammar for the Core IR tests, or reports false for a

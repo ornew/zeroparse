@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/schema"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/schema"
 )
 
 const schemaGrammar = `type Pair = { Key node[string]; Value node[string] }

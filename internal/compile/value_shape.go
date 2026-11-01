@@ -1,9 +1,9 @@
 package compile
 
 import (
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // The static shapes of values in the value model. Every backend builds the values of an

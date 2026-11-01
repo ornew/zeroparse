@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	. "github.com/ornew/zeroparse/internal/engine"
+	"zeroparse.dev/zp/internal/compile"
+	. "zeroparse.dev/zp/internal/engine"
 )
 
 func benchmarkDocumentSnapshotEditRead(b *testing.B, prefix bool) {

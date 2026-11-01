@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // TestGeneratedTSLeftRecursionMemberMemoLinear checks that generated TypeScript parsers memoize

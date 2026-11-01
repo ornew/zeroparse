@@ -7,7 +7,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	rt "github.com/ornew/zeroparse/runtime"
+	rt "zeroparse.dev/zp/runtime"
 )
 
 var documentBenchmarkRecordCounts = [...]int{256, 4096} // 1/20 KiB UTF-8

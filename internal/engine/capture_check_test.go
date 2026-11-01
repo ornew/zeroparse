@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
 )
 
 // A name captured several times in one match has the join of the types of its captures: the

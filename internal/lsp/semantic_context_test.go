@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/syntax"
+	"zeroparse.dev/zp/internal/syntax"
 )
 
 func TestSemanticResponsesControlledParity(t *testing.T) {

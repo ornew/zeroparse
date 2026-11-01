@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/schema"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/schema"
 )
 
 const missingSchemaGrammar = `type P = { M missing; E error; O *missing; L []missing }

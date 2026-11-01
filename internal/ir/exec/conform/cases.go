@@ -5,9 +5,9 @@ import (
 	"math/rand/v2"
 	"slices"
 
-	"github.com/ornew/zeroparse/internal/ir/exec"
-	"github.com/ornew/zeroparse/internal/ir/exec/ops"
-	"github.com/ornew/zeroparse/internal/ir/exec/ref"
+	"zeroparse.dev/zp/internal/ir/exec"
+	"zeroparse.dev/zp/internal/ir/exec/ops"
+	"zeroparse.dev/zp/internal/ir/exec/ref"
 )
 
 // noValue and noErrs are the value and the recovered errors that cases store in entries: the

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compiletest"
-	"github.com/ornew/zeroparse/internal/gen"
+	"zeroparse.dev/zp/internal/compiletest"
+	"zeroparse.dev/zp/internal/gen"
 )
 
 const OrdinaryOnlyTyped = `type A = { Text string }

@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // Ty is a type used in type checking.

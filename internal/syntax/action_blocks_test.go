@@ -1,9 +1,9 @@
 package syntax
 
 import (
-	"github.com/ornew/zeroparse/grammar"
 	"strings"
 	"testing"
+	"zeroparse.dev/zp/grammar"
 )
 
 func TestActionBlocksSource(t *testing.T) {

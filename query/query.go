@@ -12,10 +12,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/internal/limits"
-	"github.com/ornew/zeroparse/internal/value"
-	"github.com/ornew/zeroparse/schema"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/internal/limits"
+	"zeroparse.dev/zp/internal/value"
+	"zeroparse.dev/zp/schema"
 )
 
 // Pattern is a programmatic structural pattern. Empty Type, Rule and Category are

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/grammaranalysis"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/grammaranalysis"
 )
 
 // Keep the cancellation sentinel inside the metadata invocation, before the

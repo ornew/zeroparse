@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/starttest"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/starttest"
 )
 
 func BenchmarkClassCompileCancellation(b *testing.B) {

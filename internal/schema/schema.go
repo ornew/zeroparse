@@ -7,9 +7,9 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/schema"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/schema"
 )
 
 // ErrUnavailable reports missing checked grammar metadata: it is compile.ErrSchemaUnavailable,

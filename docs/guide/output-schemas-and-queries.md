@@ -4,7 +4,7 @@
 rules it calls and the types their output references; `zp.WithAllSchemaRules()` also includes unreachable rules and all
 declared types. A structural query searches the values of an
 actual parse result. Together they let a tool inspect the shape of a grammar and find values without generating code or
-serializing a result. Structural queries are in package `github.com/ornew/zeroparse/query`. These Go APIs are experimental; the schema JSON format is versioned. The contract is defined in
+serializing a result. Structural queries are in package `zeroparse.dev/zp/query`. These Go APIs are experimental; the schema JSON format is versioned. The contract is defined in
 [Output Schemas and Structural Queries](../../spec/runtime/schemas-and-queries.md).
 
 ```go
@@ -15,8 +15,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/query"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/query"
 )
 
 func main() {
@@ -66,7 +66,7 @@ q, err := prepared.Compile(query.Pattern{
 })
 ```
 
-`schema.Compare(before, after)` in package `github.com/ornew/zeroparse/schema` compares two schemas and returns the added,
+`schema.Compare(before, after)` in package `zeroparse.dev/zp/schema` compares two schemas and returns the added,
 removed and changed entries, for example to review how a grammar change alters its output:
 
 ```go

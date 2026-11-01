@@ -1,9 +1,9 @@
 package sample
 
 import (
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/grammar"
 	"testing"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/grammar"
 )
 
 func TestOperatorsRuleStopSelectionStatus(t *testing.T) {

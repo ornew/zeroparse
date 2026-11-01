@@ -1,8 +1,8 @@
 package compile
 
 import (
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/bytecode"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/bytecode"
 )
 
 // A parser variable is declared by a top-level var declaration. Its type is int, string or

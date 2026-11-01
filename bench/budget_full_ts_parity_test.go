@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ornew/zeroparse/gen"
-	"github.com/ornew/zeroparse/internal/syntax"
+	"zeroparse.dev/zp/gen"
+	"zeroparse.dev/zp/internal/syntax"
 )
 
 // TestGeneratedTSFullWorkloadParity compares generated TypeScript against its

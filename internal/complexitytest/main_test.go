@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // TestMain gives the go commands that the tests run, which build generated parsers, a build cache

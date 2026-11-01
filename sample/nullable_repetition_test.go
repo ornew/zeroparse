@@ -3,7 +3,7 @@ package sample
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 func TestNullableRepetitionMatcher(t *testing.T) {

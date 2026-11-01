@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/engine/document"
+	"zeroparse.dev/zp/internal/engine/document"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	. "github.com/ornew/zeroparse/internal/engine"
+	"zeroparse.dev/zp/internal/compile"
+	. "zeroparse.dev/zp/internal/engine"
 )
 
 const reparseGrammar = `rule main = line* $$

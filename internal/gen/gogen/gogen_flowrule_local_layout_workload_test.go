@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // ZP_TYPED_LOCAL_LAYOUT_DIR preserves generated controls for benchmarks of
@@ -95,7 +95,7 @@ func BenchmarkTypedLocalLayoutGeneration(b *testing.B) {
 const typedLocalLayoutWorkloadFixture = `package lrfixture
 
 import (
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
     "encoding/json"
     "fmt"
     "strings"

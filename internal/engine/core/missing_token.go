@@ -3,7 +3,7 @@ package core
 import (
 	"fmt"
 
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // MissingTokenLimitError reports exhaustion of the invocation's insertion budget.

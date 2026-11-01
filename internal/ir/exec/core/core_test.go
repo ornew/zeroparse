@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/ir/exec"
+	"zeroparse.dev/zp/internal/ir/exec"
 )
 
 // TestGoRuntimeCurrent checks that the printed compositions in the Go runtime are those the

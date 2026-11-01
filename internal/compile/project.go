@@ -3,7 +3,7 @@ package compile
 import (
 	"strings"
 
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 // Projected repetitions.

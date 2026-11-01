@@ -11,12 +11,12 @@ import (
 	"fmt"
 	"io/fs"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gen/gogen"
-	"github.com/ornew/zeroparse/internal/gen/tsgen"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gen/gogen"
+	"zeroparse.dev/zp/internal/gen/tsgen"
 )
 
 // Generator generates the source code of parsers in one language.
@@ -47,7 +47,7 @@ const (
 	// depends on nothing else: the package internal/runtime in Go, runtime.ts in TypeScript. It is
 	// the default. GenerateRuntime refreshes the copy without regenerating the parser.
 	RuntimeEmbed RuntimeMode = iota
-	// RuntimeImport imports the runtime: github.com/ornew/zeroparse/runtime in Go, the module of
+	// RuntimeImport imports the runtime: zeroparse.dev/zp/runtime in Go, the module of
 	// TypeScript.RuntimeModule in TypeScript.
 	RuntimeImport
 )

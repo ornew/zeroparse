@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 func TestGeneratedGoMemoEnvironmentBudget(t *testing.T) {
@@ -65,7 +65,7 @@ rule word Word = t:(x:[a-z]+ #atomic {text($x) == v}) => Word{Text: text($t)}`
 
 const generatedGoMemoConsumer = `package PACKAGE
 
-import zprt "github.com/ornew/zeroparse/runtime"
+import zprt "zeroparse.dev/zp/runtime"
 import("context";"errors";"fmt";"reflect";"strings";"testing")
 func catchMemoFatal(f func())(err error){defer func(){if x:=recover();x!=nil{v,ok:=x.(zprt.X_fatal);if !ok{panic(x)};err=v.X_err}}();f();return nil}
 func makeEnvParser(limit uint64)*zprt.Parser{

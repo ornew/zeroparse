@@ -13,8 +13,8 @@ import (
 	"runtime"
 	"runtime/debug"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/internal/bench/inputs"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/internal/bench/inputs"
 )
 
 const forcedGCs = 3

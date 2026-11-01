@@ -114,7 +114,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 //go:embed config.zp

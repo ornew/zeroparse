@@ -8,10 +8,10 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/syntax"
-	"github.com/ornew/zeroparse/lint"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/syntax"
+	"zeroparse.dev/zp/lint"
 )
 
 // symKind is the namespace of a name: rules and types have separate namespaces.

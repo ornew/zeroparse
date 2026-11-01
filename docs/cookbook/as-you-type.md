@@ -46,7 +46,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 //go:embed settings.zp

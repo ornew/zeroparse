@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 func TestGeneratedGoActionErrorBudget(t *testing.T) {
@@ -71,7 +71,7 @@ func TestGeneratedGoActionErrorBudget(t *testing.T) {
 
 const generatedGoActionErrorConsumer = `package PACKAGE
 
-import zprt "github.com/ornew/zeroparse/runtime"
+import zprt "zeroparse.dev/zp/runtime"
 import("context";"errors";"reflect";"strings";"testing")
 const wantError=WANT_ERROR
 const recognize=CHECK_RECOGNIZE

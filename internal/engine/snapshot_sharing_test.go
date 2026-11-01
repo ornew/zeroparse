@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/value"
 )
 
 func TestSnapshotSharingCyclesAndTypedNil(t *testing.T) {

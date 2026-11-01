@@ -11,7 +11,7 @@
 
 Never write a parser again.
 
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENCE) [![Go Reference](https://pkg.go.dev/badge/github.com/ornew/zeroparse.svg)](https://pkg.go.dev/github.com/ornew/zeroparse) [![Go](https://img.shields.io/badge/go-1.27.1+-00ADD8?logo=go&logoColor=white)](go.mod)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENCE) [![Go Reference](https://pkg.go.dev/badge/zeroparse.dev/zp.svg)](https://pkg.go.dev/zeroparse.dev/zp) [![Go](https://img.shields.io/badge/go-1.27.1+-00ADD8?logo=go&logoColor=white)](go.mod)
 
 [Website](https://zeroparse.dev/) · [Playground](https://zeroparse.dev/playground/) · [Quick start](docs/tutorial/getting-started.md) · [Guides](docs/guide/README.md) · [Specification](spec/README.md) · [Examples](examples/)
 
@@ -80,8 +80,8 @@ zp: 1:5: syntax error: expected "(", [0-9]
 ## Install
 
 ```bash
-go get github.com/ornew/zeroparse                        # library
-go install github.com/ornew/zeroparse/cmd/zp@latest    # command-line tool
+go get zeroparse.dev/zp                        # library
+go install zeroparse.dev/zp/cmd/zp@latest    # command-line tool
 ```
 
 Go 1.27.1 or later. No dependencies outside the standard library.

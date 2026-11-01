@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 func TestGeneratedExpectationRecords(t *testing.T) {
@@ -33,7 +33,7 @@ rule main N = ("é") #atomic`)
 	// uses except for the expectation record itself, which the runtime keeps unexported.
 	fixture = []byte(strings.NewReplacer("package core", "package engine", "&Parser{", "&zprt.Parser{", "ExpID", "zprt.ExpID", "ExpMark", "zprt.ExpMark", "MsgBit", "zprt.MsgBit",
 		"p.ExpBase", "p.expBase", "p.Expect(", "p.Expect(", "p.Exp", "p.exp", "p.Farthest", "p.farthest").Replace(string(fixture)))
-	fixture = []byte(strings.Replace(string(fixture), "import (", "import (\n\tzprt \"github.com/ornew/zeroparse/runtime\"", 1))
+	fixture = []byte(strings.Replace(string(fixture), "import (", "import (\n\tzprt \"zeroparse.dev/zp/runtime\"", 1))
 	for _, mode := range []string{"plain", "direct", "conversion"} {
 		t.Run(mode, func(t *testing.T) {
 			code, err := gentest.GenerateCode(t, g, gen.GenOptions{Package: "engine", Start: "main", Types: mode != "plain", ConvertTypes: mode == "conversion"})

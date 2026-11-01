@@ -10,11 +10,11 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/engine/core"
-	"github.com/ornew/zeroparse/internal/engine/vm"
-	"github.com/ornew/zeroparse/internal/limits"
-	"github.com/ornew/zeroparse/internal/value"
+	. "zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/engine/core"
+	"zeroparse.dev/zp/internal/engine/vm"
+	"zeroparse.dev/zp/internal/limits"
+	"zeroparse.dev/zp/internal/value"
 )
 
 func TestBudgetDocumentAdmittedAbortAndRetry(t *testing.T) {

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // A parser generated without budget controls holds no code that spends budget or reads a control, does not
@@ -76,7 +76,7 @@ rule num = [0-9]+ ("." [0-9]+)?
 		t.Errorf("Document parser without budget controls is %d bytes, with %d", len(documentWithout), len(documentWith))
 	}
 	tests := `package wc
-import("strings";"testing";"context";zprt "github.com/ornew/zeroparse/runtime")
+import("strings";"testing";"context";zprt "zeroparse.dev/zp/runtime")
 func TestOptions(t *testing.T) {
  if _,err:=Parse("abc 12.5 x"); err!=nil {t.Fatal(err)}
  if err:=Recognize("abc 12.5 x"); err!=nil {t.Fatal(err)}

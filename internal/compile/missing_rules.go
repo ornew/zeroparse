@@ -3,8 +3,8 @@ package compile
 import (
 	"fmt"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // markMissingRules records transitive insertion dependencies before matchers or

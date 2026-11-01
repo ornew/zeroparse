@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/lint"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/lint"
 )
 
 func TestRun(t *testing.T) {

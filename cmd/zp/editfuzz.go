@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/editfuzz"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/editfuzz"
 )
 
 func editFuzzCmd(args []string, stdout io.Writer) error {

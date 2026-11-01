@@ -3,8 +3,8 @@ package schema_test
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/schema"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/schema"
 )
 
 // A field that changes between error and missing is a change of its type.

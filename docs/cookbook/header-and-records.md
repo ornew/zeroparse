@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 const grammar = `package kv

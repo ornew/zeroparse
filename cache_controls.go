@@ -1,6 +1,6 @@
 package zp
 
-import "github.com/ornew/zeroparse/internal/engine"
+import "zeroparse.dev/zp/internal/engine"
 
 // CacheStats describes the incremental reuse history retained by a Document.
 // EstimatedBytes is an approximation of cache-owned backing storage, excluding

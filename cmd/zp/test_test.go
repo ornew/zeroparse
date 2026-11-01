@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/fixture"
+	"zeroparse.dev/zp/internal/fixture"
 )
 
 func TestTestCommandTextAndBackendSelection(t *testing.T) {

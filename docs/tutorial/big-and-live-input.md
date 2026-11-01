@@ -10,7 +10,7 @@ evaluates again.
 
 ## Before You Start
 
-Complete [Building Typed Trees](typed-trees.md): you need `config.zp` and a Go module that requires `github.com/ornew/zeroparse`.
+Complete [Building Typed Trees](typed-trees.md): you need `config.zp` and a Go module that requires `zeroparse.dev/zp`.
 
 ## Streaming
 
@@ -74,7 +74,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 //go:embed stream.zp

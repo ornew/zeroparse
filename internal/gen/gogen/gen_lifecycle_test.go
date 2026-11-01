@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // TestGeneratedActionTracking inspects state after real generated rules have
@@ -44,7 +44,7 @@ rule main = "a" => Outer{Inner: Inner{N: 1}}`, "a"},
 			main := fmt.Sprintf(`package main
 import (
 	"fmt"
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
 )
 func main() {
     for _, unit := range []PositionUnit{CodePoints, Bytes} {
@@ -103,7 +103,7 @@ func testGeneratedEnvironmentBindings(t *testing.T) {
 	main := `package main
 import (
 	"strings"
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
 )
 func main() {
  for _, unit := range []PositionUnit{CodePoints, Bytes} {

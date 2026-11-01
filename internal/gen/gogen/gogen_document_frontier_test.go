@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // The examined frontier, the evaluations and the reuse that a Document reports for a rule that
@@ -53,7 +53,7 @@ import (
 	"strings"
 	"testing"
 
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
 )
 
 func TestFrontier(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // series builds a series of three doubling sizes from f.

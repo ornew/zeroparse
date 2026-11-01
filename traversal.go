@@ -1,8 +1,8 @@
 package zp
 
 import (
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // WalkAction controls whether a walk descends, skips descendants, or stops.

@@ -14,7 +14,7 @@ Every grammar and output below was produced by running it. To follow along, put 
 first line and run the command shown, using either the installed tool or `go run ./cmd/zp` from a checkout:
 
 ```bash
-go install github.com/ornew/zeroparse/cmd/zp@latest
+go install zeroparse.dev/zp/cmd/zp@latest
 ```
 
 `zp parse -g <grammar> -s <rule> -i '<input>' -f sexpr` parses the input with the start rule `<rule>` (default

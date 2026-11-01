@@ -1,8 +1,8 @@
 package lsp
 
 import (
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/syntax"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/syntax"
 )
 
 // contextualItems recognizes unfinished syntax without requiring the containing

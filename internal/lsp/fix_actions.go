@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ornew/zeroparse/internal/engine"
-	"github.com/ornew/zeroparse/lint"
+	"zeroparse.dev/zp/internal/engine"
+	"zeroparse.dev/zp/lint"
 )
 
 // A lint fix is offered for a finding only when lint.Rewrites proves its kind of change, and then

@@ -1,4 +1,4 @@
-module github.com/ornew/zeroparse/site
+module zeroparse.dev/zp/site
 
 go 1.27.1
 

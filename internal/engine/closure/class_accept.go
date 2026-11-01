@@ -1,10 +1,10 @@
 package closure
 
 import (
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/engine/core"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/engine/core"
 
-	"github.com/ornew/zeroparse/internal/compile"
+	"zeroparse.dev/zp/internal/compile"
 )
 
 // ClassAccept returns the membership test of a character class. Classes of one or two ranges,

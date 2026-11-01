@@ -6,7 +6,7 @@
 
 ## Summary
 
-The package `github.com/ornew/zeroparse/sample` generates inputs that a grammar accepts, to test code that consumes parse
+The package `zeroparse.dev/zp/sample` generates inputs that a grammar accepts, to test code that consumes parse
 results and to seed fuzz tests, and `zp sample` exposes it on the command line. A generator walks the grammar AST
 from the start rule of a `*zp.Parser`, makes random but reproducible decisions, and returns an input only after the
 parser has accepted it. It can bias its decisions toward rules and alternatives that no input has exercised yet and

@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // TestTraceFirstCharacterDispatch records executed calls, not synthetic calls

@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 // The replacement fields of Python f-strings take the text of a capture that holds the nested

@@ -16,7 +16,7 @@ import (
     "fmt"
     "log"
 
-    "github.com/ornew/zeroparse"
+    "zeroparse.dev/zp"
 )
 
 func main() {

@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ornew/zeroparse/internal/ir/core"
+	"zeroparse.dev/zp/internal/ir/core"
 )
 
 // String returns a readable listing of the function f, for tests and debugging: its variables,

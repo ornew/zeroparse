@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ornew/zeroparse/internal/ir/flow"
+	"zeroparse.dev/zp/internal/ir/flow"
 )
 
 // Variables a printed function never reads.

@@ -1,8 +1,8 @@
 package gogen
 
 import (
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/gen"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/gen"
 )
 
 // typedFrameComment reports whether the body of the typed rule r is printed in place under the

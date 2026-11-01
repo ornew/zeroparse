@@ -3,7 +3,7 @@ package document
 import (
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/engine/core"
+	"zeroparse.dev/zp/internal/engine/core"
 )
 
 // catchFatal runs f and returns the error of the Fatal panic it raises, or nil.

@@ -8,7 +8,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/ornew/zeroparse/sample"
+	"zeroparse.dev/zp/sample"
 )
 
 // sampleStderr receives the coverage report of zp sample -coverage in the lines format, and

@@ -53,8 +53,8 @@ import (
 	_ "embed"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/sample"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/sample"
 )
 
 //go:embed version.zp

@@ -23,10 +23,10 @@ package build
 import (
 	"fmt"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/ir/core"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/ir/core"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // CoreFrom builds the Core IR of the program: its rules and then its value-free twins, each at

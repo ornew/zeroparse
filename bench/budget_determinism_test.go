@@ -7,10 +7,10 @@ import (
 	"runtime"
 	"testing"
 
-	gcsv "github.com/ornew/zeroparse/internal/bench/gen/csv"
-	gjson "github.com/ornew/zeroparse/internal/bench/gen/json"
-	gxml "github.com/ornew/zeroparse/internal/bench/gen/xml"
-	"github.com/ornew/zeroparse/internal/bench/inputs"
+	gcsv "zeroparse.dev/zp/internal/bench/gen/csv"
+	gjson "zeroparse.dev/zp/internal/bench/gen/json"
+	gxml "zeroparse.dev/zp/internal/bench/gen/xml"
+	"zeroparse.dev/zp/internal/bench/inputs"
 )
 
 // TestGeneratedBudgetErrorsAreDeterministic requires that a parse under a finite budget fails the

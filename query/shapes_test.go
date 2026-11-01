@@ -6,9 +6,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ornew/zeroparse"
-	"github.com/ornew/zeroparse/query"
-	"github.com/ornew/zeroparse/schema"
+	"zeroparse.dev/zp"
+	"zeroparse.dev/zp/query"
+	"zeroparse.dev/zp/schema"
 )
 
 const queryShapeGrammar = `type Int = { Text string }

@@ -4,8 +4,8 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 func TestTopBottomGeneratedTypeScriptParity(t *testing.T) {

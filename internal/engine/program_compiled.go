@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"hash/crc32"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/bytecode"
-	"github.com/ornew/zeroparse/internal/compile"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/bytecode"
+	"zeroparse.dev/zp/internal/compile"
 )
 
 // The compiled grammar format (.zpc), specified in the File format section of

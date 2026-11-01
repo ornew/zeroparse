@@ -1,6 +1,6 @@
 package compile
 
-import "github.com/ornew/zeroparse/grammar"
+import "zeroparse.dev/zp/grammar"
 
 // TextArg returns the argument of t if t is a call text(x).
 func TextArg(t grammar.Term) (grammar.Term, bool) {

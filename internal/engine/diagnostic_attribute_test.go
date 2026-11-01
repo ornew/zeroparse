@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/bytecode"
+	"zeroparse.dev/zp/internal/bytecode"
 )
 
 func TestDiagnosticAttribute(t *testing.T) {

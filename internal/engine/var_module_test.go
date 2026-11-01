@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/bytecode"
-	"github.com/ornew/zeroparse/internal/compile"
+	"zeroparse.dev/zp/internal/bytecode"
+	"zeroparse.dev/zp/internal/compile"
 )
 
 // varModuleSource declares variables of each type, reads them in predicates and rebinds them.

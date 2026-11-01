@@ -6,7 +6,7 @@ compare a parser with another implementation of the same language, and to seed a
 from inputs that get past the first token. Near-miss invalid inputs, valid ones with one mutation, exercise error
 reporting and recovery.
 
-| | Command line | Go (`github.com/ornew/zeroparse/sample`) |
+| | Command line | Go (`zeroparse.dev/zp/sample`) |
 |:--|:--|:--|
 | Inputs the grammar accepts | `zp sample -g g.zp` | `sample.Generate`, `Generator.Next`, `Generator.Generate` |
 | Prefer what was not exercised yet, and report it | `-coverage` | `sample.WithCoverage()`, `Generator.Coverage` |

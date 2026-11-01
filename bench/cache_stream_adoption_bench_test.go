@@ -1,13 +1,13 @@
 package bench
 
 import (
-	"github.com/ornew/zeroparse/internal/bench/inputs"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
+	"zeroparse.dev/zp/internal/bench/inputs"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 const streamAdoptionElements = 50001 // inputs.CSVInput(50000) includes the header.

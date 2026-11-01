@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // ZP_TYPED_OPERATORS_RULE_DIR preserves latest-generator controls for paired timing.
@@ -66,7 +66,7 @@ rule atom Atom = t:("a") #atomic => Atom{Text: text($t)}
 const typedOperatorsRuleActionWorkloadFixture = `package lrfixture
 
 import (
-	zprt "github.com/ornew/zeroparse/runtime"
+	zprt "zeroparse.dev/zp/runtime"
 	"encoding/json"
 	"fmt"
 	"strings"

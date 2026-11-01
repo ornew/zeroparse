@@ -124,7 +124,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 //go:embed robust.zp

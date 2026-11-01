@@ -34,7 +34,7 @@ the other side would have built.
 | | Engine (Go) | Generated Go | Generated TypeScript |
 |:--|:--|:--|:--|
 | Runs in | Go programs | Go programs | Node.js, Deno, Bun, browsers (tested under Node.js only) |
-| Dependencies | `github.com/ornew/zeroparse` | Standard library | None |
+| Dependencies | `zeroparse.dev/zp` | Standard library | None |
 | Trees and errors | Reference | Identical | Identical (also as JSON, byte for byte) |
 | Recognition (no tree) | `RecognizeOnly` | `Recognize` | `recognize`, with `-recognize` |
 | Typed values (`-types`) | — | Yes | Yes: Node conversion |
@@ -56,8 +56,8 @@ rule value = [0-9]+ #atomic
 rule ws = [ \t\n]*
 ```
 
-Generate the module (`zp` is installed with `go install github.com/ornew/zeroparse/cmd/zp@latest`, or run as
-`go run github.com/ornew/zeroparse/cmd/zp`):
+Generate the module (`zp` is installed with `go install zeroparse.dev/zp/cmd/zp@latest`, or run as
+`go run zeroparse.dev/zp/cmd/zp`):
 
 ```bash
 zp gen -lang ts -g pairs.zp -o pairs
@@ -141,7 +141,7 @@ zp gen -lang ts -g <grammar> -o <directory> [-s <rule>] [-runtime embed|import|o
 `-pkg` and `-nodoc` are for Go and are rejected with `-lang ts`. As for Go, the output is deterministic (generating
 twice gives identical files), and grammar errors are reported with positions before any file is written.
 
-The same generator is available from Go, in package `github.com/ornew/zeroparse/gen`, for build tools:
+The same generator is available from Go, in package `zeroparse.dev/zp/gen`, for build tools:
 
 ```go
 files, err := gen.TypeScript{}.Generate(g, "main") // grammar, start rule: runtime.ts and parser.ts
@@ -562,7 +562,7 @@ the grammar keeps both parsers in step:
 In a JavaScript project, a script does the same:
 
 ```json
-{ "scripts": { "generate": "go run github.com/ornew/zeroparse/cmd/zp@latest gen -lang ts -g pairs.zp -o src/pairs" } }
+{ "scripts": { "generate": "go run zeroparse.dev/zp/cmd/zp@latest gen -lang ts -g pairs.zp -o src/pairs" } }
 ```
 
 (replace `latest` with the version you use, so that everybody generates the same file). To check in CI that the file is current, regenerate and compare: `npm run generate && git

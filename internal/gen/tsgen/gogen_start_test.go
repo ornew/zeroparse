@@ -2,12 +2,12 @@ package tsgen_test
 
 import (
 	"fmt"
-	"github.com/ornew/zeroparse/internal/syntax"
 	"strings"
 	"testing"
+	"zeroparse.dev/zp/internal/syntax"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 // startEntryWant is what the interpreter reports for each of startEntryNames, one line each.

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/limits"
+	"zeroparse.dev/zp/internal/limits"
 )
 
 func TestBudgetDiagnosticRecoveryTextMatchesNative(t *testing.T) {

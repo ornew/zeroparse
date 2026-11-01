@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/gentest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/gentest"
 )
 
 func TestGeneratedGoProfile(t *testing.T) {
@@ -66,7 +66,7 @@ func TestGeneratedGoProfile(t *testing.T) {
 
 const generatedProfileConsumer = `package PACKAGE
 
-import zprt "github.com/ornew/zeroparse/runtime"
+import zprt "zeroparse.dev/zp/runtime"
 import("context";"encoding/json";"fmt";"reflect";"sync";"testing";"time")
 func TestProfile(t *testing.T){
  operations:=[]func(...ParseOption)(any,error){func(opts ...ParseOption)(any,error){return Parse(INPUT,opts...)},func(opts ...ParseOption)(any,error){return ParseRule("main",INPUT,opts...)},func(opts ...ParseOption)(any,error){return nil,Recognize(INPUT,opts...)}}

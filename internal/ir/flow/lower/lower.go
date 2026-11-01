@@ -29,8 +29,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ornew/zeroparse/internal/ir/core"
-	"github.com/ornew/zeroparse/internal/ir/flow"
+	"zeroparse.dev/zp/internal/ir/core"
+	"zeroparse.dev/zp/internal/ir/flow"
 )
 
 // Options selects the forms the lowering writes.

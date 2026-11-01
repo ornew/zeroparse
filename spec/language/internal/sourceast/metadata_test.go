@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
+	"zeroparse.dev/zp/grammar"
 )
 
 func TestPositionsAndOwnership(t *testing.T) {

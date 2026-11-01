@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/grammar"
-	"github.com/ornew/zeroparse/internal/compiletest"
+	"zeroparse.dev/zp/grammar"
+	"zeroparse.dev/zp/internal/compiletest"
 )
 
 // Replace a source-valid placeholder with a public-AST value. Only matching

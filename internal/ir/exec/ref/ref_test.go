@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/ir/exec"
-	"github.com/ornew/zeroparse/internal/ir/exec/ops"
+	"zeroparse.dev/zp/internal/ir/exec"
+	"zeroparse.dev/zp/internal/ir/exec/ops"
 )
 
 // The model is the executable contract; these tests pin the behaviors its contract text states.

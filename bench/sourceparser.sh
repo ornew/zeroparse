@@ -24,7 +24,7 @@ cat > "$sourcebench_dir/source_test.go" <<'GO'
 package sourcebaseline
 
 import (
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 	"os"
 	"path/filepath"
 	"sourcebaseline/generated"
@@ -89,7 +89,7 @@ func BenchmarkSource(b *testing.B) {
 }
 GO
 cd "$sourcebench_dir"
-GOWORK=off go mod edit -require github.com/ornew/zeroparse@v0.0.0 -replace "github.com/ornew/zeroparse=$sourcebench_repo"
+GOWORK=off go mod edit -require zeroparse.dev/zp@v0.0.0 -replace "zeroparse.dev/zp=$sourcebench_repo"
 GOWORK=off go test -c -o sourcebaseline.test .
 ./sourcebaseline.test -test.run '^TestParityCounts$'
 sourcebench_round=0

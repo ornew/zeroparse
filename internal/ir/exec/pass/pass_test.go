@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/ornew/zeroparse/internal/ir/exec"
+	. "zeroparse.dev/zp/internal/ir/exec"
 )
 
 // module declares a log component whose operations record calls, so that a test sees which

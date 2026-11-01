@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/internal/compile"
-	"github.com/ornew/zeroparse/internal/compiletest"
-	"github.com/ornew/zeroparse/internal/gen"
-	"github.com/ornew/zeroparse/internal/value"
+	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/compiletest"
+	"zeroparse.dev/zp/internal/gen"
+	"zeroparse.dev/zp/internal/value"
 )
 
 // ReferenceParse parses input with a program compiled for Reference: with positions in bytes if

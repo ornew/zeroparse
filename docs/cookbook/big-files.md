@@ -41,7 +41,7 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 //go:embed stream.zp

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ornew/zeroparse/gen"
+	"zeroparse.dev/zp/gen"
 )
 
 func TestMaxDepth(t *testing.T) {

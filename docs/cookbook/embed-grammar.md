@@ -33,7 +33,7 @@ package main
 import (
 	_ "embed"
 
-	"github.com/ornew/zeroparse"
+	"zeroparse.dev/zp"
 )
 
 //go:embed units.zp
