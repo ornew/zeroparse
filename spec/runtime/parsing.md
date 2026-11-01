@@ -758,8 +758,10 @@ necessary.
    expression whose matches are bounded in length, or of a repetition with an
    upper bound, such as `x:a #repeat(,2)`, through choices and options; a
    `list(...)` or a list literal; and a value built only from bounded lists
-   and literals, by `concat`, `map`, `filter` or a fold, without a variable, a
-   lambda parameter or the value of a call on a recursion with the rule. The
+   and literals, by `concat`, `map`, `filter` or a fold, whose list operands
+   are not a variable, a lambda parameter or the value of a call on a
+   recursion with the rule; the lambda may read them, so `map($b, (y) => y)`
+   is bounded when `$b` is. The
    size is the one that the operation copies: the
    characters of a string, or the elements of a list. A value includes the
    value of such a call when it is the value of the call, passes it on, as `$x`
@@ -782,8 +784,9 @@ necessary.
    copies outside it, in the lambdas around it, and the first parameter of a
    fold over it holds what the initial value and the value of the lambda hold,
    at most a constant multiple of their sizes. A fold whose lambda builds a
-   value that can hold the first parameter more than once, as `acc + acc`
-   does, doubles it on each step, by a factor exponential in the bound, and it
+   value that can hold the first parameter more than once, counting the copies
+   in the elements of the lists it builds, as `acc + acc`,
+   `list(acc[0] + acc[0])` and `map(acc, (e) => e + e)` do, doubles it on each step, by a factor exponential in the bound, and it
    is checked as a fold over a list that is not bounded. A copying operation that copies
    the value of a variable is linear given an environment bound.
 5. **Left recursion in lookaheads and recoveries.** No rule grows inside a

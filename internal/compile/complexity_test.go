@@ -122,6 +122,10 @@ func TestClassifyComplexity(t *testing.T) {
 		// bound.
 		{"fold over a bounded list", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(text($a), $b, (acc, y) => acc + text($a))\n", ClassLinear, 0},
 		{"doubling fold over a bounded list", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(text($a), $b, (acc, y) => acc + acc + text($a))\n", ClassExp, 0},
+		{"fold over a bounded list that doubles an element", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(list(text($a)), $b, (acc, y) => concat(list(acc[0] + acc[0]), acc))\n", ClassExp, 0},
+		{"fold over a bounded list that builds a doubled element", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(list(text($a)), $b, (acc, y) => list(acc[0] + acc[0]))\n", ClassExp, 0},
+		{"fold over a bounded list that doubles each element", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(list(text($a)), $b, (acc, y) => map(acc, (e) => e + e))\n", ClassExp, 0},
+		{"fold over a bounded list that extends each element", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => foldl(list(text($a)), $b, (acc, y) => map(acc, (e) => e + text(y)))\n", ClassLinear, 0},
 		{"bounded elements inside a map", "rule main = zs:\"z\"* b:\"y\" #repeat(,2) => map($zs, (z) => foldl(\"\", $b, (acc, y) => acc + text(y)))\n", ClassLinear, 0},
 		{"doubling fold over a list", "rule main = a:\"x\"* b:\"y\"* => foldl(text($a), $b, (acc, y) => acc + acc)\n", ClassExp, 0},
 		{"bounded map copying a value from outside", "rule main = a:\"x\"* b:\"y\" #repeat(,2) => map($b, (y) => text($a) + text(y))\n", ClassLinear, 0},

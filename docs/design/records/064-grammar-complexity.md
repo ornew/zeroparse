@@ -417,7 +417,10 @@ The groups are addressed by these mechanisms:
   dictionary displays fold over the `/` marker and a `#repeat(,1)` value, and they carry no cause; the corpus measures
   them linear. A bounded fold inside a map over a list that is not bounded still copies its outer values once for each
   element of that list, and a fold whose accumulator doubles stays exponential, since its factor is exponential in the
-  bound. The accumulator of a bounded fold is taken to hold what any number of steps can add, not at most the bound:
+  bound. The copies are counted inside the elements of the lists the lambda builds, as in `list(acc[0] + acc[0])` and
+  `map(acc, (e) => e + e)`, and a term whose value the count does not follow, such as a block or a nested fold, counts
+  as two copies when it reads the accumulator: an index such as `acc[0]` counts as a whole copy, so
+  `concat(list(acc[0]), acc)` is checked as a fold over a list that is not bounded, though it grows linearly. The accumulator of a bounded fold is taken to hold what any number of steps can add, not at most the bound:
   a fold over `#repeat(,1)` that adds the value of the rule's own recursion on each step is reported exponential,
   though it runs at most once and holds that value once, which condition 4 classes polynomial.
 - **Recovery-skip refinement of the classifier.** A `#recover` skip is not a scanning source once repetition-run reuse

@@ -234,8 +234,10 @@ over at most $m$ evaluations gives at most a constant times
 $m (a^m (I + B) + B)$, which is $c (I + E + S + 1)$ for a constant $c$.
 $\square$
 
-When the value of the lambda holds the first parameter at most once, the
-recurrence is $A_{j+1} \le A_j + (r + 1) B$, so $A_j \le I + j (r + 1) B$,
+When the value of the lambda holds the first parameter at most once,
+counting the copies in its elements and in the elements of the lists it
+builds, so that its total size is at most that of the first parameter plus
+$(r + 1) B$, the recurrence is $A_{j+1} \le A_j + (r + 1) B$, so $A_j \le I + j (r + 1) B$,
 which grows linearly with $m$ rather than as $a^m$. Condition 4 applies the
 lemma only to such folds: a fold whose lambda can hold the first parameter
 twice multiplies it by a factor that is exponential in $m$, a constant that

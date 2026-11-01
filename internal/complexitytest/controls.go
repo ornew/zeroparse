@@ -315,6 +315,26 @@ func Controls() []Control {
 			Input:  func(n int) string { return rep("x", n) + rep("yz", n) },
 			Sizes:  double(250), ShortSizes: double(100), Order: Poly(2), Class: ClassUnknown,
 		},
+		// A fold whose accumulator doubles inside an element of the list it builds grows by a
+		// factor exponential in the number of steps, which the bound limits but the input reaches.
+		{
+			Name: "Bounded fold doubling an element it keeps", Family: "bounded lambda",
+			Source: "rule main = a:\"x\"* b:\"y\" #repeat(,14) => foldl(list(text($a)), $b, (acc, y) => concat(list(acc[0] + acc[0]), acc))\n",
+			Input:  func(n int) string { return rep("x", 64) + rep("y", n) },
+			Sizes:  double(3), ShortSizes: double(3), Order: Exp, Class: ClassExp,
+		},
+		{
+			Name: "Bounded fold building a doubled element", Family: "bounded lambda",
+			Source: "rule main = a:\"x\"* b:\"y\" #repeat(,14) => foldl(list(text($a)), $b, (acc, y) => list(acc[0] + acc[0]))\n",
+			Input:  func(n int) string { return rep("x", 64) + rep("y", n) },
+			Sizes:  double(3), ShortSizes: double(3), Order: Exp, Class: ClassExp,
+		},
+		{
+			Name: "Bounded fold doubling each element", Family: "bounded lambda",
+			Source: "rule main = a:\"x\"* b:\"y\" #repeat(,14) => foldl(list(text($a)), $b, (acc, y) => map(acc, (e) => e + e))\n",
+			Input:  func(n int) string { return rep("x", 64) + rep("y", n) },
+			Sizes:  double(3), ShortSizes: double(3), Order: Exp, Class: ClassExp,
+		},
 	}
 	for i := range cs {
 		if cs[i].BecomesLinear && becomesLinearLanded {
