@@ -745,9 +745,23 @@ necessary.
    because a failed alternative undoes its bindings before the next is tried.
    A binding after the recursive call binds a value that no later evaluation
    of it sees, because bindings in a called rule are not visible to its
-   caller. When every binding is a literal, a constant number of combinations
-   of values occurs at a position. When a binding reads a capture or a
-   variable, the cost is linear given an environment bound.
+   caller. A variable with **finite values** is exempt from this condition: a
+   `bool` variable, or an `int` variable whose values form a set of at most
+   4096 values, the least set that holds its initial value and, for each of
+   its bindings and each value in the set that passes the guards of the
+   binding, the value that the binding binds from it. Every binding of the
+   variable must read only the variable itself and literals, through `+`, `-`,
+   `*`, `/`, `%`, unary `-` and parentheses; a value whose evaluation is an
+   error, as a division by zero, is not bound. The **guards** of a binding are
+   the predicates that read only its variable and literals and that are
+   earlier elements of a sequence around the binding, which the binding is in
+   through groups, options, choices, captures, discards and atomic expressions
+   only, with no binding of the variable in the elements between them: every
+   evaluation of the binding follows a guard that has succeeded on the value
+   that the binding reads. When every binding is a literal or binds a variable
+   with finite values, a constant number of combinations of values occurs at a
+   position. When another binding reads a capture or a variable, the cost is
+   linear given an environment bound.
 2. **Repeated scans.** Every unit that contains a scanning source and can
    fail after one of its scanning sources has examined input is committing. A
    unit can fail after a source when something that can fail is evaluated

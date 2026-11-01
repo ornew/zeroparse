@@ -335,6 +335,22 @@ func Controls() []Control {
 			Input:  func(n int) string { return rep("x", 64) + rep("y", n) },
 			Sizes:  double(3), ShortSizes: double(3), Order: Exp, Class: ClassExp,
 		},
+		// A binding that reads its own earlier value before a recursive call that follows consumed
+		// input still reaches each position with a different value from every start, so the
+		// number of combinations of values at a position grows with the input.
+		{
+			Name: "Counter bound before a call after consumed input", Family: "bounded binding",
+			Source: "var v int\nrule main = (r / .)* $$\nrule r = \"#\" {v := v + 1} r / \"y\" {v >= 0}\n",
+			Input:  func(n int) string { return rep("#", n) },
+			Sizes:  double(50), ShortSizes: double(25), Order: Poly(3), Class: ClassExp,
+		},
+		// A guard that reads only the variable keeps its values in a set bounded by a constant.
+		{
+			Name: "Counter guarded before a call after consumed input", Family: "bounded binding",
+			Source: "var v int\nrule main = (r / .)* $$\nrule r = \"#\" {v < 3} {v := v + 1} r / \"y\" {v >= 0}\n",
+			Input:  func(n int) string { return rep("#", n) },
+			Sizes:  double(250), ShortSizes: double(100), Order: Linear, Class: ClassLinear, Positive: true,
+		},
 	}
 	for i := range cs {
 		if cs[i].BecomesLinear && becomesLinearLanded {

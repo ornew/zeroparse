@@ -406,11 +406,18 @@ The groups are addressed by these mechanisms:
   `-` before `neg_unary` calls `member` one position later; no condition captures this yet, and the causes stay
   reasons for the class Unknown.
 - **Bounded-binding refinement of the classifier.** A binding that reads its own earlier value is not exponential when
-  its values at a position come from a bounded set, or when the recursive call follows consumed input. TypeScript's
+  its values come from a set bounded by a constant. Condition 1 exempts a variable with finite values: a `bool`, or an
+  `int` whose bindings read only itself and literals, with at most 4096 values reachable from its initial value
+  through its bindings and their guards
+  ([Lemma 8](../../../spec/proofs/linear-cost.md#lemma-8-finite-values)). This covers Python's `isdict`. TypeScript's
   context flags stay within seven bits, since every capture that a binding measures is bounded (`"*"`, `"async"`,
-  `list($m)`). The profile shows a constant number of evaluations per byte and at most four evaluations of a memoized
-  rule per position at every nesting depth, so no exponential input exists. Memoizing across variable values that a
-  rule does not read would lower a constant, not the order.
+  `list($m)`), but some of those bindings read captures, so the set is not computed from the bindings alone; Python's
+  `lv` has an unguarded binding `lv := lv + 8192`, and its `ind`, CUE's `sv` and YAML's `n` read the lengths of
+  unbounded captures. The profile shows a constant number of evaluations per byte and at most four evaluations of a
+  memoized rule per position at every nesting depth, so no exponential input exists. Memoizing across variable values
+  that a rule does not read would lower a constant, not the order. A recursive call that follows consumed input does
+  not bound the values: in `main = (r / .)* $$` with `r = "#" {v := v + 1} r / "y" {v >= 0}`, each start reaches every
+  later position with a different value of `v`, and the cost on n characters `#` is cubic.
 - **Lambdas over bounded lists.** A fold or map over a list with a constant bound on its number of elements runs its
   lambda a constant number of times, so condition 4 checks its copies as copies outside the lambda
   ([Lemma 7](../../../spec/proofs/linear-cost.md#lemma-7-lambdas-over-bounded-lists)). Python's parameter lists and
@@ -473,7 +480,7 @@ The groups are addressed by these mechanisms:
 | duckdb | nested | 675 | open | 16 | 1.01 | n |
 | duckdb | operator-tails | 15 | repetition-run reuse | 5 | 2.00 | n² |
 | duckdb | strings | 4 | token-scan refinement | 5 | 1.00 | n |
-| python | bounded-variables | 42 | bounded-binding refinement | 5 | 1.01 | n |
+| python | bounded-variables | 41 | bounded-binding refinement | 5 | 1.01 | n |
 | python | except-star-handlers | 3 | grammar rewrite | 2 | 1.91 | n² |
 | python | fold-copies | 16 | in-place fold accumulators | 4 | 2.00 | n² |
 | python | nested | 183 | open | 10 | 1.03 | n |

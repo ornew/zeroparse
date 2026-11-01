@@ -10,7 +10,7 @@ splits the cost into the parts that the specification counts and bounds each
 part by one lemma, so that a new condition is added as a lemma, or as a case of
 one, without changing the others.
 
-Lemmas 1, 2 and 7 are proved, and the theorem is proved from the others.
+Lemmas 1, 2, 7 and 8 are proved, and the theorem is proved from the others.
 Lemmas 3 to 6 are given as outlines: each states its claim, the conditions it uses,
 and the steps that its proof must still make precise, listed under
 [Open Steps](#open-steps) with the step that the theorem needs besides them.
@@ -196,8 +196,10 @@ is not bounded runs once per element and copies at most a constant from
 outside the lambda; over a bounded list, Lemma 7 makes the copies of the call
 those of a constant number of copies outside the lambda. A copy of the
 value of a variable costs at most $L$. Condition 1 keeps the value of a
-variable from growing from its own earlier value, so the number of
-combinations at a position is $K$, a constant when every binding is a literal.
+variable from growing from its own earlier value, or, by Lemma 8, keeps it in
+a set of constant size, so the number of combinations at a position is $K$, a
+constant when every binding is a literal or binds a variable with finite
+values.
 
 Taking the text of a node is not a copy: by the
 [Constant-Cost Text proof](constant-cost-text.md#lemma-1-text-is-a-constant-step)
@@ -267,12 +269,55 @@ value of a call on the recursion is checked as such a copy. The lemma itself
 needs $a^m$ only to be a constant; the restriction to folds that hold the first
 parameter once keeps the constant of the class proportional to $m$.
 
+## Lemma 8 (Finite Values)
+
+Let $v$ be a variable with
+[finite values](../runtime/parsing.md#conditions-for-linear-cost) and $S_v$
+its set of values, of at most 4096 values for an `int` and 2 for a `bool`.
+Then $v$ holds a value of $S_v$ at every step of every parse, and the
+variables with finite values contribute at most the product of their $|S_v|$,
+a constant, to $K$.
+
+*Proof.* For a `bool`, $S_v$ is the set of both values, and the claim holds.
+For an `int`, by induction on the steps of the parse. By
+[Variables](../language/predicates.md#variables), the parse starts with $v$
+bound to its initial value, which is in $S_v$, and afterwards a lookup of $v$
+gives the nearest binding of $v$ that has not been undone, or the initial
+value. Bindings made in a called rule are not visible to its caller, and
+backtracking undoes bindings, so every value that a lookup gives is the
+initial value or a value that an evaluation of a binding bound earlier.
+
+Let a binding of $v$ be evaluated, and let $x$ be the value of $v$ that it
+reads, which is in $S_v$ by the induction hypothesis. Each guard of the
+binding is an earlier element of a sequence around it in the same evaluation
+of the rule body, reached without a repetition in between, so it was
+evaluated on this path before the binding and succeeded, or the binding would
+not be evaluated. No binding of $v$ lies in the elements between them, and
+bindings in the rules that those elements call are not visible after the
+calls return, so the guard read the same value $x$. So $x$ passes every guard.
+The binding reads only $v$ and literals, so its value is determined by $x$ by
+the rules of [Operators and Functions](../language/actions.md#operators-and-functions):
+it is in $S_v$, which holds the value that each binding binds from each value
+of $S_v$ that passes its guards, or the evaluation is an error and binds
+nothing.
+
+The values of the variables that memoized rules read at a position are
+therefore drawn, for the variables with finite values, from the product of
+their sets, so they contribute at most the product of the $|S_v|$ to the
+number of combinations $K$. $\square$
+
+The bound of 4096 keeps $S_v$ cheap to compute; the proof needs only that it
+is finite. A variable whose bindings read a capture is outside the lemma even
+when the capture is bounded, since the lemma computes $S_v$ from the bindings
+alone.
+
 ## Theorem (Linear Cost)
 
 When every rule that the start rule reaches satisfies conditions 1 to 5, every
 parse from the start rule has a cost of at most $c \cdot K \cdot (L + 1) \cdot (n + 1)$
 for a constant $c$. When no variable holds a string and every binding binds a
-literal, $K$ is a constant and $L = 0$, so the cost is at most $c' \cdot (n + 1)$.
+literal or a variable with finite values, $K$ is a constant by Lemma 8 and
+$L = 0$, so the cost is at most $c' \cdot (n + 1)$.
 
 *Proof, given Lemmas 3 to 6 and open step 7.* Each unit of $C$ is the local
 cost of a body evaluation, the scanned cost of one, or a call. By Lemma 1 the

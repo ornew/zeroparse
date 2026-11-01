@@ -1,4 +1,4 @@
-# python: exponential (degree 0), 148 witnesses, 190 reasons
+# python: exponential (degree 0), 147 witnesses, 190 reasons
 
 ## whitespace (70) -> F97
 254:7 indentation: the cost can grow as n^2: after an iteration of the repetition at 254:6 in rule indentation fails, what follows the repetition ([ \t]* "\u{c}")* can start again inside the input that the repetition [ \t]* at 254:7 in rule indentation examined; this repeats in the recursion of rule indented_block
@@ -94,7 +94,7 @@
 997:32 ident: the cost can grow as n^4: after the option at 329:19 in rule dotted_as_name fails, what follows the option (-ws kw_as -ws a:ident)? can start again inside the input that the repetition idcont* at 997:32 in rule ident examined; it is evaluated again inside an iteration of the repetition at 326:38 in rule import_stmt; it is evaluated again inside the alternative at 275:62 in rule simple_stmt; this repeats in the repetition (-ws -";" -ws s:simple_stmt / -stmt_s... at 222:14 in rule stmts
 997:32 ident: the cost can grow as n^4: after the option at 349:42 in rule import_from_as_name fails, what follows the option (-ws kw_as -ws a:ident)? can start again inside the input that the repetition idcont* at 997:32 in rule ident examined; it is evaluated again inside an iteration of the repetition at 345:29 in rule plain_import_names; it is evaluated again inside the alternative at 275:76 in rule simple_stmt; this repeats in the repetition (-ws -";" -ws s:simple_stmt / -stmt_s... at 222:14 in rule stmts
 
-## bounded-variables (42) -> F101
+## bounded-variables (41) -> F101
 237:6 indented_block: the cost can grow exponentially: the binding ind := foldl(0, $i.$segs, (a, s) => (... at 237:6 in rule indented_block reads the earlier value of ind, and the call stmts at 238:7 in rule indented_block evaluates the binding again with the value it binds
 458:6 case_blocks: the cost can grow exponentially: the binding ind := foldl(0, $i.$segs, (a, s) => (... at 458:6 in rule case_blocks reads the earlier value of ind, and the call case_block at 459:7 in rule case_blocks evaluates the binding again with the value it binds
 512:52 group_pattern: the cost can grow exponentially: the binding lv := lv / 2 * 2 + 2 at 512:52 in rule group_pattern reads the earlier value of lv, and the call pattern at 512:80 in rule group_pattern evaluates the binding again with the value it binds
@@ -112,7 +112,6 @@
 786:27 dict_unpack_first: the cost can grow exponentially: the binding lv := lv / 2 * 2 + 2 at 786:27 in rule dict_unpack_first reads the earlier value of lv, and the call bitwise_or at 786:64 in rule dict_unpack_first evaluates the binding again with the value it binds
 790:27 set_star_first: the cost can grow exponentially: the binding lv := lv / 2 * 2 + 2 at 790:27 in rule set_star_first reads the earlier value of lv, and the call starred_bitor at 790:55 in rule set_star_first evaluates the binding again with the value it binds
 796:27 brace_items: the cost can grow exponentially: the binding lv := lv / 2 * 2 + 2 at 796:27 in rule brace_items reads the earlier value of lv, and the call walrus at 796:58 in rule brace_items evaluates the binding again with the value it binds
-798:6 brace_items: the cost can grow exponentially: the binding isdict := len($kv) > 0 at 798:6 in rule brace_items reads the earlier value of isdict, and the call for_if_clauses at 799:15 in rule brace_items evaluates the binding again with the value it binds
 823:48 paren_target: the cost can grow exponentially: the binding lv := lv / 2 * 2 + 2 at 823:48 in rule paren_target reads the earlier value of lv, and the call target_with_star_atom at 823:76 in rule paren_target evaluates the binding again with the value it binds
 826:27 star_tuple_target: the cost can grow exponentially: the binding lv := lv / 2 * 2 + 2 at 826:27 in rule star_tuple_target reads the earlier value of lv, and the call star_target at 826:55 in rule star_tuple_target evaluates the binding again with the value it binds
 831:27 star_list_target: the cost can grow exponentially: the binding lv := lv / 2 * 2 + 2 at 831:27 in rule star_list_target reads the earlier value of lv, and the call star_target at 831:55 in rule star_list_target evaluates the binding again with the value it binds

@@ -1057,7 +1057,13 @@ func (k *classifier) checkValues() {
 			deps[b.b.Name][v] = true
 		}
 	}
+	// A variable whose values lie in a set bounded by a constant adds at most that many
+	// combinations of values at a position, whatever its bindings read.
+	finite := k.finiteVars()
 	for _, b := range k.binds {
+		if finite[b.b.Name] {
+			continue
+		}
 		pos := termPosOf(b.b)
 		text := k.showTerm(b.b)
 		if !constant(b.b.Value) {

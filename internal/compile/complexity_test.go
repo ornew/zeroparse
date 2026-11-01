@@ -167,6 +167,17 @@ func TestClassifyComplexity(t *testing.T) {
 		{"self-growing variable", "var s string = \"a\"\nrule main = r $$\nrule r = \"x\" {s := s + s} r / {len(s) > 0}\n", ClassExp, 0},
 		// Only a polynomial class has a degree.
 		{"exponential with a polynomial cause", "var s string = \"a\"\nrule main = r (a / \"a\")* $$\nrule r = \"x\" {s := s + s} r / {len(s) > 0}\nrule a = \"a\"* \"c\"\n", ClassExp, 0},
+		// A variable whose values lie in a set bounded by a constant adds a constant number of
+		// combinations of values, whatever its bindings read; the set of an int comes from its
+		// initial value, bindings that read only it, and the guards before them.
+		{"counter before a call", "var v int\nrule main = (r / .)* $$\nrule r = \"#\" {v := v + 1} r / \"y\" {v >= 0}\n", ClassExp, 0},
+		{"guarded counter before a call", "var v int\nrule main = (r / .)* $$\nrule r = \"#\" {v < 3} {v := v + 1} r / \"y\" {v >= 0}\n", ClassLinear, 0},
+		{"counter modulo a constant", "var v int = 1\nrule main = r $$\nrule r = \"#\" {v := (v * 3 + 1) % 7} r / \"y\" {v != 0}\n", ClassLinear, 0},
+		{"counter guarded outside a repetition", "var v int\nrule main = r $$\nrule r = \"(\" {v < 3} (\"#\" {v := v + 1})* r \")\" / \"y\" {v >= 0}\n", ClassExp, 0},
+		{"guard before another binding", "var v int\nrule main = r $$\nrule r = \"#\" {v < 3} {v := v + 1} {v := v + 1} r / \"y\" {v >= 0}\n", ClassExp, 0},
+		{"counter that reads a capture", "var v int\nrule main = r $$\nrule r = x:\"#\" {v < 3} {v := v + len($x)} r / \"y\" {v >= 0}\n", ClassExp, 0},
+		{"Boolean toggled before a call", "var b bool\nrule main = r $$\nrule r = x:\"#\" {b := !b && len($x) > 0} r / \"y\" {b}\n", ClassLinear, 0},
+		{"counter divided by zero", "var v int\nrule main = r $$\nrule r = \"#\" {v := v + 1 / v} r / \"y\" {v >= 0}\n", ClassLinear, 0},
 		{"rebinding after the left call", "var k int\nrule main = e $$\nrule e = e \"x\" {k := k + 1} / \"x\" {k >= 0}\n", ClassLinearEnv, 0},
 		{"non-leader cycle members", "rule main = c $$\nrule a = c \"+\" / \"n\"\nrule c = \"(\" c \")\" \"y\" / \"(\" c \")\" \"z\" / a\n", ClassUnknown, 0},
 	} {
