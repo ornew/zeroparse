@@ -51,6 +51,8 @@ A separate generated-Go typed-allocation bootstrap and its focused measurements 
 
 **Generated size.** A generated Go `parser.go` ranges from 25.3 KB (CSV) to 1.59 MB (DuckDB), and a binary that calls the parser's `ParseAST` from 2.15 to 6.45 MB, most of which is the ZeroParse runtime and the standard library. The TypeScript `parser.ts` ranges from 32.0 KB to 3.32 MB, which is 6.57–257 KB gzipped with `gzip -9`, plus a runtime of 146 KB (36.9 KB gzipped) that every parser shares.
 
+**Position unit.** On the ready-made DuckDB and Python grammars (generated Go, typed `ParseAST`), the Bytes unit takes 1.03–1.08× the CodePoints time and allocates the same bytes per warm parse, so it does not pay for the saved decoding. Decoding the input to code points happens once per parse into reused buffers, whereas Bytes decodes each character while matching. In a fresh process, a CodePoints parse allocates about 8 bytes per input character more than Bytes (a `[]rune` and a 4-byte offset table: 2.1 MB for the 263 KB DuckDB script, 1.8 MB for the 227 KB `_pydecimal.py`), which is 1.5–2.5 MB or 1.5–4% of the process's peak resident set size; allocation of the tree dominates (about 500 bytes per input byte). The generated source is identical for both units, so the sizes of `parser.go` and of binaries do not depend on the unit. On the closure engine (CSV, 50,000 records, 2.9 MB), Bytes parses 4% faster and streams 15% faster with 9% fewer bytes, and a one-character `Document` edit with its re-parse takes 6% longer (1.06×). Error positions and spans become byte offsets under Bytes. These figures support no change of the default: it stays CodePoints, which reports character positions and costs a few percent of memory. The measurement is below.
+
 **Grammar style.** The calculator workload takes 2.30× as long with left recursion as with Operators Rule parsing on closure (1.98× generated, 1.62× typed). The generated Recovery workload takes about the same time as Minilang, but skips broken statements and therefore performs different matching work.
 
 **VM Parse Timing Recheck (2026-10-14).** Five alternating 1-second samples on Go 1.27.1 (Apple M3 Max, darwin/arm64, `GOMAXPROCS=16`, `GOGC=100`, `GOMEMLIMIT=off`) compared the historical grammar revisions `8177b32` and `4d1dbff`. They are sibling commits with the same parent, so this ratio is not a chronological before/after. All eight VM medians were below parity, but paired ranges span 0.959–1.027; the earlier short-run slowdown was not reproduced. Allocation counts changed by at most one, with no broad memory change.
@@ -170,6 +172,38 @@ Object/list reference controls do not change that block: treat string-node
 ownership as a separate domain when evaluating a cleanup strategy. Clone the
 returned string-node text just like terminal text, and retain the manual
 string-node control in both position units.
+
+### Position Unit Measurement
+
+Baseline `e2a6da0` (main), Go 1.27.1, Apple M3 Max (darwin/arm64, `GOMAXPROCS=16`), run under the benchmark lock. Ten
+samples of 1 s per cell, compared with `benchstat -col /unit` (CodePoints is the base). The parsers are DuckDB and
+Python generated from `testdata/grammars` with the options of `testdata/grammars/generate.txt`; the closure engine
+runs the CSV grammar. Inputs: the 256 KB DuckDB script of the alpha-parsers benchmark (262,719 bytes, ASCII, and a
+332,503-byte variant with a Japanese comment on every statement), `_pydecimal.py` (227,283 bytes) and `typing.py`
+(118,744 bytes) of the CPython 3.12 library, `typing.py` with a Japanese comment after every blank line, and
+`inputs.CSVInput(50000)`.
+
+| Cell | CodePoints | Bytes | Bytes / CodePoints (p < 0.001) |
+| --- | --- | --- | --- |
+| DuckDB ASCII | 46.52 ms | 49.54 ms | 1.065 |
+| DuckDB non-ASCII | 48.18 ms | 49.55 ms | 1.028 |
+| Python `_pydecimal.py` | 20.67 ms | 22.39 ms | 1.083 |
+| Python `typing.py` | 10.52 ms | 11.20 ms | 1.065 |
+| Python `typing.py`, non-ASCII | 10.40 ms | 11.26 ms | 1.083 |
+| Engine CSV parse | 72.5 ms | 69.4 ms | 0.958 |
+| Engine CSV stream | 118.1 ms | 100.3 ms | 0.850 |
+| Engine CSV `Document` edit and parse | 2.609 ms | 2.770 ms | 1.062 |
+
+Allocated bytes and allocation counts per warm parse of the generated parsers differ by at most 2.4% and 0.01% (the
+rune buffers are reused). A single parse in a fresh process (`/usr/bin/time -l`, three runs per cell) allocates
+2.1 MB (DuckDB ASCII), 2.1 MB (non-ASCII), 1.8 MB (`_pydecimal.py`) and 0.95 MB (`typing.py`) more with CodePoints.
+Its peak resident set size is 154.6–158.5 MB against 152.4–152.8 MB (DuckDB ASCII), 60.3–61.1 MB against
+58.2–59.0 MB (`_pydecimal.py`) and 35.1–35.6 MB against 33.8–34.5 MB (`typing.py`); for the non-ASCII DuckDB input
+the ranges overlap (154.6–155.6 MB against 152.6–155.8 MB).
+
+The harness is not committed. To repeat: generate the two parsers into a scratch package inside the module with
+`zp gen -g testdata/grammars/<name>/<name>.zp -module <path> <options> -o <dir>`, benchmark `ParseAST` with
+`WithUnit(CodePoints)` and `WithUnit(Bytes)`, and measure memory with one parse per process.
 
 ### Benchmark Workloads
 
