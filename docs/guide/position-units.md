@@ -54,7 +54,10 @@ Choosing:
 - Invalid UTF-8 is read as one U+FFFD character per invalid byte, so positions stay well defined; the decoding rules
   and their effect on the text of string nodes are in [Positions](../../spec/runtime/parsing.md#positions).
 
-The [benchmarks](../benchmarks.md#parsing-time-position-unit-bytes) show almost no speed difference between the units.
+The units differ by a few percent: generated parsers run 3–8% faster with code points, which decode the input once,
+while the closure engine streams faster with bytes, and code points cost about 8 bytes of memory per input character.
+The [position unit measurement](../performance.md#position-unit-measurement) has the figures, and the
+[benchmarks](../benchmarks.md#parsing-time-position-unit-bytes) compare the backends in bytes.
 The CLI flag is `-unit codepoints|bytes`.
 
 ## Related Topics
