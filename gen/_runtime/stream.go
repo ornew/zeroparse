@@ -502,6 +502,15 @@ func (p *Parser) pruneStreamMemo(pos int) {
 		clear(t.slots[n:])
 		t.slots = t.slots[:n]
 	}
+	if t.index != nil {
+		moved := make(map[int]memoIndex[memoEntry], len(t.index))
+		for at, ix := range t.index {
+			if at >= k {
+				moved[at-k] = ix
+			}
+		}
+		t.index = moved
+	}
 	s.memoBase = pos
 }
 

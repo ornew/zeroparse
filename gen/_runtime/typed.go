@@ -799,6 +799,9 @@ type TParser struct {
 	fields    tarena[tfield]
 	memoSlab  tarena[tmemoEntry]
 	memoSlots []*tmemoEntry // memo entries by position (chains)
+	// memoIndexes are the hash indexes of the positions whose chain is longer than a lookup walks
+	// (memoScan). They belong to one parse: a typed Document keeps its chains, not its indexes.
+	memoIndexes map[int]memoIndex[tmemoEntry]
 	// TypedDocument is set only by typed Document parses (TypedDocumentParse).
 	TypedDocument *typedDocumentState
 	free          [8][]*TCaptureFrame // frames freed by FreeFrame, by size
@@ -963,12 +966,29 @@ func (p *TParser) memoGet(rule, pos, min int, env []any) *tmemoEntry {
 	if pos >= len(p.memoSlots) {
 		return nil
 	}
-	for e := p.memoSlots[pos]; e != nil; e = e.next {
+	e, n := p.memoSlots[pos], 0
+	for ; e != nil && n < memoScan; e, n = e.next, n+1 {
 		if e.rule == int32(rule) && e.min == int32(min) && sameValues(e.env, env) {
 			return e
 		}
 	}
-	return nil
+	if e == nil {
+		return nil
+	}
+	h, _ := memoKeyHash(int32(rule), int32(min), env)
+	_, x := p.memoIndexAt(pos, nil).probe(h, func(x *tmemoEntry) bool {
+		return x.rule == int32(rule) && x.min == int32(min) && sameValues(x.env, env)
+	})
+	return x
+}
+
+// memoIndexAt returns the hash index of the chain at pos, building it on first use; hash, if not
+// nil, computes the hash of an entry (and may charge for it).
+func (p *TParser) memoIndexAt(pos int, hash func(*tmemoEntry) uint64) memoIndex[tmemoEntry] {
+	if hash == nil {
+		hash = func(e *tmemoEntry) uint64 { h, _ := memoKeyHash(e.rule, e.min, e.env); return h }
+	}
+	return indexAt(&p.memoIndexes, pos, p.memoSlots[pos], func(e *tmemoEntry) *tmemoEntry { return e.next }, hash)
 }
 
 func (p *TParser) memoGetControlled(rule, pos, min int, key []any) *tmemoEntry {
@@ -976,13 +996,21 @@ func (p *TParser) memoGetControlled(rule, pos, min int, key []any) *tmemoEntry {
 	if pos >= len(p.memoSlots) {
 		return nil
 	}
-	for e := p.memoSlots[pos]; e != nil; e = e.next {
+	e, n := p.memoSlots[pos], 0
+	for ; e != nil && n < memoScan; e, n = e.next, n+1 {
 		p.Spend()
 		if e.rule == int32(rule) && e.min == int32(min) && p.memoKeyEqual(e.env, key) {
 			return e
 		}
 	}
-	return nil
+	if e == nil {
+		return nil
+	}
+	ix := p.memoIndexAt(pos, func(e *tmemoEntry) uint64 { return p.hashMemoKey(e.rule, e.min, e.env) })
+	_, x := ix.probe(p.hashMemoKey(int32(rule), int32(min), key), func(x *tmemoEntry) bool {
+		return x.rule == int32(rule) && x.min == int32(min) && p.memoKeyEqual(x.env, key)
+	})
+	return x
 }
 
 func (p *TParser) memoPut(rule, pos, min int, env []any, e *tmemoEntry) {
@@ -1000,9 +1028,31 @@ func (p *TParser) memoPut(rule, pos, min int, env []any, e *tmemoEntry) {
 		}
 	}
 	e.rule, e.min, e.env = int32(rule), int32(min), env
+	same := func(x *tmemoEntry) bool { return x.rule == e.rule && x.min == e.min && sameValues(x.env, env) }
 	link := &p.memoSlots[pos]
-	for x := *link; x != nil; link, x = &x.next, x.next {
-		if x.rule == e.rule && x.min == e.min && sameValues(x.env, env) {
+	for n := 0; *link != nil && n < memoScan; link, n = &(*link).next, n+1 {
+		if x := *link; same(x) {
+			if ix := p.memoIndexes[pos]; ix != nil {
+				h, _ := memoKeyHash(x.rule, x.min, x.env)
+				slot, _ := ix.probe(h, func(y *tmemoEntry) bool { return y == x })
+				ix[slot] = e
+			}
+			e.next = x.next
+			*link = e
+			return
+		}
+	}
+	if *link != nil {
+		// A long chain: the index finds the entry to replace, and a walk finds its link.
+		ix := p.memoIndexAt(pos, nil)
+		h, _ := memoKeyHash(e.rule, e.min, env)
+		slot, x := ix.probe(h, same)
+		ix[slot] = e
+		if x != nil {
+			link = &p.memoSlots[pos]
+			for *link != x {
+				link = &(*link).next
+			}
 			e.next = x.next
 			*link = e
 			return
@@ -1027,16 +1077,42 @@ func (p *TParser) memoPutControlled(rule, pos, min int, key []any, e *tmemoEntry
 	}
 	link := &slots[pos]
 	var replaced *tmemoEntry
-	for x := *link; x != nil; link, x = &x.next, x.next {
+	same := func(x *tmemoEntry) bool {
+		return x == e || x.rule == int32(rule) && x.min == int32(min) && p.memoKeyEqual(x.env, key)
+	}
+	for n := 0; *link != nil && n < memoScan; link, n = &(*link).next, n+1 {
 		p.Spend()
-		if x == e || x.rule == int32(rule) && x.min == int32(min) && p.memoKeyEqual(x.env, key) {
+		if x := *link; same(x) {
 			replaced = x
 			break
+		}
+	}
+	var ix memoIndex[tmemoEntry]
+	var ixSlot uint64
+	if replaced == nil && *link != nil {
+		// A long chain: the index finds the entry to replace.
+		ix = indexAt(&p.memoIndexes, pos, slots[pos], func(e *tmemoEntry) *tmemoEntry { return e.next },
+			func(e *tmemoEntry) uint64 { return p.hashMemoKey(e.rule, e.min, e.env) })
+		ixSlot, replaced = ix.probe(p.hashMemoKey(int32(rule), int32(min), key), same)
+		if replaced != nil {
+			link = &slots[pos]
+			for *link != replaced {
+				p.Spend()
+				link = &(*link).next
+			}
+		}
+	} else if replaced != nil {
+		// The entry replaced among the first of a long chain is indexed too.
+		if ix = p.memoIndexes[pos]; ix != nil {
+			ixSlot, _ = ix.probe(p.hashMemoKey(replaced.rule, replaced.min, replaced.env), func(y *tmemoEntry) bool { return y == replaced })
 		}
 	}
 	p.Spend()
 	p.memoSlots = slots
 	e.rule, e.min, e.env = int32(rule), int32(min), key
+	if ix != nil {
+		ix[ixSlot] = e
+	}
 	if replaced != nil {
 		e.next = replaced.next
 		*link = e

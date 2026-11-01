@@ -1509,6 +1509,9 @@ type memoTable struct {
 	calls []seenCalls
 	// free links entries retired by stream memo pruning through next.
 	free *memoEntry
+	// index holds the hash index of each position whose chain is longer than a lookup walks
+	// (memoScan), by position.
+	index map[int]memoIndex[memoEntry]
 }
 
 // seenRulePages caches the last visited page beside its directory. Most calls
@@ -1735,12 +1738,36 @@ func (t *memoTable) get(rule, pos, min int, env []any) *memoEntry {
 	if pos >= len(t.slots) {
 		return nil
 	}
-	for e := t.slots[pos]; e != nil; e = e.next {
+	e, n := t.slots[pos], 0
+	for ; e != nil && n < memoScan; e, n = e.next, n+1 {
 		if e.rule == int32(rule) && e.min == int32(min) && sameValues(e.env, env) {
 			return e
 		}
 	}
-	return nil
+	if e == nil {
+		return nil
+	}
+	h, _ := memoKeyHash(int32(rule), int32(min), env)
+	_, x := t.indexAt(pos).probe(h, func(x *memoEntry) bool {
+		return x.rule == int32(rule) && x.min == int32(min) && sameValues(x.env, env)
+	})
+	return x
+}
+
+// indexAt returns the hash index of the chain at pos, building it on first use.
+func (t *memoTable) indexAt(pos int) memoIndex[memoEntry] {
+	return indexAt(&t.index, pos, t.slots[pos], func(e *memoEntry) *memoEntry { return e.next },
+		func(e *memoEntry) uint64 { h, _ := memoKeyHash(e.rule, e.min, e.env); return h })
+}
+
+// reindex makes the index of pos, if it has one, hold e where it held x, which has the key of e
+// and is replaced by it in the chain.
+func (t *memoTable) reindex(pos int, x, e *memoEntry) {
+	if ix := t.index[pos]; ix != nil {
+		h, _ := memoKeyHash(x.rule, x.min, x.env)
+		slot, _ := ix.probe(h, func(y *memoEntry) bool { return y == x })
+		ix[slot] = e
+	}
 }
 
 // put stores e under the key, replacing an entry with the same key.
@@ -1755,9 +1782,27 @@ func (t *memoTable) put(rule, pos, min int, env []any, e *memoEntry) {
 		}
 	}
 	e.rule, e.min, e.env = int32(rule), int32(min), env
+	same := func(x *memoEntry) bool { return x.rule == e.rule && x.min == e.min && sameValues(x.env, env) }
 	link := &t.slots[pos]
-	for x := *link; x != nil; link, x = &x.next, x.next {
-		if x.rule == e.rule && x.min == e.min && sameValues(x.env, env) {
+	for n := 0; *link != nil && n < memoScan; link, n = &(*link).next, n+1 {
+		if x := *link; same(x) {
+			t.reindex(pos, x, e)
+			e.next = x.next
+			*link = e
+			return
+		}
+	}
+	if *link != nil {
+		// A long chain: the index finds the entry to replace, and a walk finds its link.
+		ix := t.indexAt(pos)
+		h, _ := memoKeyHash(e.rule, e.min, env)
+		slot, x := ix.probe(h, same)
+		ix[slot] = e
+		if x != nil {
+			link = &t.slots[pos]
+			for *link != x {
+				link = &(*link).next
+			}
 			e.next = x.next
 			*link = e
 			return

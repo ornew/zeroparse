@@ -1074,13 +1074,36 @@ func (p *Parser) memoGetControlled(rule, pos, min int, key []any) *memoEntry {
 	if pos >= len(p.memo.slots) {
 		return nil
 	}
-	for e := p.memo.slots[pos]; e != nil; e = e.next {
+	e, n := p.memo.slots[pos], 0
+	for ; e != nil && n < memoScan; e, n = e.next, n+1 {
 		p.Spend()
 		if e.rule == int32(rule) && e.min == int32(min) && p.memoKeyEqual(e.env, key) {
 			return e
 		}
 	}
-	return nil
+	if e == nil {
+		return nil
+	}
+	ix := indexAt(&p.memo.index, pos, p.memo.slots[pos], func(e *memoEntry) *memoEntry { return e.next },
+		func(e *memoEntry) uint64 { return p.hashMemoKey(e.rule, e.min, e.env) })
+	_, x := ix.probe(p.hashMemoKey(int32(rule), int32(min), key), func(x *memoEntry) bool {
+		return x.rule == int32(rule) && x.min == int32(min) && p.memoKeyEqual(x.env, key)
+	})
+	return x
+}
+
+// hashMemoKey hashes a memo key for the index of a long chain. The hash costs one step plus one
+// per variable of the key, and the bytes of string values as a value comparison would, so a
+// lookup through the index costs the size of the key, not the length of the chain.
+func (p *Parser) hashMemoKey(rule, min int32, env []any) uint64 {
+	h, bytes := memoKeyHash(rule, min, env)
+	for range 1 + len(env) {
+		p.Spend()
+	}
+	if bytes > 0 {
+		p.spendValue(bytes)
+	}
+	return h
 }
 
 func (p *Parser) memoPut(rule, pos, min int, key []any, e *memoEntry) {
@@ -1111,11 +1134,34 @@ func (p *Parser) memoPutControlled(rule, pos, min int, key []any, e *memoEntry) 
 	}
 	link := &slots[pos]
 	var replaced *memoEntry
-	for x := *link; x != nil; link, x = &x.next, x.next {
+	same := func(x *memoEntry) bool {
+		return x == e || x.rule == int32(rule) && x.min == int32(min) && p.memoKeyEqual(x.env, key)
+	}
+	for n := 0; *link != nil && n < memoScan; link, n = &(*link).next, n+1 {
 		p.Spend()
-		if x == e || x.rule == int32(rule) && x.min == int32(min) && p.memoKeyEqual(x.env, key) {
+		if x := *link; same(x) {
 			replaced = x
 			break
+		}
+	}
+	var ix memoIndex[memoEntry]
+	var ixSlot uint64
+	if replaced == nil && *link != nil {
+		// A long chain: the index finds the entry to replace.
+		ix = indexAt(&p.memo.index, pos, slots[pos], func(e *memoEntry) *memoEntry { return e.next },
+			func(e *memoEntry) uint64 { return p.hashMemoKey(e.rule, e.min, e.env) })
+		ixSlot, replaced = ix.probe(p.hashMemoKey(int32(rule), int32(min), key), same)
+		if replaced != nil {
+			link = &slots[pos]
+			for *link != replaced {
+				p.Spend()
+				link = &(*link).next
+			}
+		}
+	} else if replaced != nil {
+		// The entry replaced among the first of a long chain is indexed too.
+		if ix = p.memo.index[pos]; ix != nil {
+			ixSlot, _ = ix.probe(p.hashMemoKey(replaced.rule, replaced.min, replaced.env), func(y *memoEntry) bool { return y == replaced })
 		}
 	}
 	p.Spend()
@@ -1123,6 +1169,9 @@ func (p *Parser) memoPutControlled(rule, pos, min int, key []any, e *memoEntry) 
 	// checkpoint between mutations. A resident self-entry retains its successor.
 	p.memo.slots = slots
 	e.rule, e.min, e.env = int32(rule), int32(min), key
+	if ix != nil {
+		ix[ixSlot] = e
+	}
 	if replaced != nil {
 		e.next = replaced.next
 		*link = e
