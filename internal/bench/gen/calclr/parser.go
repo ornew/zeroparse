@@ -164,14 +164,15 @@ type ruleExtra struct {
 	Where      string
 	NodeType   string
 	OpNodeType string
+	Cycle      int32
 }
 
 var rulesSpec = [...]ruleSpec{
 	{"main", &sh22, 0, 0, 1, 0},
 	{"expr", &sh23, rt.RuleLeader | rt.RuleRec, 0, 0, 0},
-	{"add", &sh24, rt.RuleMember | rt.RuleRec, 0, 2, 0},
+	{"add", &sh24, rt.RuleRec, 0, 2, 0},
 	{"term", &sh23, rt.RuleLeader | rt.RuleRec, 0, 0, 0},
-	{"mul", &sh24, rt.RuleMember | rt.RuleRec, 0, 2, 0},
+	{"mul", &sh24, rt.RuleRec, 0, 2, 0},
 	{"unary", &sh23, rt.RuleMemo | rt.RuleRec, 1, 0, 0},
 	{"neg", &sh25, rt.RuleRec, 0, 3, 0},
 	{"power", &sh23, rt.RuleRec, 0, 0, 0},
@@ -192,15 +193,19 @@ var rulesStrs = [...][]string{
 }
 
 var rulesExtras = [...]ruleExtra{
-	{11, "", "Number", ""},
+	{1, "", "", "", 10},
+	{2, "", "", "", 10},
+	{3, "", "", "", 9},
+	{4, "", "", "", 9},
+	{11, "", "Number", "", 0},
 }
 
 var recRulesSpec = [...]ruleSpec{
 	{"main", &sh22, rt.RuleNovalue, 0, 0, 0},
 	{"expr", &sh23, rt.RuleLeader | rt.RuleNovalue | rt.RuleRec, 0, 0, 0},
-	{"add", &sh24, rt.RuleMember | rt.RuleNovalue | rt.RuleRec, 0, 0, 0},
+	{"add", &sh24, rt.RuleNovalue | rt.RuleRec, 0, 0, 0},
 	{"term", &sh23, rt.RuleLeader | rt.RuleNovalue | rt.RuleRec, 0, 0, 0},
-	{"mul", &sh24, rt.RuleMember | rt.RuleNovalue | rt.RuleRec, 0, 0, 0},
+	{"mul", &sh24, rt.RuleNovalue | rt.RuleRec, 0, 0, 0},
 	{"unary", &sh23, rt.RuleMemo | rt.RuleNovalue | rt.RuleRec, 1, 0, 0},
 	{"neg", &sh25, rt.RuleNovalue | rt.RuleRec, 0, 0, 0},
 	{"power", &sh23, rt.RuleNovalue | rt.RuleRec, 0, 0, 0},
@@ -215,7 +220,12 @@ var recRulesStrs = [...][]string{
 	nil,
 }
 
-var recRulesExtras = [...]ruleExtra{}
+var recRulesExtras = [...]ruleExtra{
+	{1, "", "", "", 10},
+	{2, "", "", "", 10},
+	{3, "", "", "", 9},
+	{4, "", "", "", 9},
+}
 
 func init() {
 	rules = rt.NewRules(rulesSpec[:], rulesStrs[:], rulesExtras[:])

@@ -379,3 +379,57 @@ func TSParsersCorpus(t *testing.T, node string, cases []Case, opts gen.GenOption
 		t.Errorf("got more than %d results", k)
 	}
 }
+
+// TSParsersOutputs generates a TypeScript parser for each case with opts, changes the source of
+// each with mutate (when not nil), runs them with the Node executable node on the inputs of the
+// case as TSParsersCorpus does, and returns the results, one JSON line per input, unit and form.
+// Negative controls compare the results of a mutated runtime with those of the runtime as it is.
+func TSParsersOutputs(t *testing.T, node string, cases []Case, opts gen.GenOptions, mutate func(string) string) string {
+	t.Helper()
+	dir := t.TempDir()
+	write := func(name, content string) {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("package.json", `{"type": "module"}`+"\n")
+	write("harness.mjs", TSHarness)
+	type input struct {
+		B64   string `json:"b64"`
+		Valid bool   `json:"valid"`
+	}
+	var inputs [][]input
+	for i, c := range cases {
+		g, err := compiletest.Parse(c.Src)
+		if err != nil {
+			t.Fatalf("%s: %v", c.Name, err)
+		}
+		opts.Start, opts.Recognize = "main", true
+		code, err := GenerateTSBundle(g, opts)
+		if err != nil {
+			t.Fatalf("%s: %v", c.Name, err)
+		}
+		src := string(code)
+		if mutate != nil {
+			src = mutate(src)
+		}
+		write(fmt.Sprintf("g%d.ts", i), src)
+		var in []input
+		for _, s := range c.Inputs {
+			in = append(in, input{base64.StdEncoding.EncodeToString([]byte(s)), utf8.ValidString(s)})
+		}
+		inputs = append(inputs, in)
+	}
+	data, _ := json.Marshal(inputs)
+	write("inputs.json", string(data))
+	cmd := exec.Command(node, "harness.mjs", "inputs.json", "out.jsonl")
+	cmd.Dir = dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("node: %v\n%s", err, out)
+	}
+	out, err := os.ReadFile(filepath.Join(dir, "out.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(out)
+}

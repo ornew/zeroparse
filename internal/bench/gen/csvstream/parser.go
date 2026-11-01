@@ -77,6 +77,7 @@ type ruleExtra struct {
 	Where      string
 	NodeType   string
 	OpNodeType string
+	Cycle      int32
 }
 
 var rulesSpec = [...]ruleSpec{
@@ -94,7 +95,7 @@ var rulesStrs = [...][]string{
 }
 
 var rulesExtras = [...]ruleExtra{
-	{2, "", "Field", ""},
+	{2, "", "Field", "", 0},
 }
 
 func init() {
@@ -180,14 +181,17 @@ func e6(p *rt.Parser, _ int) (*rt.Node, bool) {
 	var x7, x8 *rt.CaptureFrame
 	x1 = p.Mark()
 	p.Silent++
+	p.LookBegin(1)
 	if !p.AtEnd() {
 		p.ExpectBudget(p.Pos, rt.IdEndInput)
 		goto L2
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Reset(x1)
 	goto fail
 L2:
+	p.LookEnd(false)
 	p.Silent--
 	p.Reset(x1)
 	if v4, ok = r2(p); !ok {
@@ -330,6 +334,7 @@ L6:
 		}
 		x15 = p.Pos
 		p.Silent++
+		p.LookBegin(2)
 		if p.Pos < len(p.In) {
 			p.Control.Take(1)
 			ch, size, ok = p.In[p.Pos], 1, true
@@ -341,10 +346,12 @@ L6:
 			goto L16
 		}
 		p.Pos += size
+		p.LookEnd(true)
 		p.Silent--
 		p.Pos = x15
 		goto L17
 	L16:
+		p.LookEnd(false)
 		p.Silent--
 		p.Pos = x15
 		goto L14

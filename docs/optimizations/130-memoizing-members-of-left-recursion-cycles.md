@@ -17,64 +17,69 @@ and the input `(` n times, `n`, `)z` n times, each call of `C` at a position eva
 position through two alternatives, so the evaluations double with each level: 2^n on every backend. The same
 grammar with `A = "n"` is linear, because `C` is then memoized.
 
-A member of a cycle is now memoized like any other rule, with three rules that keep every reused result equal to
-the result of an evaluation:
+A member of a cycle is memoized like any other rule. While leaders of its cycle grow at its position, its result
+depends on the growths there, and the parser records what it depended on so that every reused result equals the
+result of an evaluation:
 
-- **A result that read a growing seed is not stored.** A growing leader holds a provisional result at its position,
-  and a call that reads it depends on the step of the growth that produced it. The parser counts the left recursions
-  that grow (the growth depth) and stamps each growing result with its depth. Each memoized call tracks the least
-  depth of the growing results that it, and the calls it made, read. A call that read the seed of a growth that was
-  already in progress when it started stores nothing, and the next step evaluates it again. Seeds of growths that
-  began and ended within the call are final, so reading them does not prevent storing.
-- **While a leader grows at a position, a member result there is evaluated again instead of reused.** A member
-  result stored before the growth started may have read an earlier result of the leader at that position. This
-  happens when the leader grew there inside a lookahead, and the call outside the lookahead does not reuse that
-  silent result and grows the leader again. Only calls at the position of a growth read its seed, and the starts of
-  the active growths do not decrease from the outermost to the innermost, so the parser checks the innermost growth
-  only.
-- **A result that read an unstable result is not stored.** A leader can grow again at its position in one parse
-  when its result is reused only in one kind of context: it was computed inside a lookahead, or it recovered
-  errors. If that growth read the seed of an enclosing growth, the new growth can read other results and have
-  another result. Such a leader result is marked unstable, and every call that reads it, at any position, counts as
-  having read a seed of depth 0, so no enclosing call stores its result. A call reads the result by a memo hit, or by
-  calling the leader and finishing its growth.
+- **The context of a call.** The context of a call of a rule of a cycle is the run of growths of that cycle at the
+  call's position: the leaders that grow there and the seeds they have reached. Growths of other cycles do not
+  matter, since the call reads none of their seeds, and neither do growths at other positions. A call of a leader
+  that grows at its position reads the seed. A leader that does not grow there grows from failure, with the seeds
+  of the context visible.
+- **What a result depends on.** A call records the seeds it read, each by its identity, a number that the growth
+  step that produced the seed gives it; for each lookahead whose evaluation read a seed, its outcome and examined
+  range, in place of those seeds; and the present set, the leaders that grew at the position, one bit each for the
+  first 32 leaders of a cycle.
+- **Where a result goes.** A result that read no seed and observed no lookahead goes to the memo with its present
+  set, and answers a call in any context whose leaders it includes. Any other result goes to the table of its
+  context, which lasts while the first growth of the context lasts, and answers a call in a context with the same
+  present set where the seeds it read have the same identities and the lookaheads it observed have the same
+  outcomes. A context whose leaders do not all have a bit cannot be told from others, and its results are
+  evaluated again.
+- **Growths in a context.** A growth in a context memoizes its steps in the table, with its own seed among the seeds
+  a step reads, and records runs of steps that read no seed but their own as jumps: from each seed of the run, the
+  seed at its end, with the observations, expectations and examined input of the steps. A later growth of the leader
+  in the same context takes a run at once. Equal step results of a leader at a position get the same identity, so a
+  result keyed by an earlier seed matches a later equal one.
 
-Every other result is a function of the rule, the position and the variables, and is stored. The leaders keep their
-own memoization. The engine, the generated Go runtime (untyped and typed) and the TypeScript runtime implement the
-same three rules. The compiled program marks the members (`Member` in the rule table, the `member` flag of
-disassembly and the `RuleMember` flag of generated Go), so the check of the second rule is one comparison.
-Documents add a rule across parses: a result that depends on the order in which its parse evaluated the calls is
-reused only by that parse (see Correctness and Tradeoffs).
+The leaders keep their own memoization. The engine, the generated Go runtime (untyped and typed, with and without
+the Exec IR compositions) and the TypeScript runtime implement the same rules. The compiled program numbers the
+cycles (`Cycle` in the rule table and the rule flags of generated code), so finding the context of a call is a scan
+of the growths at its position. Documents add a rule across parses: no result that read a seed reaches the memo of
+a later parse (see Correctness and Tradeoffs).
 
 In the example, `C` at the next position is reached from the growth of `A` at the earlier one, but outside the
-growth of `A` at the next position. It reads no seed, is stored by its first evaluation, and the second
-alternative reads it. Only the member calls at the position of a growth are evaluated again at each step. How many
-there are depends only on the grammar.
+growth of `A` at the next position. It reads no seed, is stored by its first evaluation with an empty present set,
+and the second alternative reuses it.
 
 ## Applicability
 
 | Execution profile | Applied / Partial / Not applied / Not applicable | Reason |
 |:--|:--|:--|
-| Closure, bytecode, iterative bytecode | Applied | One shared call-end rule in the engine |
-| Generated Go, ordinary and budget-controlled | Applied | `Call`, `callMemo` and `grow` of the runtime |
-| Generated typed Go | Applied | `TParser` call paths and `grow` |
-| Generated TypeScript | Applied | `callBody` and `grow` of the runtime |
-| Documents | Applied | Members are memoized under the same rules; a result that depends on the order of evaluation is reused only by the parse that stored it |
+| Closure, bytecode, iterative bytecode | Applied | One shared call-end rule and context tables in the engine |
+| Generated Go, ordinary and budget-controlled | Applied | The call paths, growths and context tables of the runtime, and the same steps in the Exec IR compositions |
+| Generated typed Go | Applied | The `TParser` call paths and growths share the context tables |
+| Generated TypeScript | Applied | `callBody`, `grow` and the context tables of the runtime |
+| Documents | Applied | Results in the memo are reused across parses; results in a context table are dropped with the table |
 
 A member that is called from one place is still transient, so a grammar like the left-recursive calculator
-(`add`, `mul`) keeps its call code; its generated parsers only carry the member flag of those rules.
+(`add`, `mul`) keeps its call code; its generated parsers only carry the cycle numbers of those rules.
 
 ## Reproduction
 
-Base `2d59b30d`, Go 1.27.1, Apple silicon, benchlock, started with a load below 8. Test binaries of the `bench`
-package, one per revision, ran interleaved for 10 rounds with `-benchtime=200ms -benchmem` over `Parse` and
-`Recognize` (left-recursive calculator, JSON, Minilang), `Incremental`, `IncrementalLong` and `Stream`; benchstat
-compared them. Tests: `TestLeftRecursionMemberMemoLinear`, `TestLeftRecursionMemberMemoMatchesNoMemo`,
-`TestLeftRecursionMemberMemoStale`, `TestLeftRecursionMemberMemoRandom`, `TestLeftRecursionMemberMemoRandomRecovering`,
+Base `a601cd9e`, Go 1.27.1, Apple silicon, benchlock. Test binaries of the `bench` package, one per revision, ran
+interleaved for 10 rounds with `-benchtime=200ms -benchmem` over the generated forms of `Parse` and `Recognize`
+(left-recursive calculator, JSON, Minilang), `Incremental`, `IncrementalLong` and `Stream`; benchstat compared them.
+Tests: `TestLeftRecursionDependencyMemoRandom`, `TestLeftRecursionDependencyMemoControls`,
+`TestLeftRecursionDependencyMemoLinear`, `TestNestedLeaderResultNotReused`, `TestLeftRecursionMemberMemoLinear`,
+`TestLeftRecursionMemberMemoMatchesNoMemo`, `TestLeftRecursionMemberMemoStale`, `TestLeftRecursionMemberMemoRandom`,
+`TestLeftRecursionMemberMemoRandomRecovering`, `TestGeneratedLeftRecursionDependencyMemo`,
+`TestGeneratedLeftRecursionDependencyMemoControls`, `TestGeneratedLeftRecursionDependencyMemoLinear`,
 `TestGeneratedLeftRecursionMemberMemoLinear`, `TestGeneratedLeftRecursionMemberMemoStale`,
-`TestGeneratedTSLeftRecursionMemberMemoLinear`, `TestGeneratedTSLeftRecursionMemberMemoStale`,
-`TestDocumentLeftRecursionMemberReparse`, `TestDocumentLeftRecursionMemberReparseRandom`,
-`TestGeneratedDocumentLeftRecursionMemberReparse` and their controls.
+`TestGeneratedTSLeftRecursionDependencyMemo`, `TestGeneratedTSLeftRecursionDependencyMemoControls`,
+`TestGeneratedTSLeftRecursionDependencyMemoLinear`, `TestGeneratedTSLeftRecursionMemberMemoLinear`,
+`TestGeneratedTSLeftRecursionMemberMemoStale`, `TestDocumentLeftRecursionMemberReparse`,
+`TestDocumentLeftRecursionMemberReparseRandom`, `TestGeneratedDocumentLeftRecursionMemberReparse` and their controls.
 
 ## Results
 
@@ -92,92 +97,90 @@ Speed (medians of 10 interleaved samples against the base; differences within no
 
 | Workload | Change |
 |:--|:--|
-| Parse, left-recursive calculator | +1.6% to +2.3% (p ≤ 0.043) on recursive and iterative bytecode in code points, iterative in bytes, generated Go in bytes and generated typed `ParseAST`; the other cells within noise |
-| Recognize, left-recursive calculator | +1.6% to +2.2% (p ≤ 0.035) on closure, iterative and generated Go; bytecode within noise |
-| Parse and Recognize JSON and Minilang | within noise, except iterative JSON parses 1.0% to 1.6% faster |
-| Incremental (Minilang), IncrementalLong (CSV), Stream (CSV) | within noise on every backend |
+| Parse, left-recursive calculator | +5.0% (p < 0.001) on generated typed `ParseAST`; generated Go in code points and bytes within noise |
+| Recognize, left-recursive calculator | +7.8% (p < 0.001) |
+| Parse and Recognize JSON and Minilang | +1.2% to +2.5% (p ≤ 0.019) on Minilang in code points, Minilang `ParseAST` and Recognize, and JSON Recognize; JSON in code points 1.2% faster; the other cells within noise |
+| Incremental (Minilang), IncrementalLong (CSV), Stream (CSV) | within noise, except a fresh generated Minilang parse +2.7% (p = 0.001), iterative +0.8% and closure IncrementalLong +0.5%, and generated IncrementalLong 1.4% faster |
 
-The cost on the calculator comes from the bookkeeping of every memoized call and growth: saving and merging the
-least depth read, and the member check on a hit. Allocations are unchanged except +0.3% (7 of 2,291) on one
-iterative cell. The bytes and allocations per operation of generated `Recognize` on the calculator depend on the
-iteration count: `-benchtime=200ms` runs it 21 to 25 times, so the setup of the run, the same on both revisions,
-divided by that count moves the figure between 820 and 976 KiB and between 21 and 24 allocations. At a fixed count
-(`-benchtime=300x`) both revisions allocate 68,466 bytes in 2 allocations per operation. The memo entry of the generated runtimes stays at 128 bytes, because one field holds both the depth
-of a growing result and the unstable mark of a final one. Generated Go for the calculator differs only in the
-member flags of `add` and `mul` in the rule tables: 24 to 58 bytes more per generated form.
+The cost on the calculator comes from the bookkeeping of each growth: a record of the growth in progress, the search
+of the context of every call of a rule of a cycle at the position of a growth, and the present set stored with each
+result. The calculator has no growth inside another at one position, so it records no dependency and keeps no
+context table. Bytes per operation fall on the calculator (−3.2% in code points, −5.0% for `ParseAST`, −13% for
+Recognize), since a growth step writes its result in place of allocating a memo entry. Allocations are unchanged
+except 3 more per `ParseAST` on the calculator (1%), and one more per operation for the closure Document of
+Incremental and for IncrementalLong on the engine backends; generated
+`Recognize` on the calculator allocates 21 to 23 times per operation depending on how many iterations
+`-benchtime=200ms` runs, as the setup of the run is divided by that count. The memo entry of the generated runtimes
+stays at 128 bytes: the present set takes the place of the depth and the unstable mark.
 
 ## Correctness and Tradeoffs
 
-A result that read a growing seed is never stored, which is stricter than invalidating it when the seed grows: it
-needs no per-growth state, and a stored result never depends on a seed that is still growing. The price is that a
-member call at the position of a growth is evaluated again at every step of the growth, a number of calls that
-depends only on the grammar.
-
-A call that finishes the growth of a leader reads its final result as one that reuses it does. In
+[Memoization](../../spec/proofs/memoization.md) proves that a reused result equals the result of an evaluation in
+the current context: a result in the memo read no seed and observed no lookahead that read one, so the growths that
+its present set includes do not change it; a result in a context table is reused only where every seed it read has
+the same identity and every lookahead it observed the same outcome and examined range, and the identities of equal
+step results are equal only when the results are. Two step results with the same end are not equal when they differ
+in the rule that produced a node. In
 
 ```
-main = r0 $$
-r0 = r0 r0 / r1 (r0 / "b" #recover(skip=[abc])) / "a"
-r1 = (("b" / level(r9, l2))* !r1 / level(r9, l2) level(r9, l2) r0) / !r0 "b" / r0 (r0 / "a") / "c"
-r9 = #operators {
-    operand r1
-    level l2 { postfix "c" }
-}
+main = A $$
+A = C / "a" / C / "b" C C
+B = B "b" / A "a" / C / "a" "a"
+C = B A / &A "a" "c"
 ```
 
-with the input `bcab`, the member `r9` at offset 2 calls the leader `r1` there, and the growth of `r1` calls `r0`
-there, whose growth reads the seed of `r1` and recovers an error: an unstable result. The growth of `r1` read it and
-recovers an error too, so its result is unstable, and `r9` reads it by finishing the call. Later, `r0` grows at 2
-inside a lookahead and then outside it, and `r1` grows again inside each growth, with a result that ends earlier.
-Had `r9` at 2 been stored, a later call would reuse the result built on the first result of `r1`, where evaluating
-`r9` again reads the last one: the parse would fail where the grammar compiled without a memo recovers.
+with the input `aaa`, `B` at 0 grows to `("a" "a")@B`, and inside the growth of `A` there, with the seed `"a"@A`,
+to `("a"@A "a")@B`, which ends at the same offset. Giving both the same identity reuses the first where the second
+belongs, and the tree loses the rule of its first leaf.
 
-The unstable rule is conservative: it also applies to a rule outside the cycle that reads an unstable result, and
-to every call that encloses the read. Such results need a leader that grows inside a lookahead, or recovers an
-error, at the position of another growth whose seed it reads; a grammar where this happens can lose memoization at
-the calls that enclose the read, which
-[Conditions for Linear Cost](../../spec/runtime/parsing.md#conditions-for-linear-cost) states as its own condition.
+The engine records the input that every evaluation examines, because its traces report it, so equal step results
+and equal lookahead outcomes also need equal examined ranges there. Generated Go records it only in Document parses
+and TypeScript never does; elsewhere they take a step or reuse an outcome that differs only in its examined range,
+which the engine evaluates again. The results are the same, but traces and evaluation counts can differ. The test that
+compares the traces of generated Go with the engine's runs the engine with a test option that leaves examined ranges
+out in the same way.
 
-A differential test compares every engine backend (with and without inserted tokens, and in recognition), generated
-Go (untyped and typed, ordinary and budget-controlled) and generated TypeScript with the same grammar compiled
-without a memo. Its inputs are the cases that a stored member result made stale, grammars found by a random search
-over small cycles with lookaheads, optional and repeated items, nested choices, cuts and recoveries, an Operators
-Rule leader read at two binding levels, and the grammar above. Removing any one of the three rules, or the read of
-a leader's result when its growth ends, makes the test fail on some backend. A random search over 3,000 grammars
-whose items recover errors and call an Operators Rule member compares every engine backend with the grammar
-compiled without a memo.
+A differential test compares every engine backend with the engine's reference that evaluates every call in a
+context again, on the random grammars of 800 seeds: for each seed, a grammar of cycles with several leaders and
+members, read inside and outside lookaheads, the same with cuts, and one whose items recover errors. Generated Go (untyped and typed, with and
+without the Exec IR compositions, ordinary and budget-controlled) and generated TypeScript are compared with the
+engine on the grammars of the first 60 seeds, and the grammars of the first 120 seeds detect, on every
+implementation, each check broken in turn: a reuse that ignores the identities of the seeds read, one that ignores
+the observations, a memo result reused whatever its present set, and equal step results given one identity without
+comparing them.
 
-A Document parse can reuse the results of the parses before it. A result that read the growing result of a growth
-that was in progress when its call started is not stored, but the result of a leader whose growth read such a seed
-is stored, because the leader's growth ended within the call; so are the results that read it. Such a result
-depends on the order in which the parse evaluated the calls: when the parse reached it, the enclosing growth was at
-a given step. A later parse of the same text evaluates the calls from the start, without that growth, and reusing
-the result can give another outcome. Before members were memoized, the start rule read such results too, but its
-own result was stored, and a later parse without an edit reused it whole, so the inner results were never reached.
-Now the start rule's result is not stored when it read an unstable result, and the later parse reached them: on the
-seed grammars 117 of `RandomCycleGrammar` and 5077 of `RandomRecoveringCycleGrammar`, the second parse of an
-unchanged Document gave other syntax errors and another tree than the first. A Document therefore removes, when a
-parse ends, the results that depend on the order of evaluation: in the engine, the provisional results (those that
-read a seed of another growth, or a provisional result); in the generated runtimes, the results of leaders whose
-growth read a seed of an enclosing growth or an unstable result, and the results that read them. A later parse
-evaluates them again. Results of leaders whose growth read only their own seed do not depend on the order, and later
-parses reuse them as before: a second parse of an unchanged Document on the left-recursive calculator or on
-the member example evaluates no rule body. On the two seed grammars, the second parse evaluates as many bodies as
-the first. Tests parse Documents of the member grammars, the seed grammars and random cycle grammars twice without
-an edit and after deleting and inserting again each character, on every engine backend and with generated Go
-(untyped and typed, ordinary and budget-controlled), and compare each outcome with a parse from scratch. Their
-controls keep the results across parses and detect the difference on both seed grammars.
+A result that read a seed is kept in the table of its context, never in the memo, and the table is dropped when the
+first growth of its context ends, so no such result reaches a later parse of a Document. A Document parse that
+reused one would depend on the order in which its parse evaluated the calls: on the seed grammars 117 of
+`RandomCycleGrammar` and 5077 of `RandomRecoveringCycleGrammar`, a runtime that also puts the results of the
+context tables in the memo gives another tree and other syntax errors on the second parse of an unchanged
+Document than on the first. Tests parse Documents of the member grammars, the seed grammars and random cycle
+grammars twice without an edit and after deleting and inserting again each character, on every engine backend and
+with generated Go (untyped and typed, ordinary and budget-controlled, with and without the compositions), and
+compare each outcome with a parse from scratch; their controls detect the difference on both seed grammars. A second
+parse of an unchanged Document on the left-recursive calculator or on the member example evaluates no rule body.
 
-Budget totals of the controlled form change only on the grammars of the corpus that have memoized members. The
-budget-controlled generated parser defers memoization to the second call of a rule at a position, and charges the
-bitmap of first calls when a parse first defers a call: 64 words, once per parse
-(`controlledFirstCallPrepare` in `runtime/budget.go`). A grammar whose only memoized rules are leaders never builds
-the bitmap. In the corpus grammars `unreachable LR tail` and `unreachable LR alias tail`, the cycle of `r1 = r2?`
-is led by `r1`, and its member `r2` is called from three places, so it is now memoized, and each parse pays the bitmap plus the steps of the memoized call
-path: 65 to 82 units more per input (for example 51 to 130 on the empty input). Grammars that already memoize a rule
-other than a leader pay the bitmap with or without this change. The results of every case are unchanged.
+The dependency bookkeeping charges the budget for each dependency recorded and each table lookup and store. On the
+random grammars, against the reference that evaluates every call in a context again (closure backend, inputs that
+neither stops at a limit):
+
+| Corpus | Budget units | Reference units | Difference | Evaluations | Reference evaluations |
+|:--|--:|--:|--:|--:|--:|
+| 400 random cycle grammars | 2,825,586 | 2,820,502 | +0.2% | 116,728 | 195,277 |
+| 800 recovering cycle grammars | 8,013,251 | 9,881,280 | −19% | 302,394 | 492,099 |
+
+A grammar without leaders that grow inside each other at one position records nothing: a call of a rule of a cycle
+where no growth of its cycle is in progress at its position stores its result in the memo with an empty present set.
 
 ## Decision and Limits
 
-Adopted on every backend. Not measured: grammars with many members called from several places, where
-memoization could cost more than it saves, as no example grammar of the repository has them.
+Adopted on every backend. A growth that begins from a result that includes the seed of another growth at its
+position is new in each step of that growth; when it covers the input that later steps cover, it covers it again in
+each step, which [Conditions for Linear Cost](../../spec/runtime/parsing.md#conditions-for-linear-cost) excludes as
+condition 5. A context with more than 32 leaders of one cycle, or a result with more than six seeds and observations,
+is not memoized, and its calls are evaluated again. The jumps from a seed are a list that a growth scans for one whose
+observations hold; in a shape where every step reads a successful lookahead over another leader
+(`S = &R S "q" / "y"`, `R = &S R "q" / "y"` on `y` and n `q`), the evaluations stay linear but the list grows with
+each step, so the scan is quadratic: generated Go parses n = 1,000, 2,000 and 4,000 in 34, 98 and 331 ms, and the
+engine runs out of the default budget from n = 1,000. Not measured: grammars with many members called from several
+places, where memoization could cost more than it saves, as no example grammar of the repository has them.

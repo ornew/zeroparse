@@ -108,6 +108,8 @@ type coreBuilder struct {
 	// streamTop holds the expressions of the rule being built where #stream makes a Stream: its
 	// body, the items of its body sequence and the operands of captures that are one of these.
 	streamTop map[grammar.Expr]bool
+	// looks is the number of lookaheads built (core.Look.Site).
+	looks int
 }
 
 // callLevel returns the minimum binding level of a call of the rule r (core.Call.Level).
@@ -468,13 +470,15 @@ func (b *coreBuilder) node(e grammar.Expr, s *coreScope, build bool) (core.Node,
 		if err != nil {
 			return nil, err
 		}
-		return b.set(&core.Look{Body: x}, e, false), nil
+		b.looks++
+		return b.set(&core.Look{Body: x, Site: b.looks}, e, false), nil
 	case *grammar.Not:
 		x, err := b.expr(e.Expr, s, false)
 		if err != nil {
 			return nil, err
 		}
-		return b.set(&core.Look{Body: x, Neg: true}, e, false), nil
+		b.looks++
+		return b.set(&core.Look{Body: x, Neg: true, Site: b.looks}, e, false), nil
 	case *grammar.Atomic:
 		x, err := b.expr(e.Expr, s, false)
 		if err != nil {

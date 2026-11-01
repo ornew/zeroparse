@@ -903,9 +903,12 @@ export interface Rule {
   leader: boolean;
   // rec means the rule is on a cycle of calls: its entries count against the nesting limit.
   rec: boolean;
-  // member is a rule of a left-recursive cycle other than its leader: while a leader grows at a
-  // position, its results there are evaluated again (see memberStale).
-  member: boolean;
+  // cycle numbers the left-recursion cycle of a leader or member from 1, or is 0 for a rule on no
+  // cycle. The results of the rules of a cycle depend on the growths of its leaders (CtxCall).
+  cycle: number;
+  // leaderBit is the bit of a leader in the present sets of the results of its cycle, or 0: the
+  // first 32 leaders of each cycle have one.
+  leaderBit: number;
   // seen is the rule's index among the memoized rules whose memoization is deferred to the second
   // call at a position (firstCall), or -1.
   seen: number;
@@ -975,7 +978,8 @@ export function mkRule(
     memo,
     leader,
     rec: false,
-    member: false,
+    cycle: 0,
+    leaderBit: 0,
     seen,
     operatorsRule: null,
     novalue,
@@ -1504,22 +1508,13 @@ export interface MemoEntry {
   // silent means the result was computed inside a lookahead without recording expectations;
   // outside lookaheads it is computed again.
   silent: boolean;
-  // growing marks a provisional result of a growing left-recursive call. memoGet matches it
-  // whatever the variable values of the call.
-  growing: boolean;
-  // unstable marks the result of a leader whose growth read the seed of another leader, or an
-  // unstable result, when the leader can grow again at its position in this parse: the result
-  // is reused only inside lookaheads (silent) or only in one kind of context (it has recovered
-  // errors). Growing again, the leader can read other results and have another one, so a result
-  // that reads it is not memoized (see readResult).
-  unstable: boolean;
-  // depth is, for a growing result, the number of left recursions that grow, its own included
-  // (Parser.growths).
-  depth: number;
+  // present is the set of leaders (Rule.leaderBit) that grew at the position when the result of a
+  // rule of a cycle was evaluated; it answers a call where no other leader grows (memoAllows).
+  present: number;
 }
 
-export function newEntry(node: R, ok: boolean, end: number, silent: boolean, growing: boolean, errs: SyntaxError[]): MemoEntry {
-  return { node, errs, expected: noExp, next: null, env: null, end, far: 0, rule: 0, min: 0, ok, silent, growing, unstable: false, depth: 0 };
+export function newEntry(node: R, ok: boolean, end: number, silent: boolean, errs: SyntaxError[]): MemoEntry {
+  return { node, errs, expected: noExp, next: null, env: null, end, far: 0, rule: 0, min: 0, ok, silent, present: 0 };
 }
 
 export const noExp: number[] = [];
@@ -1635,6 +1630,236 @@ function foldASCII(r: number): number {
   return r >= 65 && r <= 90 ? r + 32 : r;
 }
 
+// --- The dependency memo of left recursion ---
+//
+// The result of a call of a rule of a left-recursion cycle at a position is a function of the
+// growths of the cycle in progress there, its context. A result that read no seed and made no
+// observation goes to the memo with its present set; any other result goes to the table of its
+// context, keyed by the identities of the seeds it read and the outcomes of the lookaheads it
+// observed. See Parser.ctxEnter and the Go runtime's runtime/context_memo.go, which this mirrors.
+
+// failSeed is the identity of the failure that every growth starts from.
+const failSeed = 1;
+
+// maxCtxDeps is the most dependencies a result in a context table can have; a result with more is
+// evaluated again.
+const maxCtxDeps = 6;
+
+// The value of an observation for which no outcome is memoized. Outcomes are 0 and 1.
+const obsNone = -1;
+
+// The kinds of dependencies: a seed read (idx is its index in gamma, val its identity), the outcome
+// val of the lookahead site idx in the context of depth d, and a seed read by a lookahead that an
+// observation at depth d stands for.
+const depSeed = 0;
+const depObs = 1;
+const depShadow = 2;
+
+// The kinds of memoized evaluations in a context table.
+const ctxCallKind = 0;
+const ctxStepKind = 1;
+const ctxLookKind = 2;
+
+// The ways a memoized call stores its result (Parser.ctxPop): nowhere, as the call is in a context
+// that cannot be told from others; in the memo; in the table of the context.
+export const storeNone = 0;
+export const storeMemo = 1;
+export const storeCtx = 2;
+
+// CtxResult is a result that a context keeps: a seed, the result of a growth step, or the result of
+// a call that read a seed.
+export interface CtxResult {
+  node: R;
+  errs: SyntaxError[];
+  expected: number[];
+  end: number;
+  far: number;
+  ok: boolean;
+  silent: boolean;
+}
+
+export function newCtxResult(node: R, end: number, silent: boolean, errs: SyntaxError[], far: number, expected: number[]): CtxResult {
+  return { node, errs, expected, end, far, ok: node !== undefined, silent };
+}
+
+// CtxCall is the context of a memoized call of a rule of a cycle (Parser.ctxEnter): the index in
+// gamma of the first growth of the context, its present set, whether the call is in a context,
+// whether the present set tells the context from others, and whether the call records its
+// dependencies.
+export interface CtxCall {
+  gp: number;
+  present: number;
+  ctx: boolean;
+  known: boolean;
+  framed: boolean;
+}
+
+// noCtx is the context of a call where no growth is in progress, which nothing changes.
+export const noCtx: CtxCall = { gp: 0, present: 0, ctx: false, known: false, framed: false };
+
+export function newCtxCall(): CtxCall {
+  return { gp: 0, present: 0, ctx: false, known: false, framed: false };
+}
+
+// memoAllows reports whether a result in the memo with the present set present answers a call in
+// the context c: every leader that grows there grew when it was evaluated, and did not matter to it.
+export function memoAllows(c: CtxCall, present: number): boolean {
+  return !c.ctx || c.known && (c.present & ~present) === 0;
+}
+
+// GrowRec is a growth in progress: the leader's key, its position, cycle and bit, its current seed
+// and the seed's identity.
+interface GrowRec {
+  rule: number;
+  min: number;
+  pos: number;
+  cycle: number;
+  bit: number;
+  seed: CtxResult;
+  id: number;
+}
+
+interface Dep {
+  kind: number;
+  idx: number;
+  d: number;
+  val: number;
+}
+
+const noDeps: Dep[] = [];
+
+// DepFrame records the dependencies of an evaluation at pos in the context gamma[:depth], whose
+// growths at pos are gamma[gp:depth]. Its dependencies are deps[base:] while it is the innermost
+// frame.
+interface DepFrame {
+  pos: number;
+  gp: number;
+  depth: number;
+  base: number;
+}
+
+// Sdep is a stored dependency: a seed (or shadow) by the leader's key, or an observation by site.
+interface Sdep {
+  kind: number;
+  rule: number;
+  min: number;
+  site: number;
+  val: number;
+}
+
+const noSdeps: Sdep[] = [];
+
+// headKey is the key of the results of a call, a growth step or a lookahead in a context table.
+function headKey(kind: number, id: number, min: number, present: number): string {
+  return kind + "," + id + "," + min + "," + present;
+}
+
+// CtxSet is the dependencies of one shape that results of a head have: the keys of the leaders whose
+// seeds they read (rule and level pairs) and the sites they observed, and the results by the values
+// of those.
+interface CtxSet {
+  seeds: number[];
+  obs: number[];
+  vals: Map<string, CtxSlot>;
+}
+
+// CtxSlot is a result in a context table: the result, and for a growth step the identity of its
+// result and what the step itself recorded. For a lookahead, id is its outcome.
+interface CtxSlot {
+  e: CtxResult | null;
+  id: number;
+  far: number;
+  exp: number[];
+  silent: boolean;
+  env: Value[] | null;
+  deps: Sdep[];
+  next: CtxSlot | null;
+}
+
+function newSlot(e: CtxResult | null, id: number, env: Value[] | null): CtxSlot {
+  return { e, id, far: 0, exp: noExp, silent: false, env, deps: noSdeps, next: null };
+}
+
+// JumpRec takes a growth from a seed to the seed at the end of a run of steps that read no other
+// seed, with what those steps recorded.
+interface JumpRec {
+  end: CtxResult;
+  id: number;
+  far: number;
+  exp: number[];
+  silent: boolean;
+  deps: Sdep[];
+}
+
+function jumpKey(g: GrowState, seed: number): string {
+  return g.rule + "," + g.min + "," + g.present + "," + seed;
+}
+
+// CtxTable is the table of the growths of one cycle at a position: what the calls and growth steps
+// there memoized while such a growth is in progress. It is dropped when the first of those growths
+// ends.
+interface CtxTable {
+  pos: number;
+  depth: number; // the index in gamma of the first of the growths
+  heads: Map<string, CtxSet[]>;
+  jumps: Map<string, JumpRec[]> | null;
+  canon: Map<string, { e: CtxResult; id: number }> | null;
+}
+
+// GrowState is the state of the growth of a leader: its key, start and recovered errors, its index
+// in gamma and that of the first growth of its cycle at the position, whether it grows in a context
+// (whose steps are memoized with the present set present), whether it is done, the expectation mark
+// of the step being evaluated in a context, and the steps since the last step that read a seed other
+// than the leader's own.
+export interface GrowState {
+  rule: number;
+  min: number;
+  start: number;
+  rec: number;
+  gi: number;
+  gp: number;
+  ctx: boolean;
+  present: number;
+  done: boolean;
+  exp: number;
+  run: RunStep[];
+}
+
+// RunStep is a step of a run of a growth: the seed it started from and what it recorded.
+interface RunStep {
+  seed: number;
+  far: number;
+  exp: number[];
+  silent: boolean;
+  deps: Sdep[];
+}
+
+function sameNumbers(a: number[], b: number[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// mergeSdeps returns the union of two lists of stored dependencies.
+function mergeSdeps(a: Sdep[], b: Sdep[]): Sdep[] {
+  if (b.length === 0) {
+    return a;
+  }
+  const out = a.slice();
+  for (const d of b) {
+    if (!out.some((x) => x.kind === d.kind && x.rule === d.rule && x.min === d.min && x.site === d.site && x.val === d.val)) {
+      out.push(d);
+    }
+  }
+  return out;
+}
+
 export class Parser {
   observation: Observation | null = null; // set for the duration of an observed parse
   readonly g: Grammar;
@@ -1677,13 +1902,18 @@ export class Parser {
 
   // silent is positive inside lookaheads, where expectations are not recorded.
   silent = 0;
-  // growths is the number of left recursions that grow, and seedPos the position of the
-  // innermost one. readDepth is the least depth (MemoEntry.depth) of the growing results that the
-  // current call has read, 0 if it read an unstable result, or Infinity if neither (see
-  // readResult).
-  growths = 0;
-  seedPos = 0;
-  readDepth = Infinity;
+  // The dependency memo of left recursion (see CtxCall): the growths in progress, the frames that
+  // record dependencies and their dependencies, the dependencies a call ended (ctxPop), the tables
+  // of the contexts, the lookaheads in progress (their sites, -1 for one that records nothing), the
+  // lookahead sites whose outcomes are being looked up (obsValue), and the last seed identity.
+  gamma: GrowRec[] = [];
+  depFrames: DepFrame[] = [];
+  deps: Dep[] = [];
+  popped: Dep[] = [];
+  ctxs: CtxTable[] = [];
+  looks: number[] = [];
+  obsGuard: number[] = [];
+  seedSeq = 0;
   farthest = 0;
   // expectations makes expect record expectations (ParseOptions.expectations). Without it a record
   // holds at most expFar.
@@ -2014,12 +2244,11 @@ export class Parser {
     return false;
   }
 
-  // memoGet returns the entry for the rule, position, level and variable values, or the growing
-  // entry of the rule at the position and level whatever its variable values.
+  // memoGet returns the entry for the rule, position, level and variable values.
   memoGet(rule: number, pos: number, min: number, env: Value[] | null): MemoEntry | null {
     for (let e = this.slots[pos]; e; e = e.next) {
       this.spend();
-      if (e.rule === rule && e.min === min && (e.growing || sameValues(e.env, env, this.control))) {
+      if (e.rule === rule && e.min === min && sameValues(e.env, env, this.control)) {
         return e;
       }
     }
@@ -2562,16 +2791,21 @@ export class Parser {
     return v;
   }
 
+  // callBody calls rule r at binding level min: unmemoized while its memoization is deferred, and
+  // otherwise through the memo and the dependency memo of left-recursion contexts, growing the seed of
+  // a left-recursion leader.
   callBody(r: Rule, min: number): R {
+    let v: R = null;
     this.spend();
     const start = this.pos;
-    if ((!r.memo && !r.leader) || this.firstCall(r)) {
+    if (!r.memo && !r.leader || this.firstCall(r)) {
       // Unmemoized call: no memo bookkeeping, and expectations need no isolation.
       if (r.scope.length === 0) {
-        return this.invokePlainBody(r, min);
+        v = this.invokePlainBody(r, min);
+        return v;
       }
       const rec = this.recovered.length;
-      const v = this.invoke(r, min);
+      v = this.invoke(r, min);
       if (v === undefined) {
         this.pos = start;
         this.recovered.length = rec;
@@ -2579,19 +2813,28 @@ export class Parser {
       return v;
     }
     const env = this.envValues(r.vars);
+    // The context of the call: the growths of the rule's cycle at the position, and the seed of the
+    // rule's own growth there, which the call reads.
+    let c = noCtx;
+    let seed: CtxResult | null = null;
+    if (r.cycle !== 0 && this.gamma.length !== 0) {
+      c = newCtxCall();
+      seed = this.ctxEnter(c, r, min);
+    }
+    if (seed !== null) {
+      this.replayCtx(seed!, true);
+      if (!seed!.ok) {
+        return undefined;
+      }
+      return seed!.node;
+    }
     // See the engine's callBegin: entries with recovered errors are reused only in the same kind of
     // context (inside or outside a lookahead) they were computed in.
     const e = this.memoGet(r.id, start, min, env);
-    if (
-      e !== null &&
-      !this.memberStale(r.member, start) &&
-      (e.growing || ((!e.silent || this.silent > 0) && (e.errs.length === 0 || e.silent === this.silent > 0)))
-    ) {
+    const found = e !== null;
+    if (found && memoAllows(c, e.present) && ((!e.silent || this.silent > 0) && ((e.errs.length === 0) || e.silent === this.silent > 0))) {
       this.observation?.memoHit();
-      this.readResult(e);
-      if (!e.growing) {
-        this.mergeKept(e.far, e.expected);
-      }
+      this.mergeKept(e.far, e.expected);
       if (!e.ok) {
         return undefined;
       }
@@ -2602,132 +2845,808 @@ export class Parser {
       }
       return e.node;
     }
+    if (c.ctx) {
+      const held = this.ctxLookup(c, r.id, min, env);
+      if (held !== null) {
+        this.replayCtx(held!, false);
+        if (!held!.ok) {
+          return undefined;
+        }
+        return held!.node;
+      }
+    }
     const rec = this.recovered.length;
-    const depth = this.growths;
-    const read = this.enterCall();
+    this.ctxPush(c);
     // The memoized result includes the expectations recorded in this call.
     const mFar = this.farthest;
     const mBase = this.expBase;
     this.expBase = this.expTop;
     this.farthest = start;
-    let v: R;
-    let entry: MemoEntry;
     if (r.leader) {
-      v = this.grow(r, min, env);
-      entry = this.memoGet(r.id, start, min, env) as MemoEntry;
+      v = this.grow(r, min);
     } else {
       v = this.invoke(r, min);
       if (v === undefined) {
         this.recovered.length = rec;
       }
-      if (this.readDepth <= depth) {
-        // A result that read the seed of a growth that began before the call, or an unstable
-        // result, can change and is not memoized (see readResult).
-        entry = newEntry(undefined, false, 0, false, false, noErrs);
-      } else {
-        entry = newEntry(
-          v,
-          v !== undefined,
-          this.pos,
-          this.silent > 0,
-          false,
-          this.recovered.length > rec ? (this.control === null ? this.recovered.slice(rec) : copyErrorsSpend(this.recovered, rec, this.recovered.length, this.control)) : noErrs,
-        );
-        this.memoPut(r.id, start, min, env, entry);
-      }
     }
-    this.leaveCall(read);
-    // Unisolate: the inner record is exp[from:to].
     const far = this.farthest;
-    const from = this.expBase;
-    const to = this.expTop;
+    const innerFrom = this.expBase;
+    const innerTo = this.expTop;
     this.expTop = this.expBase;
     this.expBase = mBase;
     this.farthest = mFar;
-    entry.far = far;
-    entry.expected = this.keep(from, to);
-    this.mergeExpected(far, from, to);
+    const kept = this.keep(innerFrom, innerTo);
+    // The result goes to the memo, or to the table of its context if it read a seed or observed a
+    // lookahead that did.
+    const store = this.ctxPop(c);
+    if (store === storeMemo) {
+      const entry = newEntry(v, v !== undefined, this.pos, this.silent > 0, this.recovered.length > rec ? (this.control === null ? this.recovered.slice(rec) : copyErrorsSpend(this.recovered, rec, this.recovered.length, this.control)) : noErrs);
+      this.memoPut(r.id, start, min, env, entry);
+      entry.present = c.present;
+      entry.far = far;
+      entry.expected = kept;
+    } else if (store === storeCtx) {
+      this.ctxKeep(c, r.id, start, min, env, newCtxResult(v, this.pos, this.silent > 0, this.recovered.length > rec ? (this.control === null ? this.recovered.slice(rec) : copyErrorsSpend(this.recovered, rec, this.recovered.length, this.control)) : noErrs, far, kept));
+    }
+    this.ctxDone(c);
+    this.mergeExpected(far, innerFrom, innerTo);
     if (v === undefined) {
       this.pos = start;
     }
     return v;
   }
 
-  // readResult records that the current call read the memoized result e: a growing one, or an
-  // unstable one, which a call reads by reusing it or by finishing the growth that produced it. A
-  // call that read the seed of a growth that began before it, or an unstable result, is not
-  // memoized: its result can change. The seeds of growths that began and ended within the call
-  // have their final values.
-  readResult(e: MemoEntry): void {
-    if (e.growing) {
-      this.readDepth = Math.min(this.readDepth, e.depth);
-    } else if (e.unstable) {
-      this.readDepth = 0;
-    }
-  }
-
-  // enterCall starts tracking the reads of a memoized call (readResult) and returns the state to
-  // restore with leaveCall.
-  enterCall(): number {
-    const read = this.readDepth;
-    this.readDepth = Infinity;
-    return read;
-  }
-
-  // leaveCall ends tracking the reads of a call, which also count as reads of the call that made it.
-  leaveCall(read: number): void {
-    this.readDepth = Math.min(read, this.readDepth);
-  }
-
-  // memberStale reports whether a memoized result at pos of a rule that is a member of a cycle
-  // (member) must be evaluated again instead of reused: while a leader grows at pos, the result may
-  // have read an earlier result of the leader there, which the growth is replacing step by step.
-  // Only calls at pos read the seed of a growth at pos, and a growth that is not the innermost one
-  // started at a position no later than the innermost one, so the innermost growth tells.
-  memberStale(member: boolean, pos: number): boolean {
-    return member && this.growths !== 0 && this.seedPos === pos;
-  }
-
-  // grow grows the seed of a left-recursive leader: it memoizes a failure, then evaluates the
-  // body again while the match gets longer, and keeps the last longer result.
-  grow(r: Rule, min: number, env: Value[] | null): R {
-    const start = this.pos;
-    const rec = this.recovered.length;
-    let best = newEntry(undefined, false, start, false, true, noErrs);
-    this.memoPut(r.id, start, min, env, best);
-    const read = this.enterCall();
-    const prevPos = this.seedPos;
-    this.growths++;
-    this.seedPos = start;
-    best.depth = this.growths;
+  // grow grows the seed of a left-recursive leader from a failure: it evaluates the body again while
+  // the match gets longer, and returns the last longer result.
+  grow(r: Rule, min: number): R {
+    const g = this.growBegin(r, min);
     for (;;) {
-      this.spend();
-      const v = this.invoke(r, min);
-      if (v === undefined || (best.ok && this.pos <= best.end)) {
+      if (!this.growNext(g)) {
         break;
       }
-      best = newEntry(v, true, this.pos, false, true, this.recovered.length > rec ? (this.control === null ? this.recovered.slice(rec) : copyErrorsSpend(this.recovered, rec, this.recovered.length, this.control)) : noErrs);
-      best.depth = this.growths;
-      this.memoPut(r.id, start, min, env, best);
-      this.pos = start;
-      this.recovered.length = rec;
+      const v = this.invoke(r, min);
+      this.growStep(g, v);
     }
-    best.growing = false;
-    best.silent = this.silent > 0;
-    // The growth has read its seed for the last time: those reads are resolved.
-    this.growths--;
-    this.seedPos = prevPos;
-    best.unstable = this.readDepth <= this.growths && (best.silent || best.errs.length > 0);
-    this.leaveCall(read);
-    // The call that made the growth reads its final result as on a memo hit.
-    this.readResult(best);
+    const best = this.growEnd(g);
+    return best!.ok ? best!.node : undefined;
+  }
+
+  // --- The dependency memo of left recursion ---
+  //
+  // A mirror of the Go runtime's (runtime/context_memo.go; see "Evaluations of Rules" in
+  // spec/runtime/parsing.md and spec/proofs/memoization.md), without Documents: the examined input
+  // of results is not tracked.
+
+  // recSince returns a copy of the errors recovered since rec.
+  recSince(rec: number): SyntaxError[] {
+    return this.recovered.length > rec ? (this.control === null ? this.recovered.slice(rec) : copyErrorsSpend(this.recovered, rec, this.recovered.length, this.control)) : noErrs;
+  }
+
+  // gammaAt returns the index of the first growth of the cycle at pos that the innermost growths
+  // there are (gamma.length if the innermost growth is not one).
+  gammaAt(pos: number, cycle: number): number {
+    let i = this.gamma.length;
+    while (i > 0 && this.gamma[i - 1]!.pos === pos && this.gamma[i - 1]!.cycle === cycle) {
+      i--;
+    }
+    return i;
+  }
+
+  // gammaFind returns the index of the growth of the leader rule at level min from gp on, or -1.
+  gammaFind(gp: number, rule: number, min: number): number {
+    for (let i = this.gamma.length - 1; i >= gp; i--) {
+      const g = this.gamma[i]!;
+      if (g.rule === rule && g.min === min) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  // presentOf returns the present set of the context gamma[gp:], or null if a leader in it has no
+  // bit.
+  presentOf(gp: number): number | null {
+    let m = 0;
+    for (let i = gp; i < this.gamma.length; i++) {
+      const b = this.gamma[i]!.bit;
+      if (b === 0) {
+        return null;
+      }
+      m |= b;
+    }
+    return m;
+  }
+
+  // ctxEnter computes the context c of a memoized call of r, a rule of a cycle, at the current
+  // position and level min. When r is a leader that grows there, it returns the seed, which the call
+  // reads whatever its variable values.
+  ctxEnter(c: CtxCall, r: Rule, min: number): CtxResult | null {
+    const gp = this.gammaAt(this.pos, r.cycle);
+    c.gp = gp;
+    if (gp === this.gamma.length) {
+      return null;
+    }
+    if (r.leader) {
+      const i = this.gammaFind(gp, r.id, min);
+      if (i >= 0) {
+        this.noteSeedRead(i);
+        return this.gamma[i]!.seed;
+      }
+    }
+    c.ctx = true;
+    const present = this.presentOf(gp);
+    if (present !== null) {
+      c.present = present;
+      c.known = true;
+    }
+    return null;
+  }
+
+  // ctxLookup returns the result kept in the context c for a call of rule at level min with the
+  // variable values env, or null.
+  ctxLookup(c: CtxCall, rule: number, min: number, env: Value[] | null): CtxResult | null {
+    if (!c.known) {
+      return null;
+    }
+    const s = this.ctxFind(this.pos, c.gp, headKey(ctxCallKind, rule, min, c.present), c.present, env);
+    if (s === null || !this.reusable(s.e!.silent, s.e!.errs.length)) {
+      return null;
+    }
+    this.replayDeps(c.gp, s.deps);
+    return s.e;
+  }
+
+  // ctxPush starts recording the dependencies of a call in the context c.
+  ctxPush(c: CtxCall): void {
+    if (c.known) {
+      this.pushFrame(this.pos, c.gp);
+      c.framed = true;
+    }
+  }
+
+  // ctxPop ends the dependencies of a call in the context c and returns how the call stores its
+  // result: in the table of the context if it read a seed or made an observation, and otherwise in
+  // the memo. The dependencies stay readable for ctxKeep until ctxDone.
+  ctxPop(c: CtxCall): number {
+    if (c.framed) {
+      this.popped = this.popFrame().deps;
+      for (const d of this.popped) {
+        if (d.kind !== depShadow) {
+          return storeCtx;
+        }
+      }
+      return storeMemo;
+    }
+    if (c.ctx) {
+      return storeNone;
+    }
+    return storeMemo;
+  }
+
+  // ctxKeep keeps the result res of a call of rule at start and level min with the variable values
+  // env in the table of the context c, with the dependencies that ctxPop ended.
+  ctxKeep(c: CtxCall, rule: number, start: number, min: number, env: Value[] | null, res: CtxResult): void {
+    const sd = this.stored(this.popped);
+    this.ctxStore(start, c.gp, headKey(ctxCallKind, rule, min, c.present), sd, newSlot(res, 0, env));
+  }
+
+  // ctxDone passes the dependencies that ctxPop ended to the enclosing frame.
+  ctxDone(c: CtxCall): void {
+    if (c.framed) {
+      this.mergeDeps(this.popped);
+      this.popped = noDeps;
+    }
+  }
+
+  // pushFrame starts recording the dependencies of an evaluation at pos, in the context of the
+  // growths gamma[gp:] there.
+  pushFrame(pos: number, gp: number): void {
+    this.depFrames.push({ pos, gp, depth: this.gamma.length, base: this.deps.length });
+  }
+
+  // popFrame ends the innermost frame and returns it with its dependencies.
+  popFrame(): { f: DepFrame; deps: Dep[] } {
+    const f = this.depFrames.pop()!;
+    return { f, deps: this.deps.length > f.base ? this.deps.splice(f.base) : noDeps };
+  }
+
+  // addDep adds d to the innermost frame unless it holds it already.
+  addDep(d: Dep): void {
+    const f = this.depFrames[this.depFrames.length - 1]!;
+    for (let i = f.base; i < this.deps.length; i++) {
+      const x = this.deps[i]!;
+      if (x.kind === d.kind && x.idx === d.idx && (d.kind !== depObs || x.d === d.d)) {
+        return;
+      }
+    }
+    this.spend();
+    this.deps.push(d);
+  }
+
+  // mergeDeps passes the dependencies of a finished evaluation to the innermost frame: the seeds of
+  // its context, and the observations made in the same context. A shadow becomes a seed read when
+  // the frame cannot check the observation it belongs to.
+  mergeDeps(ds: Dep[]): void {
+    if (this.depFrames.length === 0) {
+      return;
+    }
+    const depth = this.depFrames[this.depFrames.length - 1]!.depth;
+    for (const d of ds) {
+      switch (d.kind) {
+        case depSeed:
+          if (d.idx < depth) this.addDep(d);
+          break;
+        case depObs:
+          if (d.d === depth) this.addDep(d);
+          break;
+        case depShadow:
+          if (d.d === depth) {
+            this.addDep(d);
+          } else if (d.idx < depth) {
+            this.addDep({ kind: depSeed, idx: d.idx, d: 0, val: d.val });
+          }
+          break;
+      }
+    }
+  }
+
+  // noteSeedRead records that the evaluation read the seed of gamma[i].
+  noteSeedRead(i: number): void {
+    const n = this.depFrames.length;
+    if (n === 0 || i >= this.depFrames[n - 1]!.depth) {
+      return;
+    }
+    this.addDep({ kind: depSeed, idx: i, d: 0, val: this.gamma[i]!.id });
+  }
+
+  // stored converts frame dependencies to stored ones.
+  stored(ds: Dep[]): Sdep[] {
+    if (ds.length === 0) {
+      return noSdeps;
+    }
+    const out: Sdep[] = [];
+    for (const d of ds) {
+      this.spend();
+      if (d.kind === depObs) {
+        out.push({ kind: depObs, rule: 0, min: 0, site: d.idx, val: d.val });
+      } else {
+        const g = this.gamma[d.idx]!;
+        out.push({ kind: d.kind, rule: g.rule, min: g.min, site: 0, val: d.val });
+      }
+    }
+    return out;
+  }
+
+  // replayDeps passes the stored dependencies of a reused result to the innermost frame, as if the
+  // evaluation that produced them had run in the current context gamma[gp:].
+  replayDeps(gp: number, ds: Sdep[]): void {
+    if (this.depFrames.length === 0 || ds.length === 0) {
+      return;
+    }
+    const depth = this.gamma.length;
+    const buf: Dep[] = [];
+    for (const d of ds) {
+      if (d.kind === depObs) {
+        buf.push({ kind: depObs, idx: d.site, d: depth, val: d.val });
+      } else {
+        const i = this.gammaFind(gp, d.rule, d.min);
+        if (i < 0) {
+          continue;
+        }
+        buf.push({ kind: d.kind, idx: i, d: depth, val: d.val });
+      }
+    }
+    this.mergeDeps(buf);
+  }
+
+  // table returns the table of the growths gamma[gp:] at pos, creating it if create is set, or null.
+  table(pos: number, gp: number, create: boolean): CtxTable | null {
+    const n = this.ctxs.length;
+    if (n > 0 && this.ctxs[n - 1]!.pos === pos && this.ctxs[n - 1]!.depth === gp) {
+      return this.ctxs[n - 1]!;
+    }
+    if (!create) {
+      return null;
+    }
+    const t: CtxTable = { pos, depth: gp, heads: new Map(), jumps: null, canon: null };
+    this.ctxs.push(t);
+    return t;
+  }
+
+  // dropTable drops the table of the growth at gamma[i] if that growth is the first of its context.
+  dropTable(i: number): void {
+    const n = this.ctxs.length;
+    if (n > 0 && this.ctxs[n - 1]!.pos === this.gamma[i]!.pos && this.ctxs[n - 1]!.depth === i) {
+      this.ctxs.pop();
+    }
+  }
+
+  // obsValue returns the outcome memoized for the lookahead site at pos in the current context, or
+  // obsNone.
+  obsValue(pos: number, gp: number, present: number, site: number): number {
+    for (const s of this.obsGuard) {
+      if (s === site) {
+        return obsNone;
+      }
+    }
+    this.obsGuard.push(site);
+    try {
+      const s = this.ctxFind(pos, gp, headKey(ctxLookKind, site, 0, present), present, null);
+      return s === null ? obsNone : s.id;
+    } finally {
+      this.obsGuard.pop();
+    }
+  }
+
+  // ctxFind looks up a result of head h, whose present set is present, in the table of the growths
+  // gamma[gp:] at pos for the current context.
+  ctxFind(pos: number, gp: number, h: string, present: number, env: Value[] | null): CtxSlot | null {
+    const t = this.table(pos, gp, false);
+    if (t === null) {
+      return null;
+    }
+    this.spend();
+    const sets = t.heads.get(h);
+    if (sets === undefined) {
+      return null;
+    }
+    next: for (const s of sets) {
+      this.spend();
+      let k = "";
+      for (let j = 0; j < s.seeds.length; j += 2) {
+        const i = this.gammaFind(gp, s.seeds[j]!, s.seeds[j + 1]!);
+        if (i < 0) {
+          continue next;
+        }
+        k += this.gamma[i]!.id + ",";
+      }
+      for (const o of s.obs) {
+        const v = this.obsValue(pos, gp, present, o);
+        if (v === obsNone) {
+          continue next;
+        }
+        k += v + ",";
+      }
+      for (let x: CtxSlot | null = s.vals.get(k) ?? null; x !== null; x = x.next) {
+        this.spend();
+        if (env === null && x.env === null || sameValues(x.env, env, this.control)) {
+          return x;
+        }
+      }
+    }
+    return null;
+  }
+
+  // ctxStore stores slot as the result of head h in the table of the growths gamma[gp:] at pos, with
+  // the stored dependencies ds.
+  ctxStore(pos: number, gp: number, h: string, ds: Sdep[], slot: CtxSlot): void {
+    const seeds: number[] = [];
+    const obs: number[] = [];
+    for (const d of ds) {
+      if (d.kind === depShadow) {
+        continue;
+      }
+      if (seeds.length / 2 + obs.length === maxCtxDeps) {
+        return; // too many dependencies to index: the result is evaluated again
+      }
+      if (d.kind === depSeed) {
+        seeds.push(d.rule, d.min);
+      } else {
+        obs.push(d.site);
+      }
+    }
+    // The values follow the order of the set: seeds first, then observations.
+    let k = "";
+    for (const d of ds) {
+      if (d.kind === depSeed) k += d.val + ",";
+    }
+    for (const d of ds) {
+      if (d.kind === depObs) k += d.val + ",";
+    }
+    const t = this.table(pos, gp, true)!;
+    this.spend();
+    let sets = t.heads.get(h);
+    if (sets === undefined) {
+      sets = [];
+      t.heads.set(h, sets);
+    }
+    let set: CtxSet | null = null;
+    for (const s of sets) {
+      this.spend();
+      if (sameNumbers(s.seeds, seeds) && sameNumbers(s.obs, obs)) {
+        set = s;
+        break;
+      }
+    }
+    if (set === null) {
+      set = { seeds, obs, vals: new Map() };
+      sets.push(set);
+    }
+    slot.deps = ds;
+    const link = set.vals.get(k) ?? null;
+    for (let x = link; x !== null; x = x.next) {
+      this.spend();
+      if (x.env === null && slot.env === null || sameValues(x.env, slot.env, this.control)) {
+        // Replace the result in place: the other kind of context (inside or outside a lookahead)
+        // evaluated it again.
+        const nx = x.next;
+        Object.assign(x, slot);
+        x.next = nx;
+        return;
+      }
+    }
+    slot.next = link;
+    set.vals.set(k, slot);
+  }
+
+  // reusable reports whether a memoized result evaluated inside a lookahead (silent) or with
+  // recovered errors can be used by a call in the current kind of context, as for memo entries.
+  reusable(silent: boolean, errs: number): boolean {
+    return (!silent || this.silent > 0) && (errs === 0 || silent === this.silent > 0);
+  }
+
+  // replayCtx applies a result that a context kept, or a seed (seed), as the call that it records
+  // would have.
+  replayCtx(e: CtxResult, seed: boolean): void {
+    this.observation?.memoHit();
+    if (!seed) {
+      this.mergeKept(e.far, e.expected);
+    }
+    if (e.ok) {
+      this.pos = e.end;
+      for (const x of e.errs) {
+        this.spend();
+        this.recovered.push(x);
+      }
+    }
+  }
+
+  // lookBegin starts a lookahead of the given site. In a context at the current position, the
+  // lookahead records what it reads, so that a result that depends on it records its outcome
+  // instead of the seeds it read (lookEnd). Where no frame records dependencies, a lookahead records
+  // nothing, and the frames are the same at its end.
+  lookBegin(site: number): void {
+    const n = this.depFrames.length;
+    if (n === 0) {
+      return;
+    }
+    const f = this.depFrames[n - 1]!;
+    const g = this.gamma.length;
+    if (f.pos === this.pos && f.gp < g && this.gamma[g - 1]!.pos === this.pos && this.gamma[g - 1]!.cycle === this.gamma[f.gp]!.cycle) {
+      this.looks.push(site);
+      this.pushFrame(this.pos, f.gp);
+      return;
+    }
+    this.looks.push(-1);
+  }
+
+  // lookEnd ends the innermost lookahead, whose expression matched if ok.
+  lookEnd(ok: boolean): void {
+    if (this.depFrames.length === 0) {
+      return;
+    }
+    const site = this.looks.pop()!;
+    if (site < 0) {
+      return;
+    }
+    const { f, deps: ds } = this.popFrame();
+    let read = false;
+    for (const d of ds) {
+      if (d.kind === depSeed) {
+        read = true;
+        break;
+      }
+    }
+    if (!read) {
+      this.mergeDeps(ds);
+      return;
+    }
+    // Without Documents, the outcome is whether the expression matched.
+    const val = ok ? 1 : 0;
+    const present = this.presentOf(f.gp);
+    const sd = this.stored(ds);
+    if (present !== null) {
+      this.ctxStore(f.pos, f.gp, headKey(ctxLookKind, site, 0, present), sd, newSlot(null, val, null));
+    }
+    const out: Dep[] = [{ kind: depObs, idx: site, d: f.depth, val }];
+    for (const d of ds) {
+      out.push(d.kind === depSeed ? { kind: depShadow, idx: d.idx, d: f.depth, val: d.val } : d);
+    }
+    this.mergeDeps(out);
+  }
+
+  // growBegin starts the growth of the leader r at level min at the current position from a failure.
+  // A growth in a context, where another leader of its cycle grows, memoizes its steps (growNext).
+  growBegin(r: Rule, min: number): GrowState {
+    // One budget unit before each evaluation of the body, the seed's included.
+    this.spend();
+    const start = this.pos;
+    const gi = this.gamma.length;
+    const gp = this.gammaAt(start, r.cycle);
+    const g: GrowState = { rule: r.id, min, start, rec: this.recovered.length, gi, gp, ctx: false, present: 0, done: false, exp: 0, run: [] };
+    this.gamma.push({ rule: r.id, min, pos: start, cycle: r.cycle, bit: r.leaderBit, seed: newCtxResult(undefined, start, false, noErrs, 0, noExp), id: failSeed });
+    if (gp < gi) {
+      // The present set of the steps includes the leader's own growth.
+      const present = this.presentOf(gp);
+      if (present !== null) {
+        g.present = present;
+        g.ctx = true;
+      }
+    }
+    return g;
+  }
+
+  // growNext reports whether the body must be evaluated for the next step. In a context it first
+  // takes the steps it can from the jumps and the memoized steps.
+  growNext(g: GrowState): boolean {
+    if (g.done) {
+      return false;
+    }
+    if (!g.ctx) {
+      return true;
+    }
+    for (;;) {
+      const id = this.gamma[g.gi]!.id;
+      const j = this.findJump(g, id);
+      if (j !== null) {
+        this.replayDeps(g.gp, j.deps);
+        this.mergeKept(j.far, j.exp);
+        this.setSeed(g, j.end, j.id);
+        continue;
+      }
+      const s = this.ctxFind(g.start, g.gp, headKey(ctxStepKind, g.rule, g.min, g.present), g.present, null);
+      if (s !== null && this.reusable(s.silent, s.e!.errs.length)) {
+        this.replayDeps(g.gp, s.deps);
+        this.mergeKept(s.far, s.exp);
+        if (!this.advance(g, s.e!, s.id, { seed: id, far: s.far, exp: s.exp, silent: s.silent, deps: s.deps })) {
+          return false;
+        }
+        continue;
+      }
+      // Evaluate the step, with its own frame and expectations.
+      this.pushFrame(g.start, g.gp);
+      g.exp = this.isolate();
+      return true;
+    }
+  }
+
+  // growStep receives the result v of a step and adopts it as the seed if the match grew.
+  growStep(g: GrowState, v: R): void {
+    const ok = v !== undefined;
+    if (!g.ctx) {
+      const rec = this.gamma[g.gi]!;
+      const best = rec.seed;
+      if (!ok || (best.ok && this.pos <= best.end)) {
+        g.done = true;
+        return;
+      }
+      this.spend();
+      rec.seed = newCtxResult(v, this.pos, false, this.recSince(g.rec), 0, noExp);
+      rec.id = this.nextSeedID();
+      this.pos = g.start;
+      this.recovered.length = g.rec;
+      return;
+    }
+    const id = this.gamma[g.gi]!.id;
+    const ds = this.popFrame().deps;
+    const far = this.unisolate(g.exp);
+    const exp = this.isoIds;
+    this.mergeKept(far, exp);
+    let res = newCtxResult(v, ok ? this.pos : g.start, this.silent > 0, ok ? this.recSince(g.rec) : noErrs, 0, noExp);
+    const c = this.canonicalSeed(g, res);
+    res = c.e;
+    const sd = this.stored(ds);
+    const slot = newSlot(res, c.id, null);
+    slot.far = far;
+    slot.exp = exp;
+    slot.silent = this.silent > 0;
+    this.ctxStore(g.start, g.gp, headKey(ctxStepKind, g.rule, g.min, g.present), sd, slot);
+    this.mergeDeps(ds);
+    this.advance(g, res, c.id, { seed: id, far, exp, silent: this.silent > 0, deps: sd });
+  }
+
+  // nextSeedID returns a new seed identity.
+  nextSeedID(): number {
+    this.seedSeq++;
+    return this.seedSeq + failSeed;
+  }
+
+  // advance continues the growth in a context after a step from the current seed with result res: it
+  // extends or ends the run of steps that read no other seed, and adopts res if the match grew. It
+  // reports whether the growth continues.
+  advance(g: GrowState, res: CtxResult, rid: number, st: RunStep): boolean {
+    const best = this.gamma[g.gi]!.seed;
+    const grew = res.ok && (!best.ok || res.end > best.end);
+    let other = false;
+    const obs: Sdep[] = [];
+    for (const d of st.deps) {
+      if (d.kind === depSeed && (d.rule !== g.rule || d.min !== g.min)) {
+        other = true;
+      } else if (d.kind === depObs || d.kind === depShadow) {
+        obs.push(d);
+      }
+    }
+    if (grew && !other && res.errs.length === 0) {
+      st.deps = obs;
+      g.run.push(st);
+    } else {
+      this.recordJumps(g);
+    }
+    if (!grew) {
+      g.done = true;
+      return false;
+    }
+    this.spend();
+    this.setSeed(g, res, rid);
+    this.pos = g.start;
+    this.recovered.length = g.rec;
+    return true;
+  }
+
+  // setSeed makes e, with identity id, the seed of the growth in a context.
+  setSeed(g: GrowState, e: CtxResult, id: number): void {
+    const rec = this.gamma[g.gi]!;
+    rec.seed = e;
+    rec.id = id;
+  }
+
+  // growEnd ends the growth and returns its last result, which the call stores.
+  growEnd(g: GrowState): CtxResult {
+    this.recordJumps(g);
+    this.dropTable(g.gi);
+    const best = this.gamma[g.gi]!.seed;
+    this.gamma.length = g.gi;
     this.pos = best.end;
-    this.recovered.length = rec;
+    this.recovered.length = g.rec;
     for (const x of best.errs) {
       this.spend();
       this.recovered.push(x);
     }
-    return best.ok ? best.node : undefined;
+    return best;
+  }
+
+  // recordJumps records, for each seed of the run, a jump to the current seed with what the steps
+  // from that seed on recorded, and starts a new run.
+  recordJumps(g: GrowState): void {
+    if (g.run.length === 0) {
+      return;
+    }
+    const t = this.table(g.start, g.gp, true)!;
+    if (t.jumps === null) {
+      t.jumps = new Map();
+    }
+    const cur = this.gamma[g.gi]!;
+    let acc: JumpRec = { end: cur.seed, id: cur.id, far: -1, exp: noExp, silent: false, deps: noSdeps };
+    for (let i = g.run.length - 1; i >= 0; i--) {
+      const s = g.run[i]!;
+      this.spend();
+      acc = { ...acc };
+      if (s.far > acc.far) {
+        acc.far = s.far;
+        acc.exp = s.exp;
+      } else if (s.far === acc.far) {
+        acc.exp = this.unionExpected(acc.exp, s.exp);
+      }
+      acc.silent = acc.silent || s.silent;
+      acc.deps = mergeSdeps(acc.deps, s.deps);
+      const k = jumpKey(g, s.seed);
+      const js = t.jumps.get(k);
+      if (js === undefined) {
+        t.jumps.set(k, [acc]);
+      } else {
+        js.push(acc);
+      }
+    }
+    g.run.length = 0;
+  }
+
+  // findJump returns a jump from the seed with identity id that holds in the current context.
+  findJump(g: GrowState, id: number): JumpRec | null {
+    const t = this.table(g.start, g.gp, false);
+    if (t === null || t.jumps === null) {
+      return null;
+    }
+    this.spend();
+    const js = t.jumps.get(jumpKey(g, id));
+    if (js === undefined) {
+      return null;
+    }
+    next: for (const j of js) {
+      this.spend();
+      if (j.silent && this.silent === 0) {
+        continue;
+      }
+      for (const d of j.deps) {
+        if (d.kind === depObs && this.obsValue(g.start, g.gp, g.present, d.site) !== d.val) {
+          continue next;
+        }
+      }
+      return j;
+    }
+    return null;
+  }
+
+  // unionExpected returns the expectations of a and b, at the same farthest position.
+  unionExpected(a: number[], b: number[]): number[] {
+    if (b.length === 0) {
+      return a;
+    }
+    const out = a.slice();
+    for (const x of b) {
+      this.spend();
+      if (!out.includes(x)) {
+        out.push(x);
+      }
+    }
+    return out;
+  }
+
+  // canonicalSeed returns the identity of the result e of a growth step, the same as an earlier
+  // equal result's of the leader at the position, whose result it then returns instead of e.
+  canonicalSeed(g: GrowState, e: CtxResult): { e: CtxResult; id: number } {
+    const id = this.nextSeedID();
+    if (!e.ok || e.errs.length > 0) {
+      return { e, id };
+    }
+    const t = this.table(g.start, g.gp, true)!;
+    if (t.canon === null) {
+      t.canon = new Map();
+    }
+    const ck = g.rule + "," + g.min + "," + e.end;
+    this.spend();
+    const c = t.canon.get(ck);
+    if (c !== undefined) {
+      const budget = { n: 64 };
+      if (c.e.errs.length === 0 && this.nodesEqual(c.e.node ?? null, e.node ?? null, budget)) {
+        return c;
+      }
+    }
+    const rec = { e, id };
+    t.canon.set(ck, rec);
+    return rec;
+  }
+
+  // nodesEqual reports whether two trees are equal, comparing at most budget.n pairs of distinct
+  // nodes (false beyond: two results that are not shown equal get different identities, which costs
+  // only reuse).
+  nodesEqual(a: Node | null, b: Node | null, budget: { n: number }): boolean {
+    if (a === b) {
+      return true;
+    }
+    if (a === null || b === null) {
+      return false;
+    }
+    if (--budget.n < 0) {
+      return false;
+    }
+    this.spend();
+    if (Object.getPrototypeOf(a) !== Object.getPrototypeOf(b) || a.type !== b.type || a.rule !== b.rule || a.start !== b.start || a.end !== b.end ||
+      a.text !== b.text || a.fresh !== b.fresh || a.terminal !== b.terminal || a.labeled !== b.labeled || a.box !== null || b.box !== null ||
+      (a instanceof TypedNode && a.base !== (b as TypedNode).base) ||
+      a.children.length !== b.children.length || a.fields.length !== b.fields.length) {
+      return false;
+    }
+    for (let i = 0; i < a.children.length; i++) {
+      if (!this.nodesEqual(a.children[i] ?? null, b.children[i] ?? null, budget)) {
+        return false;
+      }
+    }
+    for (let i = 0; i < a.fields.length; i++) {
+      const fa = a.fields[i]!, fb = b.fields[i]!;
+      if (fa.name !== fb.name) {
+        return false;
+      }
+      const va = fa.value, vb = fb.value;
+      if (va instanceof Node || vb instanceof Node) {
+        if (!(va instanceof Node && vb instanceof Node) || !this.nodesEqual(va, vb, budget)) {
+          return false;
+        }
+      } else if (va !== vb) {
+        return false;
+      }
+    }
+    return true;
   }
 
   // invoke evaluates the body of r and makes the rule's value.

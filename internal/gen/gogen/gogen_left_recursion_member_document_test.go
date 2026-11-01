@@ -174,29 +174,68 @@ func testGeneratedDocumentLeftRecursionMemberReparse(t *testing.T) {
 
 // TestGeneratedDocumentLeftRecursionMemberReparseControl checks that the checks of
 // TestGeneratedDocumentLeftRecursionMemberReparse detect a later parse that reuses results that
-// only the parse that stored them may reuse: with a runtime that keeps them, each of
-// LeftRecursionMemberDocumentCases differs from a parse from scratch, untyped and typed.
+// read a growing seed: with a runtime that keeps them in the memo of the Document for later parses,
+// whatever the leaders growing there, each of LeftRecursionMemberDocumentCases differs from a parse
+// from scratch, untyped and typed.
 func TestGeneratedDocumentLeftRecursionMemberReparseControl(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
 		t.Skip("builds generated code")
 	}
 	gentest.PinOrdinary(t)
+	flush := "for _, f := range keptSeedResults {\n\t\tf()\n\t}\n\tkeptSeedResults = nil\n"
+	reps := map[string][2]string{
+		"document.go":       {"\t\td.memo = p.memo\n", "\t" + flush + "\t\td.memo = p.memo\n"},
+		"typed_document.go": {"\tcache.slots = p.memoSlots\n", flush + "\tcache.slots = p.memoSlots\n"},
+	}
+	// The results that a call keeps in its context are also put in the memo when the parse ends:
+	// before each ctxKeep of a call, in the hand-written calls (call.go) and in the compositions of
+	// the Exec IR (call_exec.go).
+	keep := func(doc, minExpr, entry, alloc, meta string) string {
+		return "if " + doc + " != nil {\n" +
+			"\t\t\tentry := " + entry + "\n" +
+			"\t\t\texamined, rule := p.docHigh, r.Id\n\t\t\t_ = examined\n" +
+			"\t\t\tkeptSeedResults = append(keptSeedResults, func() {\n" +
+			"\t\t\t\te := " + alloc + "\n\t\t\t\t*e = entry\n" +
+			"\t\t\t\tp.memoPut(rule, start, " + minExpr + ", env, e)\n" + meta +
+			"\t\t\t})\n\t\t}\n\t\t"
+	}
+	nodeKeep := keep("p.Document", "min", "memoEntry{node: v, ok: ok, end: p.Pos, examined: p.docHigh, present: ^uint32(0), errs: p.copyErrors(nil, p.Recovered[rec:]), far: far, expected: kept}", "p.memo.alloc()", "")
+	typedKeep := func(minExpr string) string {
+		return keep("p.TypedDocument", minExpr, "tmemoEntry{val: v, ok: ok, end: p.Pos, present: ^uint32(0), errs: p.copyErrors(nil, p.Recovered[rec:]), far: far, expected: kept}", "p.memoSlab.one()", "\t\t\t\tp.TypedDocument.meta[e] = typedDocumentMeta{examined: examined}\n")
+	}
+	// Each anchor is the ctxKeep of a call, which the mutation prefixes, and the number of times it
+	// occurs in the file.
+	anchors := map[string][]struct {
+		at, prefix string
+		n          int
+	}{
+		"call.go": {
+			{"p.ctxKeep(&c, r.Id, start, min, env, &ctxResult{node: v,", nodeKeep, 1},
+			{"p.ctxKeep(&c, r.Id, start, min, env, &ctxResult{val: v,", typedKeep("min"), 1},
+		},
+		"call_exec.go": {
+			{"p.ctxKeep(&c, r.Id, start, min, env, &ctxResult{node: v,", nodeKeep, -1},
+			{"p.ctxKeep(&c, r.Id, start, min, env, &ctxResult{val: v,", typedKeep("min"), -1},
+			{"p.ctxKeep(&c, r.Id, start, 0, env, &ctxResult{val: v,", typedKeep("0"), -1},
+		},
+	}
 	rt := gentest.RuntimeCopyWith(t, func(name, src string) string {
-		var old string
-		switch name {
-		case "document.go":
-			old = "\t\td.memo.removeParseOnly(p.docParseOnly)\n"
-		case "typed_document.go":
-			old = "\tcache.removeParseOnly()\n"
-		default:
-			return src
+		if r, ok := reps[name]; ok {
+			if strings.Count(src, r[0]) != 1 {
+				t.Fatalf("runtime anchor changed: %q", r[0])
+			}
+			src = strings.Replace(src, r[0], r[1], 1)
 		}
-		if strings.Count(src, old) != 1 {
-			t.Fatalf("runtime anchor changed: %q", old)
+		for _, a := range anchors[name] {
+			// -1: at least once.
+			if n := strings.Count(src, a.at); n == 0 || a.n > 0 && n != a.n {
+				t.Fatalf("%s: runtime anchor changed: %q", name, a.at)
+			}
+			src = strings.ReplaceAll(src, a.at, a.prefix+a.at)
 		}
-		return strings.Replace(src, old, "", 1)
-	}, nil)
+		return src
+	}, map[string]string{"zz_keep.go": "package runtime\n\nvar keptSeedResults []func()\n"})
 	cases := gentest.LeftRecursionMemberDocumentCases()
 	diffs, _ := runMemberDocuments(t, cases, rt)
 	for i, c := range cases {

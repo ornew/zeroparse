@@ -99,6 +99,18 @@ are equal by their identities: a step result gets the identity of an earlier
 equal result of the same growth key at the same position, compared by a
 bounded structural comparison of the nodes, and a new identity otherwise.
 
+**Parses that record no range.** Examined ranges matter only where a parse
+records them: in a [Document](../runtime/documents.md) parse, and in every parse
+of the reference implementation, whose trace reports them. A parse that records
+no range may, in (D), take two observations to be the same when the
+expressions of both lookaheads matched or both failed, and two current results
+to be equal whatever their ranges. Lemma 4 then gives $y$ the outcome $\omega$
+but not necessarily the range $\rho$: by (A1) the range of a lookahead enters
+only the range of the call around it. For such a parse the proof below holds
+with the ranges left out, that is, with soundness, Lemma 3, Lemma 4 and the
+invariant reduced to outcomes, dropping (I2). The cases of the theorem derive
+outcomes only from outcomes, so (I1), and with it the theorem, holds unchanged.
+
 **Scope.** The proof covers a parse that no limit stops: no
 [nesting limit](../runtime/parsing.md#limits), cancellation, budget limit or
 `MissingTokenLimitError`. A call answered from an entry does not nest, so

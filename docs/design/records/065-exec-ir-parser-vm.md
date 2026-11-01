@@ -238,18 +238,28 @@ parse's position unit, advance by characters, and, in a Document, extend the exa
 for ASCII or decoded code points, literal matching by machine word. *Conformance*: inputs at UTF-8 and UTF-16
 boundaries, invalid sequences, both units, the examined bound after each read, and the input charge.
 
-**Memo table** (`memo.lookup`, `memo.lookupGrowing`, `memo.store`, `memo.seed`, `memo.reseed`, `memo.finishSeed`,
-`memo.prune`). `lookup` returns the most recent entry stored for a key (rule, position, binding level, variable
-values, missing-token mode), or none; `lookupGrowing` returns the growing entry of a rule at a position whatever the
-variable values; `store` adds an entry that later lookups of its key return; the seed operations install, replace and
-finish the growing entry of a left-recursion leader; `prune` drops entries below a position. The precondition of
-`lookup` is that a rule with a growing entry at a position and level is looked up there only with the key it was
-seeded with; compositions call `lookupGrowing` first for a leader. The generated Go memo table, whose lookup also
-matches a growing entry under other key values, and the engine's, whose lookup is exact, then agree. *Shared*: keys, the
-specified entry attributes, which entry a lookup returns, the storage charge. *Target*: slot arrays or maps, chaining,
-slab allocation and free lists, entry layout and packing. *Conformance*: random sequences of stores, seeds, lookups and
-prunes compared with a reference model; storage charges that do not depend on storage left by an earlier parse, as
+**Memo table** (`memo.lookup`, `memo.store`, `memo.setPresent`, `memo.prune`). `lookup` returns the most recent entry
+stored for a key (rule, position, binding level, variable values, missing-token mode), or none; `store` adds an entry
+that later lookups of its key return, with an end at or after its position; `setPresent` records the leaders of the
+call's left-recursion cycle that grew at the position when the result was evaluated; `prune` drops entries below a
+position. The memo holds only results that read no growing seed, so a lookup is exact on every target. *Shared*:
+keys, the specified entry attributes, which entry a lookup returns, the storage charge. *Target*: slot arrays or maps,
+chaining, slab allocation and free lists, entry layout and packing. *Conformance*: random sequences of stores, lookups
+and prunes compared with a reference model; storage charges that do not depend on storage left by an earlier parse, as
 [Cancellation and Budget Limits](../../../spec/runtime/parsing.md#cancellation-and-budget-limits) requires.
+
+**Left-recursion contexts** (`ctx.enter`, `ctx.allows`, `ctx.active`, `ctx.lookup`, `ctx.replay`, `ctx.push`,
+`ctx.pop`, `ctx.keep`, `ctx.done`; `grow.begin`, `grow.next`, `grow.step`, `grow.end`). The dependency memo of
+[Evaluations of Rules](../../../spec/runtime/parsing.md#evaluations-of-rules). `ctx.enter` computes the context of a
+call of a rule of a cycle, the growths of its cycle at the position, and returns the seed when the rule is a leader
+that grows there; `ctx.allows` tells whether a memo entry answers the call by its present set; `ctx.lookup` returns a
+result kept in the context, matched by the identities of the seeds it read and the outcomes of the lookaheads it
+observed; `ctx.push` and `ctx.pop` record the dependencies of the call and tell whether its result goes to the memo or
+to the context (`ctx.keep`); `ctx.done` passes the dependencies to the enclosing call. The growth operations grow a
+leader from failure; in a context they reuse the memoized steps and the jumps over runs of steps. *Shared*: what a
+result depends on and when it is reused, the seed identities, the present sets. *Target*: table layout, keys and
+hashing, allocation of results. *Conformance*: the differential tests against the engine on random cycle grammars,
+with negative controls that break each check, and the linearity tests of the growth shapes.
 
 **Deferred memoization** (`seen.first`). Records a call of a memoized rule at a position and reports whether it is
 the first, under the adaptive policy: per-rule counters and the switch to eager memoization. The policy is part of the
@@ -312,10 +322,10 @@ primitives ([Decisions](#decisions)).
 The compositions written once in Exec IR are the algorithms that the copies re-implemented:
 
 - the call protocol: deferred memoization, memo lookup and the reuse conditions (silent results, recovered errors,
-  growing entries, the missing-token mode), store, restore on failure, nesting and statistics;
-- left-recursion growth: seed, the growth loop, its stop condition and the guard keyed by rule and position;
+  the left-recursion context, the missing-token mode), store, restore on failure, nesting and statistics;
+- left-recursion growth: the growth from failure, its stop condition and its steps in a context;
 - rule completion: the rule's value, captures and hidden rules spliced into their caller;
-- Document calls: validation, reuse and provisional tracking of results that read a growing seed;
+- Document calls: validation, reuse and the examined bound of each result;
 - the Operators Rule loop;
 - stream delivery and commitment points;
 - parse entry: start rule, default budgets and the input limit.
@@ -430,8 +440,8 @@ TypeScript printer's formatter.
   with every contract change and every bug found in an implementation.
 - **Bindings of existing runtimes.** Before a backend prints an operation library, an existing runtime is checked
   through a test binding that calls its functions. Where an operation is inline code of a composition, the binding
-  does what that code does: in the generated Go runtime, `memo.seed` and `memo.reseed` allocate an entry and store it
-  with `memoPut` as `grow` does, and `memo.finishSeed` clears the entry's growing flag.
+  does what that code does: in the generated Go runtime, `memo.store` allocates an entry and stores it with
+  `memoPut` as the call does.
 - **Mutation controls.** Each operation library has deliberately broken variants — an off-by-one prune, a lookup that
   ignores the binding level, a counter that wraps — that the suite must reject.
 - **Differential tests.** Within a stage the old and new paths run side by side behind a private switch, as record 062
@@ -440,8 +450,8 @@ TypeScript printer's formatter.
   golden files, specification test data, grammar fixture suites, `sample/` inputs and mutated inputs. Results must be
   byte-identical as listed in [Goals](#goals). The switch is removed when the default flips.
 - **Negative controls for compositions.** Each migrated composition has broken variants that the differential tests
-  must detect, for example: reusing a silent result outside a lookahead; looking up a growing entry by variable values
-  instead of by rule and position; storing a result that read a growing seed as complete in a Document; omitting the
+  must detect, for example: reusing a silent result outside a lookahead; reusing a memo entry where a leader grows that
+  did not grow when it was evaluated; keeping a result that read a growing seed in the memo of a Document; omitting the
   expectations of a reused entry.
 - **The engine as oracle.** Until the engine adopts the shared core it is an independent implementation, so a bug in
   a composition shows as a difference between the engine and generated parsers. After it adopts the core, golden files
@@ -661,10 +671,10 @@ comments.
 
 | Mechanism | Kind | Engine | Go node (`runtime.go`, `document.go`, `stream.go`) | Go typed (`typed.go`, `typed_document.go`) | TypeScript (`runtime.ts`, `budget.ts`) |
 |:--|:--|:--|:--|:--|:--|
-| Memo table | Core | `MemoTable` `Get`, `growing`, `Put`, `Alloc`, `Retire`, `Reset`, `Prune`, `Splice` (`memo.go`, ~410) | `memoTable` `get`, `put`, `alloc` (~120) | `memoGet`, `memoPut`, `…Controlled` (~110) | `memoGet`, `memoPut`, `newEntry` (~90) |
+| Memo table | Core | `MemoTable` `Get`, `Put`, `Alloc`, `Retire`, `Reset`, `Prune`, `Splice` (`memo.go`, ~410) | `memoTable` `get`, `put`, `alloc` (~120) | `memoGet`, `memoPut`, `…Controlled` (~110) | `memoGet`, `memoPut`, `newEntry` (~90) |
 | Deferred memoization | Core | `firstCall`, `MarkSeen`, `MarkSparseSeen`, seen pages (`memo.go`, `runtime.go` `FirstCall`, ~130) | `FirstCall`, `markSeen`, `markSparseSeen`, `seenPageArena` (~160) | shares the node code | `firstCall`, `markSeen`, `markSparseSeen` (~95) |
 | Call protocol | Core | `CallBegin`, `CallEnd`, `InvokePlain`, `InvokeBegin`, `InvokeEnd`, `Memoizes` (`runtime.go`, ~250) | `Call`, `callBody`, `callMemo`, `callUnmemoized`, `invoke`, `InvokePlain` (~300) | `Call`, `callBody`, `CallMemo`, `invoke`, `InvokePlain` (~190) | `call`, `callBody`, `invoke`, `invokePlain` (~200) |
-| Left-recursion growth | Core | `GrowBegin`, `GrowStep`, `GrowEnd`, `memoGrowing` (~80) | `grow` (~25) | `grow` (~25) | `grow` (~30) |
+| Left-recursion growth | Core | `GrowBegin`, `GrowStep`, `GrowEnd` and the dependency memo (`context_memo.go`, ~730) | `grow` and the dependency memo (`context_memo.go`, ~1,200) | shares the node code | `grow` and the dependency memo (~970) |
 | Expected sets | Core | `Expect`, `Isolate`, `Unisolate`, `Keep`, `MergeExpected` (`runtime.go`, ~85) | `Expect`, `ExpectBudget`, `ExpectOrdinary`, `Isolate`, `Unisolate`, `Keep`, `MergeExpected`, `RenamedExpected` (~215) | `tracked`, `ErrorAttr`, `DiagnosticAttr` (~30) | `expect`, `keep`, `mergeExpected`, `isolate`, `unisolate`, `renameExpected`, `mergeKept` (~155) |
 | Recovery bookkeeping | Core | recovered lists in `CallEnd`, `GrowStep`, `applyRecovered`; `#missing` in `missing_token.go` (engine only, ~190) | `RecoverAttr`, `Restore`, `applyErrors` (~50) | `RecoverAttr`, `applyErrors` (~35) | recovery in `callBody`, `apply` (~20) |
 | Variable environment | Core | `Env.Lookup`, `Bind`, `EnvValues`, `memoEnv`, `SeedVars` (~90) | `bind`, `envValues`, `memoEnv`, `SetVars` (~145) | `Bind`, `Lookup` (~40) | `envValues`, `bind`, `bindValue` (~85) |

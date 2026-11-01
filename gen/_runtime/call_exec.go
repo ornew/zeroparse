@@ -5,13 +5,13 @@
 package runtime
 
 // Call calls rule r at binding level min: unmemoized while its memoization is deferred, and
-// otherwise through the memo, growing the seed of a left-recursion leader.
+// otherwise through the memo and the dependency memo of left-recursion contexts, growing the seed of
+// a left-recursion leader.
 //
-// Printed from Exec IR function call of internal/ir/exec/core, specialized for document, stream.
+// Printed from Exec IR function call of internal/ir/exec/core, specialized for document.
 func (p *Parser) Call(r *Rule, min int) (*Node, bool) {
 	var v *Node
 	var ok bool
-	var entry *memoEntry
 	if p.Observation != nil || p.Document != nil {
 		v, ok = p.callTracked(r, min)
 		return v, ok
@@ -32,13 +32,22 @@ func (p *Parser) Call(r *Rule, min int) (*Node, bool) {
 		return v, ok
 	}
 	env := p.memoEnv(r)
+	var c ctxCallState
+	var seed *ctxResult
+	if r.Cycle != 0 && len(p.gamma) != 0 {
+		seed = p.ctxEnter(&c, r, min)
+	}
+	if seed != nil {
+		p.replayCtx(seed, true)
+		if !seed.ok {
+			return nil, false
+		}
+		return seed.node, true
+	}
 	e := p.memoGet(r.Id, start, min, env)
 	found := e != nil
-	if found && !p.memberStale(r.Member, start) && (e.growing || (!e.silent || p.Silent > 0) && ((len(e.errs) == 0) || e.silent == (p.Silent > 0))) {
-		p.readResult(e.growing, e.depth)
-		if !e.growing {
-			p.MergeExpected(e.far, e.expected)
-		}
+	if found && c.memoAllows(e.present) && (!e.silent || p.Silent > 0) && ((len(e.errs) == 0) || e.silent == (p.Silent > 0)) {
+		p.MergeExpected(e.far, e.expected)
 		if !e.ok {
 			return nil, false
 		}
@@ -46,32 +55,40 @@ func (p *Parser) Call(r *Rule, min int) (*Node, bool) {
 		p.Recovered = p.copyErrors(p.Recovered, e.errs)
 		return e.node, true
 	}
+	if c.ctx {
+		held := p.ctxLookup(&c, r.Id, min, env)
+		if held != nil {
+			p.replayCtx(held, false)
+			if !held.ok {
+				return nil, false
+			}
+			return held.node, true
+		}
+	}
 	rec := len(p.Recovered)
-	depth := p.growths
-	read := p.enterCall()
+	p.ctxPush(&c)
 	m := p.Isolate(start)
 	if r.Leader {
-		v, ok = p.grow(r, min, env)
-		entry = p.memoGet(r.Id, start, min, env)
-		if entry == nil {
-			entry = &memoEntry{}
-		}
+		v, ok = p.grow(r, min)
 	} else {
 		v, ok = p.invoke(r, min)
 		if !ok {
 			p.Recovered = p.Recovered[:rec]
 		}
-		if p.readDepth <= depth {
-			entry = &memoEntry{}
-		} else {
-			entry = p.memo.alloc()
-			*entry = memoEntry{node: v, ok: ok, end: p.Pos, silent: p.Silent > 0, errs: p.copyErrors(nil, p.Recovered[rec:])}
-			p.memoPut(r.Id, start, min, env, entry)
-		}
 	}
-	p.leaveCall(read)
 	far, inner := p.Unisolate(m)
-	entry.far, entry.expected = far, p.Keep(inner)
+	kept := p.Keep(inner)
+	store := p.ctxPop(&c)
+	if store == storeMemo {
+		entry := p.memo.alloc()
+		*entry = memoEntry{node: v, ok: ok, end: p.Pos, silent: p.Silent > 0, errs: p.copyErrors(nil, p.Recovered[rec:])}
+		p.memoPut(r.Id, start, min, env, entry)
+		entry.present = c.present
+		entry.far, entry.expected = far, kept
+	} else if store == storeCtx {
+		p.ctxKeep(&c, r.Id, start, min, env, &ctxResult{node: v, ok: ok, end: p.Pos, examined: p.examinedNow(), silent: p.Silent > 0, errs: p.copyErrors(nil, p.Recovered[rec:]), far: far, expected: kept})
+	}
+	p.ctxDone(&c)
 	p.MergeExpected(far, inner)
 	if !ok {
 		p.Pos = start
@@ -79,55 +96,31 @@ func (p *Parser) Call(r *Rule, min int) (*Node, bool) {
 	return v, ok
 }
 
-// grow grows the seed of a left-recursive leader: it memoizes a failure, then evaluates the
-// body again while the match gets longer, and keeps the last longer result.
+// grow grows the seed of a left-recursive leader from a failure: it evaluates the body again while
+// the match gets longer, and returns the last longer result.
 //
 // Printed from Exec IR function grow of internal/ir/exec/core.
-func (p *Parser) grow(r *Rule, min int, env []any) (*Node, bool) {
-	start := p.Pos
-	rec := len(p.Recovered)
-	best := p.memo.alloc()
-	*best = memoEntry{end: start, growing: true}
-	p.memoPut(r.Id, start, min, env, best)
-	read := p.enterCall()
-	prev := p.seedPos
-	p.growths++
-	p.seedPos = start
-	best.depth = int32(p.growths)
+func (p *Parser) grow(r *Rule, min int) (*Node, bool) {
+	g := p.growBegin(r, min)
 	for {
-		p.Spend()
-		v, ok := p.invoke(r, min)
-		if !ok || best.ok && p.Pos <= best.end {
+		if !p.growNext(&g) {
 			break
 		}
-		best = p.memo.alloc()
-		*best = memoEntry{node: v, ok: true, end: p.Pos, growing: true, errs: p.copyErrors(nil, p.Recovered[rec:])}
-		p.memoPut(r.Id, start, min, env, best)
-		best.depth = int32(p.growths)
-		p.Pos = start
-		p.Recovered = p.Recovered[:rec]
+		v, ok := p.invoke(r, min)
+		p.growStep(&g, v, nil, ok)
 	}
-	best.growing = false
-	best.silent = p.Silent > 0
-	p.growths--
-	p.seedPos = prev
-	best.depth = finalDepth(p.readDepth, p.growths, best.silent || len(best.errs) > 0)
-	p.leaveCall(read)
-	p.readResult(best.growing, best.depth)
-	p.Pos = best.end
-	p.Recovered = p.Recovered[:rec]
-	p.Recovered = p.copyErrors(p.Recovered, best.errs)
+	best := p.growEnd(&g)
 	return best.node, best.ok
 }
 
 // callBody calls rule r at binding level min: unmemoized while its memoization is deferred, and
-// otherwise through the memo, growing the seed of a left-recursion leader.
+// otherwise through the memo and the dependency memo of left-recursion contexts, growing the seed of
+// a left-recursion leader.
 //
 // Printed from Exec IR function call of internal/ir/exec/core, specialized for document, observe, typed.
 func (p *TParser) callBody(r *TRule, min int) (any, bool) {
 	var v any
 	var ok bool
-	var entry *tmemoEntry
 	if p.TypedDocument != nil {
 		v, ok = p.DocumentCall(r, min, nil)
 		return v, ok
@@ -148,14 +141,23 @@ func (p *TParser) callBody(r *TRule, min int) (any, bool) {
 		return v, ok
 	}
 	env := p.memoEnv(r.Rule)
+	var c ctxCallState
+	var seed *ctxResult
+	if r.Cycle != 0 && len(p.gamma) != 0 {
+		seed = p.ctxEnter(&c, r.Rule, min)
+	}
+	if seed != nil {
+		p.replayCtx(seed, true)
+		if !seed.ok {
+			return nil, false
+		}
+		return seed.val, true
+	}
 	e := p.memoGet(r.Id, start, min, env)
 	found := e != nil
-	if found && !p.memberStale(r.Member, start) && (e.growing || (!e.silent || p.Silent > 0) && ((len(e.errs) == 0) || e.silent == (p.Silent > 0))) {
+	if found && c.memoAllows(e.present) && (!e.silent || p.Silent > 0) && ((len(e.errs) == 0) || e.silent == (p.Silent > 0)) {
 		p.Observation.memoHit()
-		p.readResult(e.growing, e.depth)
-		if !e.growing {
-			p.MergeExpected(e.far, e.expected)
-		}
+		p.MergeExpected(e.far, e.expected)
 		if !e.ok {
 			return nil, false
 		}
@@ -163,29 +165,40 @@ func (p *TParser) callBody(r *TRule, min int) (any, bool) {
 		p.Recovered = p.copyErrors(p.Recovered, e.errs)
 		return e.val, true
 	}
+	if c.ctx {
+		held := p.ctxLookup(&c, r.Id, min, env)
+		if held != nil {
+			p.replayCtx(held, false)
+			if !held.ok {
+				return nil, false
+			}
+			return held.val, true
+		}
+	}
 	rec := len(p.Recovered)
-	depth := p.growths
-	read := p.enterCall()
+	p.ctxPush(&c)
 	m := p.Isolate(start)
 	if r.Leader {
-		v, ok = p.grow(r, min, env)
-		entry = p.memoGet(r.Id, start, min, env)
+		v, ok = p.grow(r, min)
 	} else {
 		v, ok = p.invoke(r, min)
 		if !ok {
 			p.Recovered = p.Recovered[:rec]
 		}
-		if p.readDepth <= depth {
-			entry = &tmemoEntry{}
-		} else {
-			entry = p.memoSlab.one()
-			*entry = tmemoEntry{val: v, ok: ok, end: p.Pos, silent: p.Silent > 0, errs: p.copyErrors(nil, p.Recovered[rec:])}
-			p.memoPut(r.Id, start, min, env, entry)
-		}
 	}
-	p.leaveCall(read)
 	far, inner := p.Unisolate(m)
-	entry.far, entry.expected = far, p.Keep(inner)
+	kept := p.Keep(inner)
+	store := p.ctxPop(&c)
+	if store == storeMemo {
+		entry := p.memoSlab.one()
+		*entry = tmemoEntry{val: v, ok: ok, end: p.Pos, silent: p.Silent > 0, errs: p.copyErrors(nil, p.Recovered[rec:])}
+		p.memoPut(r.Id, start, min, env, entry)
+		entry.present = c.present
+		entry.far, entry.expected = far, kept
+	} else if store == storeCtx {
+		p.ctxKeep(&c, r.Id, start, min, env, &ctxResult{val: v, ok: ok, end: p.Pos, examined: p.examinedNow(), silent: p.Silent > 0, errs: p.copyErrors(nil, p.Recovered[rec:]), far: far, expected: kept})
+	}
+	p.ctxDone(&c)
 	p.MergeExpected(far, inner)
 	if !ok {
 		p.Pos = start
@@ -200,21 +213,29 @@ func (p *TParser) callBody(r *TRule, min int) (any, bool) {
 func (p *TParser) CallMemo(r *TRule, inv func(*TParser) (any, bool)) (any, bool) {
 	var v any
 	var ok bool
-	var entry *tmemoEntry
 	if p.TypedDocument != nil {
 		v, ok = p.DocumentCall(r, 0, inv)
 		return v, ok
 	}
 	start := p.Pos
 	env := p.memoEnv(r.Rule)
+	var c ctxCallState
+	var seed *ctxResult
+	if r.Cycle != 0 && len(p.gamma) != 0 {
+		seed = p.ctxEnter(&c, r.Rule, 0)
+	}
+	if seed != nil {
+		p.replayCtx(seed, true)
+		if !seed.ok {
+			return nil, false
+		}
+		return seed.val, true
+	}
 	e := p.memoGet(r.Id, start, 0, env)
 	found := e != nil
-	if found && !p.memberStale(r.Member, start) && (e.growing || (!e.silent || p.Silent > 0) && ((len(e.errs) == 0) || e.silent == (p.Silent > 0))) {
+	if found && c.memoAllows(e.present) && (!e.silent || p.Silent > 0) && ((len(e.errs) == 0) || e.silent == (p.Silent > 0)) {
 		p.Observation.memoHit()
-		p.readResult(e.growing, e.depth)
-		if !e.growing {
-			p.MergeExpected(e.far, e.expected)
-		}
+		p.MergeExpected(e.far, e.expected)
 		if !e.ok {
 			return nil, false
 		}
@@ -222,24 +243,40 @@ func (p *TParser) CallMemo(r *TRule, inv func(*TParser) (any, bool)) (any, bool)
 		p.Recovered = p.copyErrors(p.Recovered, e.errs)
 		return e.val, true
 	}
-	rec := len(p.Recovered)
-	depth := p.growths
-	read := p.enterCall()
-	m := p.Isolate(start)
-	v, ok = inv(p)
-	if !ok {
-		p.Recovered = p.Recovered[:rec]
+	if c.ctx {
+		held := p.ctxLookup(&c, r.Id, 0, env)
+		if held != nil {
+			p.replayCtx(held, false)
+			if !held.ok {
+				return nil, false
+			}
+			return held.val, true
+		}
 	}
-	if p.readDepth <= depth {
-		entry = &tmemoEntry{}
+	rec := len(p.Recovered)
+	p.ctxPush(&c)
+	m := p.Isolate(start)
+	if r.Leader {
+		v, ok = p.grow(r, 0)
 	} else {
-		entry = p.memoSlab.one()
+		v, ok = inv(p)
+		if !ok {
+			p.Recovered = p.Recovered[:rec]
+		}
+	}
+	far, inner := p.Unisolate(m)
+	kept := p.Keep(inner)
+	store := p.ctxPop(&c)
+	if store == storeMemo {
+		entry := p.memoSlab.one()
 		*entry = tmemoEntry{val: v, ok: ok, end: p.Pos, silent: p.Silent > 0, errs: p.copyErrors(nil, p.Recovered[rec:])}
 		p.memoPut(r.Id, start, 0, env, entry)
+		entry.present = c.present
+		entry.far, entry.expected = far, kept
+	} else if store == storeCtx {
+		p.ctxKeep(&c, r.Id, start, 0, env, &ctxResult{val: v, ok: ok, end: p.Pos, examined: p.examinedNow(), silent: p.Silent > 0, errs: p.copyErrors(nil, p.Recovered[rec:]), far: far, expected: kept})
 	}
-	p.leaveCall(read)
-	far, inner := p.Unisolate(m)
-	entry.far, entry.expected = far, p.Keep(inner)
+	p.ctxDone(&c)
 	p.MergeExpected(far, inner)
 	if !ok {
 		p.Pos = start
@@ -247,44 +284,20 @@ func (p *TParser) CallMemo(r *TRule, inv func(*TParser) (any, bool)) (any, bool)
 	return v, ok
 }
 
-// grow grows the seed of a left-recursive leader: it memoizes a failure, then evaluates the
-// body again while the match gets longer, and keeps the last longer result.
+// grow grows the seed of a left-recursive leader from a failure: it evaluates the body again while
+// the match gets longer, and returns the last longer result.
 //
 // Printed from Exec IR function grow of internal/ir/exec/core, specialized for typed.
-func (p *TParser) grow(r *TRule, min int, env []any) (any, bool) {
-	start := p.Pos
-	rec := len(p.Recovered)
-	best := p.memoSlab.one()
-	*best = tmemoEntry{end: start, growing: true}
-	p.memoPut(r.Id, start, min, env, best)
-	read := p.enterCall()
-	prev := p.seedPos
-	p.growths++
-	p.seedPos = start
-	best.depth = int32(p.growths)
+func (p *TParser) grow(r *TRule, min int) (any, bool) {
+	g := p.growBegin(r.Rule, min)
 	for {
-		p.Spend()
-		v, ok := p.invoke(r, min)
-		if !ok || best.ok && p.Pos <= best.end {
+		if !p.growNext(&g) {
 			break
 		}
-		best = p.memoSlab.one()
-		*best = tmemoEntry{val: v, ok: true, end: p.Pos, growing: true, errs: p.copyErrors(nil, p.Recovered[rec:])}
-		p.memoPut(r.Id, start, min, env, best)
-		best.depth = int32(p.growths)
-		p.Pos = start
-		p.Recovered = p.Recovered[:rec]
+		v, ok := p.invoke(r, min)
+		p.growStep(&g, nil, v, ok)
 	}
-	best.growing = false
-	best.silent = p.Silent > 0
-	p.growths--
-	p.seedPos = prev
-	best.depth = finalDepth(p.readDepth, p.growths, best.silent || len(best.errs) > 0)
-	p.leaveCall(read)
-	p.readResult(best.growing, best.depth)
-	p.Pos = best.end
-	p.Recovered = p.Recovered[:rec]
-	p.Recovered = p.copyErrors(p.Recovered, best.errs)
+	best := p.growEnd(&g)
 	return best.val, best.ok
 }
 
@@ -341,17 +354,16 @@ func (p *TParser) invokePlainObserved(r *TRule, min int) (any, bool) {
 }
 
 // callDocument is a rule call in a Document parse, which memoizes the rules that the Document reuses
-// and records how far each call examined the input and how long its result may be reused. The
-// enclosing call's frontier and reuse are restored however the call ends, an interruption included,
-// so that a parse after it starts from the state it would start from otherwise.
+// and records how far each call examined the input. The enclosing call's frontier is restored however
+// the call ends, an interruption included, so that a parse after it starts from the state it would
+// start from otherwise.
 //
 // Printed from Exec IR function document of internal/ir/exec/core, specialized for document.
 func (p *Parser) callDocument(r *Rule, min int) (*Node, bool) {
-	oldHigh, oldReuse := p.docHigh, p.docReuse
-	p.docHigh, p.docReuse = p.Pos+1, reuseAfterEdits
+	oldHigh := p.docHigh
+	p.docHigh = p.Pos + 1
 	defer func() {
 		p.docHigh = max(oldHigh, p.docHigh)
-		p.docReuse = max(oldReuse, p.docReuse)
 	}()
 	if !r.DocMemo {
 		v, ok := p.callUnmemoized(r, min)
@@ -385,31 +397,35 @@ func (p *Parser) callUnmemoized(r *Rule, min int) (*Node, bool) {
 
 // callMemo calls rule r at binding level min through the memo, as call does once the rule's
 // memoization is no longer deferred, with the observation of a reuse and, in a Document parse, the
-// bookkeeping of how far each call examined the input and how long its result may be reused.
+// bookkeeping of how far each call examined the input.
 //
-// Printed from Exec IR function memoized of internal/ir/exec/core, specialized for document, observe, stream.
+// Printed from Exec IR function memoized of internal/ir/exec/core, specialized for document, observe.
 func (p *Parser) callMemo(r *Rule, min int) (*Node, bool) {
 	var v *Node
 	var ok bool
-	var entry *memoEntry
 	start := p.Pos
 	env := p.memoEnv(r)
+	var c ctxCallState
+	var seed *ctxResult
+	if r.Cycle != 0 && len(p.gamma) != 0 {
+		seed = p.ctxEnter(&c, r, min)
+	}
+	if seed != nil {
+		p.replayCtx(seed, true)
+		if !seed.ok {
+			return nil, false
+		}
+		return seed.node, true
+	}
 	e := p.memoGet(r.Id, start, min, env)
 	found := e != nil
-	if found && !p.memberStale(r.Member, start) && (e.growing || (!e.silent || p.Silent > 0) && ((len(e.errs) == 0) || e.silent == (p.Silent > 0))) {
+	if found && c.memoAllows(e.present) && (!e.silent || p.Silent > 0) && ((len(e.errs) == 0) || e.silent == (p.Silent > 0)) {
 		p.Observation.memoHit()
-		p.readResult(e.growing, e.depth)
 		if p.Document != nil {
 			p.documentTouch(e.examined)
-			p.docReuse = max(p.docReuse, e.reuse)
-			if e.growing {
-				p.docReuse = max(p.docReuse, reuseUntilEdit)
-			}
 			p.Document.stats.Reused++
 		}
-		if !e.growing {
-			p.MergeExpected(e.far, e.expected)
-		}
+		p.MergeExpected(e.far, e.expected)
 		if !e.ok {
 			return nil, false
 		}
@@ -417,49 +433,46 @@ func (p *Parser) callMemo(r *Rule, min int) (*Node, bool) {
 		p.Recovered = p.copyErrors(p.Recovered, e.errs)
 		return e.node, true
 	}
+	if c.ctx {
+		held := p.ctxLookup(&c, r.Id, min, env)
+		if held != nil {
+			p.replayCtx(held, false)
+			if !held.ok {
+				return nil, false
+			}
+			return held.node, true
+		}
+	}
 	rec := len(p.Recovered)
-	depth := p.growths
-	read := p.enterCall()
+	p.ctxPush(&c)
 	m := p.Isolate(start)
 	if r.Leader {
-		v, ok = p.grow(r, min, env)
-		entry = p.memoGet(r.Id, start, min, env)
-		if entry == nil {
-			entry = &memoEntry{}
-		}
+		v, ok = p.grow(r, min)
 	} else {
 		v, ok = p.invoke(r, min)
 		if !ok {
 			p.Recovered = p.Recovered[:rec]
 		}
-		if p.readDepth <= depth {
-			entry = &memoEntry{}
-		} else {
-			entry = p.memo.alloc()
-			*entry = memoEntry{node: v, ok: ok, end: p.Pos, silent: p.Silent > 0, errs: p.copyErrors(nil, p.Recovered[rec:])}
-			p.memoPut(r.Id, start, min, env, entry)
-		}
 	}
-	settled := !(p.readDepth <= depth)
-	p.leaveCall(read)
 	far, inner := p.Unisolate(m)
-	entry.far, entry.expected = far, p.Keep(inner)
+	kept := p.Keep(inner)
 	if p.Document != nil {
 		p.documentTouch(p.Pos + 1)
-		if r.Leader {
-			if !settled {
-				p.docReuse = reuseInParse
-			} else {
-				p.docReuse = max(p.docReuse, reuseUntilEdit)
-			}
-		}
-		if r.Leader || settled {
-			entry.examined, entry.reuse = p.docHigh, p.docReuse
-			if p.docReuse == reuseInParse {
-				p.docParseOnly = append(p.docParseOnly, memoPlace{start, entry})
-			}
-		}
 	}
+	store := p.ctxPop(&c)
+	if store == storeMemo {
+		entry := p.memo.alloc()
+		*entry = memoEntry{node: v, ok: ok, end: p.Pos, silent: p.Silent > 0, errs: p.copyErrors(nil, p.Recovered[rec:])}
+		p.memoPut(r.Id, start, min, env, entry)
+		entry.present = c.present
+		entry.far, entry.expected = far, kept
+		if p.Document != nil {
+			entry.examined = p.docHigh
+		}
+	} else if store == storeCtx {
+		p.ctxKeep(&c, r.Id, start, min, env, &ctxResult{node: v, ok: ok, end: p.Pos, examined: p.examinedNow(), silent: p.Silent > 0, errs: p.copyErrors(nil, p.Recovered[rec:]), far: far, expected: kept})
+	}
+	p.ctxDone(&c)
 	p.MergeExpected(far, inner)
 	if !ok {
 		p.Pos = start
@@ -502,20 +515,18 @@ func (p *Parser) callTracked(r *Rule, min int) (*Node, bool) {
 // DocumentCall is a typed rule call in a Document parse, for the rule r at binding level min,
 // invoked by inv when a generated call passes it: unmemoized for a rule that the Document does not
 // memoize, and otherwise through the memo, with the Document record of each entry kept beside it. As
-// in document, the enclosing call's frontier and reuse are restored however the call ends.
+// in document, the enclosing call's frontier is restored however the call ends.
 //
 // Printed from Exec IR function typedDocument of internal/ir/exec/core, specialized for document, observe, typed.
 func (p *TParser) DocumentCall(r *TRule, min int, inv func(*TParser) (any, bool)) (any, bool) {
 	var v any
 	var ok bool
-	var entry *tmemoEntry
 	p.Spend()
 	start := p.Pos
-	oldHigh, oldReuse := p.docHigh, p.docReuse
-	p.docHigh, p.docReuse = start+1, reuseAfterEdits
+	oldHigh := p.docHigh
+	p.docHigh = start + 1
 	defer func() {
 		p.docHigh = max(oldHigh, p.docHigh)
-		p.docReuse = max(oldReuse, p.docReuse)
 	}()
 	if !r.DocMemo {
 		rec := len(p.Recovered)
@@ -532,21 +543,26 @@ func (p *TParser) DocumentCall(r *TRule, min int, inv func(*TParser) (any, bool)
 		return v, ok
 	}
 	env := p.memoEnv(r.Rule)
+	var c ctxCallState
+	var seed *ctxResult
+	if r.Cycle != 0 && len(p.gamma) != 0 {
+		seed = p.ctxEnter(&c, r.Rule, min)
+	}
+	if seed != nil {
+		p.replayCtx(seed, true)
+		if !seed.ok {
+			return nil, false
+		}
+		return seed.val, true
+	}
 	e := p.memoGet(r.Id, start, min, env)
 	found := e != nil
-	if found && !p.memberStale(r.Member, start) && (e.growing || (!e.silent || p.Silent > 0) && ((len(e.errs) == 0) || e.silent == (p.Silent > 0))) {
+	if found && c.memoAllows(e.present) && (!e.silent || p.Silent > 0) && ((len(e.errs) == 0) || e.silent == (p.Silent > 0)) {
 		p.Observation.memoHit()
-		p.readResult(e.growing, e.depth)
 		meta := p.TypedDocument.meta[e]
 		p.documentTouch(meta.examined)
-		p.docReuse = max(p.docReuse, meta.reuse)
-		if e.growing {
-			p.docReuse = max(p.docReuse, reuseUntilEdit)
-		}
 		p.Document.stats.Reused++
-		if !e.growing {
-			p.MergeExpected(e.far, e.expected)
-		}
+		p.MergeExpected(e.far, e.expected)
 		if !e.ok {
 			return nil, false
 		}
@@ -554,16 +570,21 @@ func (p *TParser) DocumentCall(r *TRule, min int, inv func(*TParser) (any, bool)
 		p.Recovered = p.copyErrors(p.Recovered, e.errs)
 		return e.val, true
 	}
+	if c.ctx {
+		held := p.ctxLookup(&c, r.Id, min, env)
+		if held != nil {
+			p.replayCtx(held, false)
+			if !held.ok {
+				return nil, false
+			}
+			return held.val, true
+		}
+	}
 	rec := len(p.Recovered)
-	depth := p.growths
-	read := p.enterCall()
+	p.ctxPush(&c)
 	m := p.Isolate(start)
 	if r.Leader {
-		if found {
-			delete(p.TypedDocument.meta, e)
-		}
-		v, ok = p.grow(r, min, env)
-		entry = p.memoGet(r.Id, start, min, env)
+		v, ok = p.grow(r, min)
 	} else {
 		if inv != nil {
 			p.Document.stats.Evaluated++
@@ -574,35 +595,25 @@ func (p *TParser) DocumentCall(r *TRule, min int, inv func(*TParser) (any, bool)
 		if !ok {
 			p.Recovered = p.Recovered[:rec]
 		}
-		if p.readDepth <= depth {
-			entry = &tmemoEntry{}
-		} else {
-			if found {
-				delete(p.TypedDocument.meta, e)
-			}
-			entry = p.memoSlab.one()
-			*entry = tmemoEntry{val: v, ok: ok, end: p.Pos, silent: p.Silent > 0, errs: p.copyErrors(nil, p.Recovered[rec:])}
-			p.memoPut(r.Id, start, min, env, entry)
-		}
 	}
-	settled := !(p.readDepth <= depth)
-	p.leaveCall(read)
 	far, inner := p.Unisolate(m)
-	entry.far, entry.expected = far, p.Keep(inner)
+	kept := p.Keep(inner)
 	p.documentTouch(p.Pos + 1)
-	if r.Leader {
-		if !settled {
-			p.docReuse = reuseInParse
-		} else {
-			p.docReuse = max(p.docReuse, reuseUntilEdit)
+	store := p.ctxPop(&c)
+	if store == storeMemo {
+		if found {
+			delete(p.TypedDocument.meta, e)
 		}
+		entry := p.memoSlab.one()
+		*entry = tmemoEntry{val: v, ok: ok, end: p.Pos, silent: p.Silent > 0, errs: p.copyErrors(nil, p.Recovered[rec:])}
+		p.memoPut(r.Id, start, min, env, entry)
+		entry.present = c.present
+		entry.far, entry.expected = far, kept
+		p.TypedDocument.meta[entry] = typedDocumentMeta{examined: p.docHigh}
+	} else if store == storeCtx {
+		p.ctxKeep(&c, r.Id, start, min, env, &ctxResult{val: v, ok: ok, end: p.Pos, examined: p.examinedNow(), silent: p.Silent > 0, errs: p.copyErrors(nil, p.Recovered[rec:]), far: far, expected: kept})
 	}
-	if r.Leader || settled {
-		p.TypedDocument.meta[entry] = typedDocumentMeta{examined: p.docHigh, reuse: p.docReuse}
-		if p.docReuse == reuseInParse {
-			p.TypedDocument.parseOnly = append(p.TypedDocument.parseOnly, tmemoPlace{start, entry})
-		}
-	}
+	p.ctxDone(&c)
 	p.MergeExpected(far, inner)
 	if !ok {
 		p.Pos = start

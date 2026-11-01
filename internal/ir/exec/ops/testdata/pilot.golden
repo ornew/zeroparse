@@ -44,22 +44,10 @@ op memo.lookup(rule int, pos int, level int, key Values) (Entry, bool)
   reads memo
   cost <= 1 + 1*key_scan
   contract:
-    // Returns the entry stored or seeded under the key, if one is there and not replaced, and
-    // true; otherwise false and an entry that must not be used. Two keys are equal when their rules,
-    // positions and levels are equal and the host's value equality holds for their values.
-  requires:
-    // If a growing entry exists for the rule, position and level, the key is the one it was
-    // seeded with. Compositions look a left-recursion leader up with memo.lookupGrowing first.
+    // Returns the entry stored under the key, if one is there and not replaced, and true;
+    // otherwise false and an entry that must not be used. Two keys are equal when their rules, positions
+    // and levels are equal and the host's value equality holds for their values.
   law: two lookups with no write of memo between them return the same result
-
-op memo.lookupGrowing(rule int, pos int, level int) (Entry, bool)
-  component memo
-  reads memo
-  cost <= 1 + 1*key_scan
-  contract:
-    // Returns the growing entry of the rule at the position and level, whatever key values it
-    // was seeded with, and true; otherwise false. This is the left-recursion guard: while a rule grows at a
-    // position, every call of it there reads the growing result.
 
 op memo.store(rule int, pos int, level int, key Values, ok bool, end int, silent bool, value Value, errs Errs) Entry
   component memo
@@ -71,42 +59,7 @@ op memo.store(rule int, pos int, level int, key Values, ok bool, end int, silent
     // context, its value and its recovered errors under the key, replacing the entry stored under the same
     // key, and returns it. Entries under other keys are unchanged.
   requires:
-    // No growing entry exists for the rule, position and level; end is at least pos.
-
-op memo.seed(rule int, pos int, level int, key Values) Entry
-  component memo
-  reads memo
-  writes memo
-  cost <= 2 + 1*key_scan + 1*slot_growth
-  contract:
-    // Starts the growth of a left-recursion leader: stores a growing entry that fails and ends
-    // at pos, not silent, with no value and no recovered errors, under the key, replacing the entry stored
-    // under the same key, and returns it.
-  requires:
-    // No growing entry exists for the rule, position and level.
-
-op memo.reseed(rule int, pos int, level int, key Values, end int, value Value, errs Errs) Entry
-  component memo
-  reads memo
-  writes memo
-  cost <= 2 + 1*key_scan + 1*slot_growth
-  contract:
-    // Records a longer seed: replaces the growing entry under the key by a growing entry that
-    // succeeds and ends at end, not silent, with the value and the recovered errors, and returns it. The
-    // replaced entry is no longer found.
-  requires:
-    // The key has a growing entry; end is greater than pos.
-
-op memo.finishSeed(e Entry, silent bool)
-  component memo
-  writes memo
-  cost <= 0
-  contract:
-    // Ends a growth: the growing entry e becomes complete, with its outcome, end, value and
-    // recovered errors, and silent as given. Lookups of its key return it as a complete entry, and
-    // memo.lookupGrowing no longer finds it.
-  requires:
-    // e is the growing entry most recently seeded or reseeded under its key.
+    // end is at least pos.
 
 op memo.ok(e Entry) bool
   component memo
@@ -121,13 +74,6 @@ op memo.end(e Entry) int
   cost <= 0
   contract:
     // Returns the end of the match of entry e; for a failure, the position of the call.
-
-op memo.growing(e Entry) bool
-  component memo
-  reads memo
-  cost <= 0
-  contract:
-    // Returns whether entry e is the growing entry of a left-recursion leader.
 
 op memo.silent(e Entry) bool
   component memo

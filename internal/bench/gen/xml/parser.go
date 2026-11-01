@@ -818,6 +818,7 @@ type ruleExtra struct {
 	Where      string
 	NodeType   string
 	OpNodeType string
+	Cycle      int32
 }
 
 var rulesSpec = [...]ruleSpec{
@@ -933,32 +934,32 @@ var rulesStrs = [...][]string{
 }
 
 var rulesExtras = [...]ruleExtra{
-	{5, "", "Version", ""},
-	{7, "", "EncName", ""},
-	{9, "", "YesNo", ""},
-	{12, "", "Comment", ""},
-	{14, "", "PIData", ""},
-	{18, "", "PERef", ""},
-	{23, "", "SystemLiteral", ""},
-	{24, "", "SystemLiteral", ""},
-	{26, "", "PubidLiteral", ""},
-	{27, "", "PubidLiteral", ""},
-	{30, "", "Keyword", ""},
-	{31, "", "Keyword", ""},
-	{37, "", "Occurrence", ""},
-	{40, "", "Keyword", ""},
-	{41, "", "Keyword", ""},
-	{43, "", "Keyword", ""},
-	{50, "", "EntityValue", ""},
-	{51, "", "EntityValue", ""},
-	{58, "", "AttValue", ""},
-	{59, "", "AttValue", ""},
-	{63, "", "CharData", ""},
-	{65, "", "CDSect", ""},
-	{67, "", "CharRef", ""},
-	{68, "", "EntityRef", ""},
-	{69, "", "Name", ""},
-	{71, "", "Nmtoken", ""},
+	{5, "", "Version", "", 0},
+	{7, "", "EncName", "", 0},
+	{9, "", "YesNo", "", 0},
+	{12, "", "Comment", "", 0},
+	{14, "", "PIData", "", 0},
+	{18, "", "PERef", "", 0},
+	{23, "", "SystemLiteral", "", 0},
+	{24, "", "SystemLiteral", "", 0},
+	{26, "", "PubidLiteral", "", 0},
+	{27, "", "PubidLiteral", "", 0},
+	{30, "", "Keyword", "", 0},
+	{31, "", "Keyword", "", 0},
+	{37, "", "Occurrence", "", 0},
+	{40, "", "Keyword", "", 0},
+	{41, "", "Keyword", "", 0},
+	{43, "", "Keyword", "", 0},
+	{50, "", "EntityValue", "", 0},
+	{51, "", "EntityValue", "", 0},
+	{58, "", "AttValue", "", 0},
+	{59, "", "AttValue", "", 0},
+	{63, "", "CharData", "", 0},
+	{65, "", "CDSect", "", 0},
+	{67, "", "CharRef", "", 0},
+	{68, "", "EntityRef", "", 0},
+	{69, "", "Name", "", 0},
+	{71, "", "Nmtoken", "", 0},
 }
 
 var scope173 = []string{}
@@ -1054,7 +1055,7 @@ var recRulesStrs = [...][]string{
 }
 
 var recRulesExtras = [...]ruleExtra{
-	{69, "", "Name", ""},
+	{69, "", "Name", "", 0},
 }
 
 var scope195 = []string{"n"}
@@ -1994,15 +1995,18 @@ func e35(p *rt.Parser, _ int) (*rt.Node, bool) {
 		}
 		x13 = p.Mark()
 		p.Silent++
+		p.LookBegin(1)
 		if (p.Pos < len(p.In) && p.In[p.Pos] == 62) && p.Control.Take(1) {
 			p.Pos++
 		} else if _, ok = p.MatchLiteral(lit34, ">", 28, false); !ok {
 			goto L14
 		}
+		p.LookEnd(true)
 		p.Silent--
 		p.Reset(x13)
 		goto L12
 	L14:
+		p.LookEnd(false)
 		p.Silent--
 		p.Reset(x13)
 		goto L6
@@ -4385,15 +4389,18 @@ func e137(p *rt.Parser, _ int) (*rt.Node, bool) {
 	var x7 rune
 	x1 = p.Mark()
 	p.Silent++
+	p.LookBegin(2)
 	if (p.Pos+2 <= len(p.In) && p.In[p.Pos] == 60 && p.In[p.Pos+1] == 47) && p.Control.Take(2) {
 		p.Pos += 2
 	} else if _, ok = p.MatchLiteral(lit126, "</", 71, false); !ok {
 		goto L2
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Reset(x1)
 	goto fail
 L2:
+	p.LookEnd(false)
 	p.Silent--
 	p.Reset(x1)
 	x4 = p.Mark()
@@ -4517,15 +4524,18 @@ func e140(p *rt.Parser, _ int) (*rt.Node, bool) {
 		}
 		x13 = p.Mark()
 		p.Silent++
+		p.LookBegin(3)
 		if (p.Pos+2 <= len(p.In) && p.In[p.Pos] == 93 && p.In[p.Pos+1] == 62) && p.Control.Take(2) {
 			p.Pos += 2
 		} else if _, ok = p.MatchLiteral(lit139, "]>", 77, false); !ok {
 			goto L14
 		}
+		p.LookEnd(true)
 		p.Silent--
 		p.Reset(x13)
 		goto L12
 	L14:
+		p.LookEnd(false)
 		p.Silent--
 		p.Reset(x13)
 		goto L6
@@ -4623,15 +4633,18 @@ func e145(p *rt.Parser, _ int) (*rt.Node, bool) {
 		}
 		x13 = p.Mark()
 		p.Silent++
+		p.LookBegin(4)
 		if (p.Pos+2 <= len(p.In) && p.In[p.Pos] == 93 && p.In[p.Pos+1] == 62) && p.Control.Take(2) {
 			p.Pos += 2
 		} else if _, ok = p.MatchLiteral(lit139, "]>", 77, false); !ok {
 			goto L14
 		}
+		p.LookEnd(true)
 		p.Silent--
 		p.Reset(x13)
 		goto L12
 	L14:
+		p.LookEnd(false)
 		p.Silent--
 		p.Reset(x13)
 		goto L6
@@ -7258,15 +7271,18 @@ func q14(p *rt.Parser) (*rt.Node, bool) {
 		}
 		x12 = p.Pos
 		p.Silent++
+		p.LookBegin(1)
 		if (p.Pos < len(p.In) && p.In[p.Pos] == 62) && p.Control.Take(1) {
 			p.Pos++
 		} else if _, ok = p.MatchLiteral(lit34, ">", 28, false); !ok {
 			goto L13
 		}
+		p.LookEnd(true)
 		p.Silent--
 		p.Pos = x12
 		goto L11
 	L13:
+		p.LookEnd(false)
 		p.Silent--
 		p.Pos = x12
 		goto L5
@@ -8835,15 +8851,18 @@ func q62(p *rt.Parser) (*rt.Node, bool) {
 	p.Enter()
 	x1 = p.Pos
 	p.Silent++
+	p.LookBegin(2)
 	if (p.Pos+2 <= len(p.In) && p.In[p.Pos] == 60 && p.In[p.Pos+1] == 47) && p.Control.Take(2) {
 		p.Pos += 2
 	} else if _, ok = p.MatchLiteral(lit126, "</", 71, false); !ok {
 		goto L2
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Pos = x1
 	goto fail
 L2:
+	p.LookEnd(false)
 	p.Silent--
 	p.Pos = x1
 	x3 = p.Pos
@@ -8964,15 +8983,18 @@ func q63(p *rt.Parser) (*rt.Node, bool) {
 		}
 		x12 = p.Pos
 		p.Silent++
+		p.LookBegin(3)
 		if (p.Pos+2 <= len(p.In) && p.In[p.Pos] == 93 && p.In[p.Pos+1] == 62) && p.Control.Take(2) {
 			p.Pos += 2
 		} else if _, ok = p.MatchLiteral(lit139, "]>", 77, false); !ok {
 			goto L13
 		}
+		p.LookEnd(true)
 		p.Silent--
 		p.Pos = x12
 		goto L11
 	L13:
+		p.LookEnd(false)
 		p.Silent--
 		p.Pos = x12
 		goto L5
@@ -9072,15 +9094,18 @@ func q65(p *rt.Parser) (*rt.Node, bool) {
 		}
 		x12 = p.Pos
 		p.Silent++
+		p.LookBegin(4)
 		if (p.Pos+2 <= len(p.In) && p.In[p.Pos] == 93 && p.In[p.Pos+1] == 62) && p.Control.Take(2) {
 			p.Pos += 2
 		} else if _, ok = p.MatchLiteral(lit139, "]>", 77, false); !ok {
 			goto L13
 		}
+		p.LookEnd(true)
 		p.Silent--
 		p.Pos = x12
 		goto L11
 	L13:
+		p.LookEnd(false)
 		p.Silent--
 		p.Pos = x12
 		goto L5
@@ -10272,15 +10297,18 @@ func s14(p *rt.TParser) (any, bool) {
 		}
 		x13 = p.Pos
 		p.Silent++
+		p.LookBegin(1)
 		if (p.Pos < len(p.In) && p.In[p.Pos] == 62) && p.Control.Take(1) {
 			p.Pos++
 		} else if _, ok = p.Parser.MatchLiteral(lit34, ">", 28, false); !ok {
 			goto L14
 		}
+		p.LookEnd(true)
 		p.Silent--
 		p.Pos = x13
 		goto L12
 	L14:
+		p.LookEnd(false)
 		p.Silent--
 		p.Pos = x13
 		goto L6
@@ -13265,15 +13293,18 @@ func i62(p *rt.TParser) (any, bool) {
 	p.Enter()
 	x1 = p.Pos
 	p.Silent++
+	p.LookBegin(2)
 	if (p.Pos+2 <= len(p.In) && p.In[p.Pos] == 60 && p.In[p.Pos+1] == 47) && p.Control.Take(2) {
 		p.Pos += 2
 	} else if _, ok = p.Parser.MatchLiteral(lit126, "</", 71, false); !ok {
 		goto L2
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Pos = x1
 	goto fail
 L2:
+	p.LookEnd(false)
 	p.Silent--
 	p.Pos = x1
 	x5 = p.Pos
@@ -13403,15 +13434,18 @@ func s63(p *rt.TParser) (any, bool) {
 		}
 		x13 = p.Pos
 		p.Silent++
+		p.LookBegin(3)
 		if (p.Pos+2 <= len(p.In) && p.In[p.Pos] == 93 && p.In[p.Pos+1] == 62) && p.Control.Take(2) {
 			p.Pos += 2
 		} else if _, ok = p.Parser.MatchLiteral(lit139, "]>", 77, false); !ok {
 			goto L14
 		}
+		p.LookEnd(true)
 		p.Silent--
 		p.Pos = x13
 		goto L12
 	L14:
+		p.LookEnd(false)
 		p.Silent--
 		p.Pos = x13
 		goto L6
@@ -13533,15 +13567,18 @@ func s65(p *rt.TParser) (any, bool) {
 		}
 		x13 = p.Pos
 		p.Silent++
+		p.LookBegin(4)
 		if (p.Pos+2 <= len(p.In) && p.In[p.Pos] == 93 && p.In[p.Pos+1] == 62) && p.Control.Take(2) {
 			p.Pos += 2
 		} else if _, ok = p.Parser.MatchLiteral(lit139, "]>", 77, false); !ok {
 			goto L14
 		}
+		p.LookEnd(true)
 		p.Silent--
 		p.Pos = x13
 		goto L12
 	L14:
+		p.LookEnd(false)
 		p.Silent--
 		p.Pos = x13
 		goto L6

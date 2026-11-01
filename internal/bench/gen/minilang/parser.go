@@ -454,6 +454,7 @@ type ruleExtra struct {
 	Where      string
 	NodeType   string
 	OpNodeType string
+	Cycle      int32
 }
 
 var rulesSpec = [...]ruleSpec{
@@ -517,11 +518,11 @@ var rulesStrs = [...][]string{
 }
 
 var rulesExtras = [...]ruleExtra{
-	{16, "", "Ident", ""},
-	{17, "", "Ident", ""},
-	{20, "", "Number", ""},
-	{22, "", "String", ""},
-	{23, "", "Bool", ""},
+	{16, "", "Ident", "", 0},
+	{17, "", "Ident", "", 0},
+	{20, "", "Number", "", 0},
+	{22, "", "String", "", 0},
+	{23, "", "Bool", "", 0},
 }
 
 var lit62 = []rune("[")
@@ -1093,15 +1094,18 @@ func e11(p *rt.Parser, _ int) (*rt.Node, bool) {
 	}
 	x3 = p.Mark()
 	p.Silent++
+	p.LookBegin(1)
 	if (p.Pos < len(p.In) && p.In[p.Pos] == 61) && p.Control.Take(1) {
 		p.Pos++
 	} else if _, ok = p.MatchLiteral(lit9, "=", 14, false); !ok {
 		goto L4
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Reset(x3)
 	goto fail
 L4:
+	p.LookEnd(false)
 	p.Silent--
 	p.Reset(x3)
 	if v6, ok = p.Call(rules[13], 0); !ok {
@@ -1476,13 +1480,16 @@ func e26(p *rt.Parser, _ int) (*rt.Node, bool) {
 	x1 = p.Pos
 	x2 = p.Mark()
 	p.Silent++
+	p.LookBegin(2)
 	if _, ok = r38(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Reset(x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Reset(x2)
 	if p.Pos < len(p.In) {
@@ -1742,13 +1749,16 @@ L8:
 L3:
 	x10 = p.Mark()
 	p.Silent++
+	p.LookBegin(4)
 	if _, ok = r39(p); !ok {
 		goto L11
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Reset(x10)
 	goto fail
 L11:
+	p.LookEnd(false)
 	p.Silent--
 	p.Reset(x10)
 	v12 = p.NewTerminal(x1, p.Text(x1, p.Pos))
@@ -2621,13 +2631,16 @@ func r32(p *rt.Parser) (*rt.Node, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(11)
 	if _, ok = r39(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	v = nil
@@ -2650,13 +2663,16 @@ func r33(p *rt.Parser) (*rt.Node, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(12)
 	if _, ok = r39(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	v = nil
@@ -2679,13 +2695,16 @@ func r34(p *rt.Parser) (*rt.Node, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(13)
 	if _, ok = r39(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	v = nil
@@ -2706,13 +2725,16 @@ func r35(p *rt.Parser) (*rt.Node, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(14)
 	if _, ok = r39(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	v = nil
@@ -2733,13 +2755,16 @@ func r36(p *rt.Parser) (*rt.Node, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(15)
 	if _, ok = r39(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	v = nil
@@ -2762,13 +2787,16 @@ func r37(p *rt.Parser) (*rt.Node, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(16)
 	if _, ok = r39(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	v = nil
@@ -2894,13 +2922,16 @@ L20:
 L3:
 	x22, x23 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(17)
 	if _, ok = r39(p); !ok {
 		goto L24
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x22, x23)
 	goto fail
 L24:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x22, x23)
 	v = nil
@@ -3275,13 +3306,16 @@ func e101(p *rt.Parser, _ int) (*rt.Node, bool) {
 	var size int
 	x1 = p.Mark()
 	p.Silent++
+	p.LookBegin(2)
 	if _, ok = q18(p); !ok {
 		goto L2
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Reset(x1)
 	goto fail
 L2:
+	p.LookEnd(false)
 	p.Silent--
 	p.Reset(x1)
 	if p.Pos < len(p.In) {
@@ -3416,15 +3450,18 @@ func q5(p *rt.Parser) (*rt.Node, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(1)
 	if (p.Pos < len(p.In) && p.In[p.Pos] == 61) && p.Control.Take(1) {
 		p.Pos++
 	} else if _, ok = p.MatchLiteral(lit9, "=", 14, false); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	if _, ok = p.Call(recRules[13], 0); !ok {
@@ -4275,13 +4312,16 @@ L20:
 L3:
 	x22, x23 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(3)
 	if _, ok = q19(p); !ok {
 		goto L24
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x22, x23)
 	goto fail
 L24:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x22, x23)
 	v = nil
@@ -4517,13 +4557,16 @@ L8:
 L3:
 	x10, x11 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(4)
 	if _, ok = q19(p); !ok {
 		goto L12
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x10, x11)
 	goto fail
 L12:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x10, x11)
 	v = nil
@@ -4546,13 +4589,16 @@ func q24(p *rt.Parser) (*rt.Node, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(5)
 	if _, ok = q19(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	v = nil
@@ -4575,13 +4621,16 @@ func q25(p *rt.Parser) (*rt.Node, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(6)
 	if _, ok = q19(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	v = nil
@@ -4604,13 +4653,16 @@ func q26(p *rt.Parser) (*rt.Node, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(7)
 	if _, ok = q19(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	v = nil
@@ -4633,13 +4685,16 @@ func q27(p *rt.Parser) (*rt.Node, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(8)
 	if _, ok = q19(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	v = nil
@@ -4660,13 +4715,16 @@ func q28(p *rt.Parser) (*rt.Node, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(9)
 	if _, ok = q19(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	v = nil
@@ -4687,13 +4745,16 @@ func q29(p *rt.Parser) (*rt.Node, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(10)
 	if _, ok = q19(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	v = nil
@@ -5212,15 +5273,18 @@ func i5(p *rt.TParser) (any, bool) {
 	}
 	x4, x5 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(1)
 	if (p.Pos < len(p.In) && p.In[p.Pos] == 61) && p.Control.Take(1) {
 		p.Pos++
 	} else if _, ok = p.Parser.MatchLiteral(lit9, "=", 14, false); !ok {
 		goto L6
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x4, x5)
 	goto fail
 L6:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x4, x5)
 	if v9, ok = u13(p); !ok {
@@ -6371,13 +6435,16 @@ func v16(p *rt.TParser) (any, bool) {
 	x1 = p.Pos
 	x2, x3 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(2)
 	if _, ok = s38(p); !ok {
 		goto L4
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x2, x3)
 	goto fail
 L4:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x2, x3)
 	if p.Pos < len(p.In) {
@@ -6694,13 +6761,16 @@ L9:
 L4:
 	x11, x12 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(4)
 	if _, ok = s39(p); !ok {
 		goto L13
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x11, x12)
 	goto fail
 L13:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x11, x12)
 	v14 = p.NewMatch(x1, p.Pos, p.Text(x1, p.Pos), true)
@@ -6915,13 +6985,16 @@ func s32(p *rt.TParser) (any, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(11)
 	if _, ok = s39(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	v = nil
@@ -6944,13 +7017,16 @@ func s33(p *rt.TParser) (any, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(12)
 	if _, ok = s39(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	v = nil
@@ -6973,13 +7049,16 @@ func s34(p *rt.TParser) (any, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(13)
 	if _, ok = s39(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	v = nil
@@ -7000,13 +7079,16 @@ func s35(p *rt.TParser) (any, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(14)
 	if _, ok = s39(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	v = nil
@@ -7027,13 +7109,16 @@ func s36(p *rt.TParser) (any, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(15)
 	if _, ok = s39(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	v = nil
@@ -7056,13 +7141,16 @@ func s37(p *rt.TParser) (any, bool) {
 	}
 	x1, x2 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(16)
 	if _, ok = s39(p); !ok {
 		goto L3
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x1, x2)
 	goto fail
 L3:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x1, x2)
 	v = nil
@@ -7188,13 +7276,16 @@ L20:
 L3:
 	x22, x23 = p.Pos, len(p.Recovered)
 	p.Silent++
+	p.LookBegin(17)
 	if _, ok = s39(p); !ok {
 		goto L24
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Restore(x22, x23)
 	goto fail
 L24:
+	p.LookEnd(false)
 	p.Silent--
 	p.Restore(x22, x23)
 	v = nil

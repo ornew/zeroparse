@@ -195,6 +195,7 @@ type ruleExtra struct {
 	Where      string
 	NodeType   string
 	OpNodeType string
+	Cycle      int32
 }
 
 var rulesSpec = [...]ruleSpec{
@@ -212,7 +213,7 @@ var rulesStrs = [...][]string{
 }
 
 var rulesExtras = [...]ruleExtra{
-	{2, "", "Field", ""},
+	{2, "", "Field", "", 0},
 }
 
 var recRulesSpec = [...]ruleSpec{
@@ -314,14 +315,17 @@ func e6(p *rt.Parser, _ int) (*rt.Node, bool) {
 	var x7, x8 *rt.CaptureFrame
 	x1 = p.Mark()
 	p.Silent++
+	p.LookBegin(1)
 	if !p.AtEndBatch() {
 		p.ExpectBudget(p.Pos, rt.IdEndInput)
 		goto L2
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Reset(x1)
 	goto fail
 L2:
+	p.LookEnd(false)
 	p.Silent--
 	p.Reset(x1)
 	if v4, ok = r2(p); !ok {
@@ -464,6 +468,7 @@ L6:
 		}
 		x15 = p.Pos
 		p.Silent++
+		p.LookBegin(2)
 		if p.Pos < len(p.In) {
 			p.Control.Take(1)
 			ch, size, ok = p.In[p.Pos], 1, true
@@ -475,10 +480,12 @@ L6:
 			goto L16
 		}
 		p.Pos += size
+		p.LookEnd(true)
 		p.Silent--
 		p.Pos = x15
 		goto L17
 	L16:
+		p.LookEnd(false)
 		p.Silent--
 		p.Pos = x15
 		goto L14
@@ -640,14 +647,17 @@ func q1(p *rt.Parser) (*rt.Node, bool) {
 	start = p.Pos
 	x1 = p.Pos
 	p.Silent++
+	p.LookBegin(1)
 	if !p.AtEndBatch() {
 		p.ExpectBudget(p.Pos, rt.IdEndInput)
 		goto L2
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Pos = x1
 	goto fail
 L2:
+	p.LookEnd(false)
 	p.Silent--
 	p.Pos = x1
 	if _, ok = q2(p); !ok {
@@ -778,6 +788,7 @@ L5:
 		}
 		x14 = p.Pos
 		p.Silent++
+		p.LookBegin(2)
 		if p.Pos < len(p.In) {
 			p.Control.Take(1)
 			ch, size, ok = p.In[p.Pos], 1, true
@@ -789,10 +800,12 @@ L5:
 			goto L15
 		}
 		p.Pos += size
+		p.LookEnd(true)
 		p.Silent--
 		p.Pos = x14
 		goto L16
 	L15:
+		p.LookEnd(false)
 		p.Silent--
 		p.Pos = x14
 		goto L13
@@ -974,14 +987,17 @@ func i1(p *rt.TParser) (any, bool) {
 	start = p.Pos
 	x1 = p.Pos
 	p.Silent++
+	p.LookBegin(1)
 	if !p.AtEndBatch() {
 		p.ExpectBudget(p.Pos, rt.IdEndInput)
 		goto L2
 	}
+	p.LookEnd(true)
 	p.Silent--
 	p.Pos = x1
 	goto fail
 L2:
+	p.LookEnd(false)
 	p.Silent--
 	p.Pos = x1
 	if v5, ok = s2(p); !ok {
@@ -1127,6 +1143,7 @@ L6:
 		}
 		x15 = p.Pos
 		p.Silent++
+		p.LookBegin(2)
 		if p.Pos < len(p.In) {
 			p.Control.Take(1)
 			ch, size, ok = p.In[p.Pos], 1, true
@@ -1138,10 +1155,12 @@ L6:
 			goto L16
 		}
 		p.Pos += size
+		p.LookEnd(true)
 		p.Silent--
 		p.Pos = x15
 		goto L17
 	L16:
+		p.LookEnd(false)
 		p.Silent--
 		p.Pos = x15
 		goto L14

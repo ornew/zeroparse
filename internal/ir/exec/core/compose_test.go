@@ -2,8 +2,8 @@ package core
 
 import (
 	"fmt"
-	"math"
 	"slices"
+	"strings"
 	"testing"
 
 	"zeroparse.dev/zp/internal/ir/exec"
@@ -22,10 +22,10 @@ import (
 // trule is a rule of the model: its flags and its scripted body, which runs at the position of the
 // machine and returns the value and success of the body.
 type trule struct {
-	id                           int64
-	memo, leader, member, defer_ bool
-	body                         func(m *machine) (any, bool)
-	runs                         int // the evaluations of the body
+	id                   int64
+	memo, leader, defer_ bool
+	body                 func(m *machine) (any, bool)
+	runs                 int // the evaluations of the body
 }
 
 // record is an expectation record of the model: the farthest position and the expectations there.
@@ -43,31 +43,22 @@ type machine struct {
 	cur   record
 	saved []record
 	// exps holds the expectations of each entry (memo.setExpected).
-	exps map[*ref.Entry]record
-	// pruned makes memo.grown find no entry, as after a stream commit.
-	pruned                 bool
+	exps                   map[*ref.Entry]record
 	spends, steps, memoHit int
-	// growths, seedPos and readDepth are the growth state (ops.Growth); depth holds the depth of each
-	// growing entry (memo.mark), and of an unstable entry 0 (memo.settle).
-	growths, seedPos, readDepth int64
-	depth                       map[*ref.Entry]int64
+	// ctx is what the context operations answer (ops.Growth): the context state of every call.
+	ctx ctxModel
 	// events lists what the observation was told (obs.enter, obs.exit); high is the examined frontier
 	// of the active call (doc.examinedBegin, doc.examinedEnd).
 	events []string
 	high   int64
-	// reuse is the reuse of the active Document call (doc.enter, doc.leave), and docMemo tells
-	// whether a Document parse memoizes the rules (rule.docMemo).
-	reuse   int64
+	// docMemo tells whether a Document parse memoizes the rules (rule.docMemo).
 	docMemo bool
-	// docActive tells whether the parse reads a Document (doc.active); examined and reuses hold what
-	// each entry records (memo.recordDoc); reused counts the reused entries
-	// (doc.reused) and parseOnly lists the entries reused only in this parse (doc.parseOnly).
+	// docActive tells whether the parse reads a Document (doc.active); examined holds what each
+	// entry records (memo.recordDoc); reused counts the reused entries (doc.reused).
 	docActive, obsActive bool
 	examined             map[*ref.Entry]int64
-	reuses               map[*ref.Entry]int64
 	reused               int
-	parseOnly            []string
-	// last is the entry stored or grown last (memo.store, memo.grown).
+	// last is the entry stored last (memo.store).
 	last *ref.Entry
 	// evaluated counts the bodies evaluated through an invocation (doc.evaluated); forgot lists the
 	// frontiers of the records forgotten (memo.forgetDoc).
@@ -75,10 +66,45 @@ type machine struct {
 	forgot    []int64
 }
 
+// ctxModel scripts the context of the calls: the seed that ctx.enter returns, whether the call is
+// in a context, the result kept there that ctx.lookup returns, whether the memo entries are allowed
+// and where ctx.pop sends the result (1 for the memo, 2 for the context, 0 for nowhere). It records
+// the context operations the calls made.
+type ctxModel struct {
+	seed, held *result
+	active     bool
+	deny       bool
+	store      int64
+	ops        []string
+	kept       []*result
+	present    map[*ref.Entry]bool
+}
+
+// result is a result that the context of a call keeps, or the last result of a growth.
+type result struct {
+	v    any
+	ok   bool
+	end  int64
+	errs []string
+	far  int64
+	exps []string
+}
+
+// growth is the state of a growth in the model: a growth in no context.
+type growth struct {
+	start, rec int64
+	best       *result
+	done       bool
+}
+
+func resultOf(x any) *result {
+	r, _ := x.(*result)
+	return r
+}
+
 func newMachine() *machine {
 	return &machine{Model: ref.New(ref.Config{Rules: 4, MaxDepth: 100}), exps: map[*ref.Entry]record{},
-		readDepth: math.MaxInt64, depth: map[*ref.Entry]int64{},
-		examined: map[*ref.Entry]int64{}, reuses: map[*ref.Entry]int64{}}
+		ctx: ctxModel{store: 1, present: map[*ref.Entry]bool{}}, examined: map[*ref.Entry]int64{}}
 }
 
 func (m *machine) UseRegisters(regs map[string]any) { m.regs = regs }
@@ -109,19 +135,6 @@ func (m *machine) merge(far int64, exps []string) {
 	}
 }
 
-func (m *machine) growing(e *ref.Entry) bool {
-	return m.Model.Call(&exec.Op{Name: "memo.growing"}, []any{e})[0].(bool)
-}
-
-func (m *machine) entrySilent(e *ref.Entry) bool {
-	return m.Model.Call(&exec.Op{Name: "memo.silent"}, []any{e})[0].(bool)
-}
-
-func (m *machine) noErrs(e *ref.Entry) bool {
-	errs, _ := m.Model.Call(&exec.Op{Name: "memo.errs"}, []any{e})[0].([]string)
-	return len(errs) == 0
-}
-
 func entryOf(x any) *ref.Entry {
 	e, _ := x.(*ref.Entry)
 	if e == nil {
@@ -136,9 +149,6 @@ func (m *machine) Call(o *exec.Op, args []any) []any {
 		return []any{false}
 	case "call.spend":
 		m.spends++
-		return nil
-	case "call.growStep":
-		m.steps++
 		return nil
 	case "call.first":
 		r := args[0].(*trule)
@@ -201,15 +211,6 @@ func (m *machine) Call(o *exec.Op, args []any) []any {
 		s, _ := args[2].([]string)
 		m.exps[entryOf(args[0])] = record{far: args[1].(int64), exps: s}
 		return nil
-	case "memo.grown":
-		res := m.Model.Call(&exec.Op{Name: "memo.lookup"}, args)
-		if m.pruned || !res[1].(bool) {
-			return []any{nil}
-		}
-		m.last = res[0].(*ref.Entry)
-		return []any{res[0]}
-	case "memo.detached":
-		return []any{&ref.Entry{}}
 	case "obs.memoHit":
 		m.memoHit++
 		return nil
@@ -228,12 +229,11 @@ func (m *machine) Call(o *exec.Op, args []any) []any {
 		m.high = max(args[0].(int64), x)
 		return []any{x, true}
 	case "doc.enter":
-		h, u := m.high, m.reuse
-		m.high, m.reuse = args[0].(int64)+1, 0
-		return []any{h, u}
+		h := m.high
+		m.high = args[0].(int64) + 1
+		return []any{h}
 	case "doc.leave":
 		m.high = max(args[0].(int64), m.high)
-		m.reuse = max(args[1].(int64), m.reuse)
 		return nil
 	case "rule.docMemo":
 		return []any{m.docMemo}
@@ -247,26 +247,10 @@ func (m *machine) Call(o *exec.Op, args []any) []any {
 	case "doc.readEntry":
 		e := entryOf(args[0])
 		m.high = max(m.high, m.examined[e])
-		m.reuse = max(m.reuse, m.reuses[e])
-		return nil
-	case "doc.reuse":
-		return []any{m.reuse}
-	case "doc.setReuse":
-		m.reuse = args[0].(int64)
-		return nil
-	case "doc.limitReuse":
-		m.reuse = max(m.reuse, args[0].(int64))
 		return nil
 	case "doc.reused":
 		m.reused++
 		return nil
-	case "doc.parseOnly":
-		m.parseOnly = append(m.parseOnly, fmt.Sprintf("%d reuse %d", args[0], m.reuses[entryOf(args[1])]))
-		return nil
-	case "reuse.untilEdit":
-		return []any{int64(1)}
-	case "reuse.inParse":
-		return []any{int64(2)}
 	case "doc.evaluated":
 		m.evaluated++
 		return nil
@@ -274,57 +258,83 @@ func (m *machine) Call(o *exec.Op, args []any) []any {
 		e := entryOf(args[0])
 		m.forgot = append(m.forgot, m.examined[e])
 		delete(m.examined, e)
-		delete(m.reuses, e)
 		return nil
 	case "rule.run":
 		return args[0].(*trule).Call(m)
 	case "memo.recordDoc":
-		e := entryOf(args[0])
-		m.examined[e], m.reuses[e] = m.high, m.reuse
+		m.examined[entryOf(args[0])] = m.high
 		return nil
 	case "call.body":
 		r := args[0].(*trule)
 		r.runs++
 		v, ok := r.body(m)
 		return []any{v, ok}
-	case "lr.stale":
-		return []any{args[0].(*trule).member && m.growths != 0 && m.seedPos == args[1].(int64)}
-	case "lr.read":
-		e := entryOf(args[0])
-		if d, ok := m.depth[e]; ok && (d == 0 || m.growing(e)) {
-			m.readDepth = min(m.readDepth, d)
+	case "ctx.enter":
+		m.ctx.ops = append(m.ctx.ops, "enter")
+		return []any{&m.ctx, m.ctx.seed}
+	case "ctx.found":
+		return []any{resultOf(args[0]) != nil}
+	case "ctx.ok":
+		return []any{resultOf(args[0]).ok}
+	case "ctx.value":
+		return []any{resultOf(args[0]).v}
+	case "ctx.replay":
+		r := resultOf(args[0])
+		m.memoHit++
+		if !args[1].(bool) {
+			m.merge(r.far, r.exps)
+		}
+		if r.ok {
+			m.setPos(r.end)
+			m.rec = append(m.rec, r.errs...)
 		}
 		return nil
-	case "lr.depth":
-		return []any{m.growths}
-	case "lr.enter":
-		read := m.readDepth
-		m.readDepth = math.MaxInt64
-		return []any{read}
-	case "lr.leave":
-		m.readDepth = min(m.readDepth, args[0].(int64))
+	case "ctx.allows":
+		return []any{!args[0].(*ctxModel).deny}
+	case "ctx.active":
+		return []any{args[0].(*ctxModel).active}
+	case "ctx.lookup":
+		m.ctx.ops = append(m.ctx.ops, "lookup")
+		return []any{m.ctx.held}
+	case "ctx.push", "ctx.done":
+		m.ctx.ops = append(m.ctx.ops, strings.TrimPrefix(o.Name, "ctx."))
 		return nil
-	case "lr.changeable":
-		return []any{m.readDepth <= args[0].(int64)}
-	case "lr.begin":
-		prev := m.seedPos
-		m.growths++
-		m.seedPos = args[0].(int64)
-		return []any{prev}
-	case "lr.end":
-		m.growths--
-		m.seedPos = args[0].(int64)
+	case "ctx.pop":
+		m.ctx.ops = append(m.ctx.ops, "pop")
+		return []any{m.ctx.store}
+	case "ctx.storeMemo":
+		return []any{int64(1)}
+	case "ctx.storeCtx":
+		return []any{int64(2)}
+	case "memo.setPresent":
+		m.ctx.present[entryOf(args[0])] = true
 		return nil
-	case "memo.mark":
-		m.depth[entryOf(args[0])] = m.growths
+	case "ctx.keep":
+		errs, _ := args[9].([]string)
+		k, _ := args[11].([]string)
+		m.ctx.kept = append(m.ctx.kept, &result{v: args[8], ok: args[5].(bool), end: args[6].(int64), errs: errs, far: args[10].(int64), exps: k})
 		return nil
-	case "memo.settle":
-		e := entryOf(args[0])
-		delete(m.depth, e)
-		if m.readDepth <= m.growths && (m.entrySilent(e) || !m.noErrs(e)) {
-			m.depth[e] = 0
+	case "grow.begin":
+		m.steps++
+		return []any{&growth{start: m.pos(), rec: int64(len(m.rec)), best: &result{end: m.pos()}}}
+	case "grow.next":
+		return []any{!args[0].(*growth).done}
+	case "grow.step":
+		g := args[0].(*growth)
+		if !args[2].(bool) || g.best.ok && m.pos() <= g.best.end {
+			g.done = true
+			return nil
 		}
+		m.steps++
+		g.best = &result{v: args[1], ok: true, end: m.pos(), errs: slices.Clone(m.rec[g.rec:])}
+		m.setPos(g.start)
+		m.rec = m.rec[:g.rec]
 		return nil
+	case "grow.end":
+		g := args[0].(*growth)
+		m.setPos(g.best.end)
+		m.rec = append(m.rec[:g.rec], g.best.errs...)
+		return []any{g.best}
 	}
 	res := m.Model.Call(o, args)
 	if o.Name == "memo.store" {
@@ -569,8 +579,8 @@ func TestObserved(t *testing.T) {
 }
 
 // TestDocument checks that a Document call starts the frontier of the call past its position and
-// its reuse at after edits, and leaves the enclosing call the farther frontier and the shorter
-// reuse, when the call returns and when an operation in it interrupts the parse.
+// leaves the enclosing call the farther frontier, when the call returns and when an operation in it
+// interrupts the parse.
 func TestDocument(t *testing.T) {
 	mod := Build()
 	f := composition(t, mod, "document", ops.Document)
@@ -623,19 +633,17 @@ func (f *fakeT) Fatal(args ...any)                 { f.failed = true; panic(f) }
 func checkDocument(t testing.TB, mod *exec.Module, f *exec.Func, extra ...any) {
 	t.Helper()
 	for _, c := range []struct {
-		name        string
-		memo, ok    bool
-		interrupt   bool
-		high, reuse int64
-		callHigh    int64
-		callReuse   int64
-		wantHigh    int64
-		wantReuse   int64
+		name      string
+		memo, ok  bool
+		interrupt bool
+		high      int64
+		callHigh  int64
+		wantHigh  int64
 	}{
-		{name: "memoized", memo: true, ok: true, high: 2, reuse: 1, callHigh: 9, callReuse: 0, wantHigh: 9, wantReuse: 1},
-		{name: "unmemoized failure", ok: false, high: 12, reuse: 2, callHigh: 9, callReuse: 1, wantHigh: 12, wantReuse: 2},
-		{name: "interrupted", memo: true, interrupt: true, high: 2, reuse: 1, callHigh: 9, callReuse: 0, wantHigh: 9, wantReuse: 1},
-		{name: "interrupted unmemoized", interrupt: true, high: 12, reuse: 2, callHigh: 9, callReuse: 1, wantHigh: 12, wantReuse: 2},
+		{name: "memoized", memo: true, ok: true, high: 2, callHigh: 9, wantHigh: 9},
+		{name: "unmemoized failure", ok: false, high: 12, callHigh: 9, wantHigh: 12},
+		{name: "interrupted", memo: true, interrupt: true, high: 2, callHigh: 9, wantHigh: 9},
+		{name: "interrupted unmemoized", interrupt: true, high: 12, callHigh: 9, wantHigh: 12},
 	} {
 		func() {
 			defer func() {
@@ -644,12 +652,12 @@ func checkDocument(t testing.TB, mod *exec.Module, f *exec.Func, extra ...any) {
 				}
 			}()
 			m := newMachine()
-			m.high, m.reuse, m.docMemo, m.docActive = c.high, c.reuse, c.memo, true
-			var atHigh, atReuse int64 = -1, -1
+			m.high, m.docMemo, m.docActive = c.high, c.memo, true
+			var atHigh int64 = -1
 			r := &trule{id: 2, memo: true, body: func(m *machine) (any, bool) {
-				atHigh, atReuse = m.high, m.reuse
+				atHigh = m.high
 				m.advance(2)
-				m.high, m.reuse = c.callHigh, c.callReuse
+				m.high = c.callHigh
 				if c.interrupt {
 					panic(exec.Interrupt{Reason: "limit"})
 				}
@@ -663,11 +671,11 @@ func checkDocument(t testing.TB, mod *exec.Module, f *exec.Func, extra ...any) {
 			} else if err != nil || res[1] != c.ok {
 				t.Errorf("%s: %v, %v, want success %v", c.name, res, err, c.ok)
 			}
-			if atHigh != 4 || atReuse != 0 {
-				t.Errorf("%s: the call began with the frontier %d and reuse %d, want 4 and 0", c.name, atHigh, atReuse)
+			if atHigh != 4 {
+				t.Errorf("%s: the call began with the frontier %d, want 4", c.name, atHigh)
 			}
-			if m.high != c.wantHigh || m.reuse != c.wantReuse {
-				t.Errorf("%s: the call left the frontier %d and reuse %d, want %d and %d", c.name, m.high, m.reuse, c.wantHigh, c.wantReuse)
+			if m.high != c.wantHigh {
+				t.Errorf("%s: the call left the frontier %d, want %d", c.name, m.high, c.wantHigh)
 			}
 			if r.runs != 1 {
 				t.Errorf("%s: evaluates the body %d times, want once", c.name, r.runs)
@@ -779,7 +787,7 @@ func TestTypedDocument(t *testing.T) {
 	if second == first || !slices.Equal(m.forgot, []int64{9}) || m.examined[second] != 9 || r.runs != 2 {
 		t.Errorf("replacing the entry forgot %v and records %d after %d evaluations; want [9], 9 and 2", m.forgot, m.examined[second], r.runs)
 	}
-	m.high, m.reuse = 0, 0
+	m.high = 0
 	if v, ok := run(m, r, r, 3, 0); !ok || v != "v" || m.pos() != 5 || r.runs != 2 || m.reused != 1 || m.high != 9 {
 		t.Errorf("the reuse gives %v %v at %d after %d evaluations, %d reuses and the frontier %d; want v true at 5, 2, 1 and 9",
 			v, ok, m.pos(), r.runs, m.reused, m.high)
@@ -806,112 +814,44 @@ func TestTypedDocument(t *testing.T) {
 }
 
 // TestMemoizedDocument checks the Document bookkeeping of a memoized call: the call that stores an
-// entry records with it the frontier and the reuse of the call, and the call that reuses it extends
-// its own frontier to the entry's, limits its reuse to the entry's and counts the reuse. Outside a
-// Document parse the call keeps no such record.
+// entry records with it the frontier of the call, and the call that reuses it extends its own
+// frontier to the entry's and counts the reuse. Outside a Document parse the call keeps no such
+// record.
 func TestMemoizedDocument(t *testing.T) {
 	mod := Build()
-	f := composition(t, mod, "memoized", ops.Document, ops.Observe, ops.Stream)
+	f := composition(t, mod, "memoized", ops.Document, ops.Observe)
 	for _, active := range []bool{true, false} {
 		m := newMachine()
 		m.docActive = active
 		r := &trule{id: 1, memo: true, body: func(m *machine) (any, bool) {
 			m.advance(2)
 			m.high = max(m.high, 4) // the body examined the input up to 4, before the end of the call
-			m.reuse = max(m.reuse, 1)
 			return "v", true
 		}}
-		m.high, m.reuse = 2, 0
+		m.high = 2
 		if v, ok := callAt(t, mod, m, f, r, 3); !ok || v != "v" {
 			t.Fatalf("active=%v: %v %v", active, v, ok)
 		}
 		e := m.lastEntry(t)
-		if active && (m.examined[e] != 6 || m.reuses[e] != 1) {
-			t.Errorf("the entry records the frontier %d and reuse %d, want 6 (past its end) and 1", m.examined[e], m.reuses[e])
+		if active && m.examined[e] != 6 {
+			t.Errorf("the entry records the frontier %d, want 6 (past its end)", m.examined[e])
 		}
-		if !active && (len(m.examined) != 0 || len(m.reuses) != 0) {
-			t.Errorf("outside a Document the entry records %v and %v", m.examined, m.reuses)
+		if !active && len(m.examined) != 0 {
+			t.Errorf("outside a Document the entry records %v", m.examined)
 		}
 		// A later call at the position reuses the entry from a call that examined less.
-		m.high, m.reuse = 3, 0
+		m.high = 3
 		if v, ok := callAt(t, mod, m, f, r, 3); !ok || v != "v" || m.pos() != 5 || r.runs != 1 || m.memoHit != 1 {
 			t.Fatalf("active=%v: reuse gives %v %v at %d after %d evaluations and %d hits", active, v, ok, m.pos(), r.runs, m.memoHit)
 		}
-		want := struct{ high, reuse int64 }{6, 1}
-		wantReused := 1
+		wantHigh, wantReused := int64(6), 1
 		if !active {
-			want.high, want.reuse, wantReused = 3, 0, 0
+			wantHigh, wantReused = 3, 0
 		}
-		if m.high != want.high || m.reuse != want.reuse || m.reused != wantReused {
-			t.Errorf("active=%v: the reuse leaves the frontier %d, reuse %d and %d reuses, want %d, %d and %d",
-				active, m.high, m.reuse, m.reused, want.high, want.reuse, wantReused)
+		if m.high != wantHigh || m.reused != wantReused {
+			t.Errorf("active=%v: the reuse leaves the frontier %d and %d reuses, want %d and %d",
+				active, m.high, m.reused, wantHigh, wantReused)
 		}
-	}
-}
-
-// TestMemoizedDocumentLeader checks how long a leader's result may be reused: until the next edit
-// when its growth read only results that do not change (it is settled), and otherwise only in this
-// parse, which then removes the entry when it ends. A reused growing entry also limits the reuse of
-// the call that reads it to until the next edit.
-func TestMemoizedDocumentLeader(t *testing.T) {
-	mod := Build()
-	f := composition(t, mod, "memoized", ops.Document, ops.Observe, ops.Stream)
-	for _, settled := range []bool{true, false} {
-		m := newMachine()
-		m.docActive = true
-		n := 0
-		r := &trule{id: 2, memo: true, leader: true, body: func(m *machine) (any, bool) {
-			if n >= 2 {
-				return nil, false
-			}
-			if !settled {
-				m.readDepth = 0 // the growth read an unstable result
-			}
-			m.advance(int64(n + 1))
-			n++
-			return fmt.Sprint("v", n), true
-		}}
-		if v, ok := callAt(t, mod, m, f, r, 2); !ok || v != "v2" {
-			t.Fatalf("settled=%v: %v %v", settled, v, ok)
-		}
-		e := m.lastEntry(t)
-		wantReuse, wantOnly := int64(1), []string(nil)
-		if !settled {
-			wantReuse, wantOnly = 2, []string{"2 reuse 2"}
-		}
-		if m.reuse != wantReuse || m.reuses[e] != wantReuse || !slices.Equal(m.parseOnly, wantOnly) {
-			t.Errorf("settled=%v: reuse %d, the entry's %d, reused only in the parse %q; want %d, %d and %q",
-				settled, m.reuse, m.reuses[e], m.parseOnly, wantReuse, wantReuse, wantOnly)
-		}
-	}
-	// L = L "x" / "a", where "x" matches while L ends before 3: the call of L in its body reuses the
-	// growing seed, which limits its reuse to until the next edit.
-	m := newMachine()
-	m.docActive = true
-	var leader *trule
-	var after []int64
-	leader = &trule{id: 2, memo: true, leader: true, body: func(m *machine) (any, bool) {
-		start := m.pos()
-		saved := m.regs
-		m.reuse = 0
-		_, ok := callAt(t, mod, m, f, leader, start)
-		pos := m.pos()
-		m.regs = saved
-		m.setPos(pos)
-		after = append(after, m.reuse)
-		if ok && m.pos() < 3 {
-			m.advance(1)
-			return "x", true
-		}
-		m.setPos(start)
-		m.advance(1)
-		return "a", true
-	}}
-	if _, ok := callAt(t, mod, m, f, leader, 0); !ok || m.pos() != 3 {
-		t.Fatalf("leader %v at %d, want a match to 3", ok, m.pos())
-	}
-	if len(after) == 0 || m.reused != len(after) || slices.ContainsFunc(after, func(u int64) bool { return u != 1 }) {
-		t.Errorf("the reads of the growing seed counted %d reuses and left the reuses %v, want one each and until the next edit", m.reused, after)
 	}
 }
 
@@ -928,93 +868,110 @@ func (m *machine) lastEntry(t *testing.T) *ref.Entry {
 // one growth step per evaluation, and ends at the longest match with its errors only.
 func TestGrowth(t *testing.T) {
 	mod := Build()
-	for _, on := range [][]string{nil, {ops.Stream}} {
-		for _, pruned := range []bool{false, true} {
-			if pruned && on == nil {
-				continue // outside streams a growth leaves its entry
-			}
-			t.Run(fmt.Sprintf("%v pruned=%v", on, pruned), func(t *testing.T) {
-				f := composition(t, mod, "call", on...)
-				m := newMachine()
-				m.pruned = pruned
-				lens := []int64{1, 3, 3}
-				n := 0
-				r := &trule{id: 2, memo: true, leader: true, body: func(m *machine) (any, bool) {
-					if n >= len(lens) {
-						return nil, false
-					}
-					m.recover(fmt.Sprint("e", n))
-					m.advance(lens[n])
-					n++
-					return fmt.Sprint("v", n), true
-				}}
-				v, ok := callAt(t, mod, m, f, r, 2)
-				if !ok || v != "v2" || m.pos() != 5 {
-					t.Errorf("%v %v at %d, want v2 true at 5", v, ok, m.pos())
-				}
-				if !slices.Equal(m.rec, []string{"e1"}) {
-					t.Errorf("recovered %v, want the errors of the longest match", m.rec)
-				}
-				if r.runs != 3 || m.steps != 3 {
-					t.Errorf("%d evaluations and %d growth steps, want 3 and 3", r.runs, m.steps)
-				}
-			})
+	f := composition(t, mod, "call")
+	m := newMachine()
+	lens := []int64{1, 3, 3}
+	n := 0
+	r := &trule{id: 2, memo: true, leader: true, body: func(m *machine) (any, bool) {
+		if n >= len(lens) {
+			return nil, false
 		}
+		m.recover(fmt.Sprint("e", n))
+		m.advance(lens[n])
+		n++
+		return fmt.Sprint("v", n), true
+	}}
+	v, ok := callAt(t, mod, m, f, r, 2)
+	if !ok || v != "v2" || m.pos() != 5 {
+		t.Errorf("%v %v at %d, want v2 true at 5", v, ok, m.pos())
+	}
+	if !slices.Equal(m.rec, []string{"e1"}) {
+		t.Errorf("recovered %v, want the errors of the longest match", m.rec)
+	}
+	if r.runs != 3 || m.steps != 3 {
+		t.Errorf("%d evaluations and %d growth steps, want 3 and 3", r.runs, m.steps)
+	}
+	// The call stores the result of the growth in the memo, with its present set, and reuses it.
+	e := m.lastEntry(t)
+	if !m.ctx.present[e] {
+		t.Error("the entry of the growth has no present set")
+	}
+	if v, ok := callAt(t, mod, m, f, r, 2); !ok || v != "v2" || m.pos() != 5 || r.runs != 3 {
+		t.Errorf("the reuse gives %v %v at %d after %d evaluations, want v2 true at 5 after 3", v, ok, m.pos(), r.runs)
 	}
 }
 
-// TestGrowthMemberReads checks the memoization of a member of a left-recursive cycle: while the
-// leader grows at the position, the member is evaluated at every step and its results, which read
-// the growing seed, are not stored; after the growth its result reads only the final result of the
-// leader and is stored, so the next call reuses it.
-func TestGrowthMemberReads(t *testing.T) {
+// TestCallContext checks how a memoized call uses the context of its call: it returns the seed of
+// its rule growing at the position without evaluating or recording anything, records its result
+// where the dependencies of its evaluation send it (the memo, the table of the context or nowhere),
+// reuses a memo entry only if the context allows it, and reuses the result kept in the context.
+func TestCallContext(t *testing.T) {
 	mod := Build()
 	f := composition(t, mod, "call")
-	m := newMachine()
-	// call runs a nested call of r from a body, at the position of the machine.
-	call := func(m *machine, r *trule) (any, bool) {
-		saved := m.regs
-		v, ok := callAt(t, mod, m, f, r, m.pos())
-		pos := m.pos()
-		m.regs = saved
-		m.setPos(pos)
-		return v, ok
+	body := func(m *machine) (any, bool) {
+		m.recover("skipped")
+		m.advance(2)
+		m.expect("x")
+		return "v", true
 	}
-	// The cycle is L = M "x" / "a" with M = L, where "x" matches while L ends before 3.
-	var leader, member *trule
-	leader = &trule{id: 2, memo: true, leader: true, body: func(m *machine) (any, bool) {
-		start := m.pos()
-		if _, ok := call(m, member); ok {
-			if m.pos() >= 3 {
-				return nil, false
+	t.Run("seed", func(t *testing.T) {
+		m := newMachine()
+		m.ctx.seed = &result{v: "s", ok: true, end: 7, far: 9, exps: []string{"y"}}
+		r := &trule{id: 1, memo: true, leader: true, body: body}
+		if v, ok := callAt(t, mod, m, f, r, 3); !ok || v != "s" || m.pos() != 7 || r.runs != 0 {
+			t.Errorf("%v %v at %d after %d evaluations, want the seed at 7 without evaluation", v, ok, m.pos(), r.runs)
+		}
+		if m.farthest() != 0 || !slices.Equal(m.ctx.ops, []string{"enter"}) || m.last != nil {
+			t.Errorf("the read of the seed recorded %d %v, made %v and stored %v", m.farthest(), m.expected(), m.ctx.ops, m.last)
+		}
+	})
+	for _, c := range []struct {
+		name   string
+		store  int64
+		stored bool
+		kept   int
+	}{{"memo", 1, true, 0}, {"context", 2, false, 1}, {"nowhere", 0, false, 0}} {
+		t.Run(c.name, func(t *testing.T) {
+			m := newMachine()
+			m.ctx.active, m.ctx.store = true, c.store
+			r := &trule{id: 1, memo: true, body: body}
+			if v, ok := callAt(t, mod, m, f, r, 3); !ok || v != "v" || m.pos() != 5 {
+				t.Fatalf("%v %v at %d", v, ok, m.pos())
 			}
-			m.advance(1)
-			return "x", true
+			if want := []string{"enter", "lookup", "push", "pop", "done"}; !slices.Equal(m.ctx.ops, want) {
+				t.Errorf("context operations %v, want %v", m.ctx.ops, want)
+			}
+			if (m.last != nil) != c.stored || len(m.ctx.kept) != c.kept {
+				t.Errorf("stored %v and kept %d results, want %v and %d", m.last != nil, len(m.ctx.kept), c.stored, c.kept)
+			}
+			if c.kept == 1 {
+				k := m.ctx.kept[0]
+				if k.v != "v" || !k.ok || k.end != 5 || !slices.Equal(k.errs, []string{"skipped"}) || k.far != 5 || !slices.Equal(k.exps, []string{"x"}) {
+					t.Errorf("kept %+v", *k)
+				}
+			}
+		})
+	}
+	t.Run("denied entry", func(t *testing.T) {
+		m := newMachine()
+		r := &trule{id: 1, memo: true, body: body}
+		callAt(t, mod, m, f, r, 3)
+		m.ctx.deny, m.rec, m.cur = true, nil, record{}
+		callAt(t, mod, m, f, r, 3)
+		if r.runs != 2 {
+			t.Errorf("%d evaluations, want the entry not reused", r.runs)
 		}
-		m.setPos(start)
-		m.advance(1)
-		return "a", true
-	}}
-	member = &trule{id: 1, memo: true, member: true, body: func(m *machine) (any, bool) {
-		return call(m, leader)
-	}}
-	if _, ok := callAt(t, mod, m, f, leader, 0); !ok || m.pos() != 3 {
-		t.Fatalf("leader %v at %d, want a match to 3", ok, m.pos())
-	}
-	if member.runs != 4 {
-		t.Errorf("member evaluated %d times in the growth, want 4: once per step", member.runs)
-	}
-	// The reads of the seed count in the caller, where the growth is over: they keep nothing from
-	// memoization at the depth of the caller.
-	if m.growths != 0 || m.readDepth <= m.growths {
-		t.Errorf("growth state %d, %d after the call, want no growth and no unresolved read", m.growths, m.readDepth)
-	}
-	for i, want := range []int{5, 5} {
-		if _, ok := callAt(t, mod, m, f, member, 0); !ok || m.pos() != 3 {
-			t.Fatalf("member %v at %d, want a match to 3", ok, m.pos())
+	})
+	t.Run("kept result", func(t *testing.T) {
+		m := newMachine()
+		m.ctx.active = true
+		m.ctx.held = &result{v: "k", ok: true, end: 6, errs: []string{"e"}, far: 6, exps: []string{"z"}}
+		r := &trule{id: 1, memo: true, body: body}
+		if v, ok := callAt(t, mod, m, f, r, 3); !ok || v != "k" || m.pos() != 6 || r.runs != 0 {
+			t.Errorf("%v %v at %d after %d evaluations, want the kept result", v, ok, m.pos(), r.runs)
 		}
-		if member.runs != want {
-			t.Errorf("call %d after the growth: member evaluated %d times in all, want %d", i, member.runs, want)
+		if !slices.Equal(m.rec, []string{"e"}) || m.farthest() != 6 || !slices.Equal(m.expected(), []string{"z"}) || m.memoHit != 1 {
+			t.Errorf("the reuse recorded %v, %d %v and %d hits", m.rec, m.farthest(), m.expected(), m.memoHit)
 		}
-	}
+	})
 }

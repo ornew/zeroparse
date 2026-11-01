@@ -153,8 +153,14 @@ type Inc struct{ V *Var }
 // Step charges one step of budget.
 type Step struct{}
 
-// Silent adds Delta to the silent depth: expectations are not recorded while it is positive.
-type Silent struct{ Delta int }
+// Silent adds Delta to the silent depth: expectations are not recorded while it is positive. A
+// Silent of a lookahead (Site is not 0) also begins the lookahead of the site, after it enters the
+// silent depth, or ends it, whose body matched if Ok, before it leaves (Parser.LookBegin).
+type Silent struct {
+	Delta int
+	Site  int
+	Ok    bool
+}
 
 // Peek reads the character at the position without consuming it: its code point into Ch, its
 // size into Size and whether there is one into OK. Ch and Size may be nil (not kept).

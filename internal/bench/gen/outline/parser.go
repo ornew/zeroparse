@@ -149,6 +149,7 @@ type ruleExtra struct {
 	Where      string
 	NodeType   string
 	OpNodeType string
+	Cycle      int32
 }
 
 var rulesSpec = [...]ruleSpec{
@@ -359,6 +360,7 @@ func e5(p *rt.Parser, _ int) (*rt.Node, bool) {
 	var v8, v10 *rt.Node
 	x1 = p.Pos
 	p.Silent++
+	p.LookBegin(1)
 	for {
 		p.Spend()
 		x5 = p.Mark()
@@ -377,10 +379,12 @@ func e5(p *rt.Parser, _ int) (*rt.Node, bool) {
 		goto L2
 	}
 	p.SetCapture(0, v8)
+	p.LookEnd(true)
 	p.Silent--
 	p.Pos = x1
 	goto L3
 L2:
+	p.LookEnd(false)
 	p.Silent--
 	p.Pos = x1
 	goto fail
@@ -688,6 +692,7 @@ func e19(p *rt.Parser, _ int) (*rt.Node, bool) {
 	var v8 *rt.Node
 	x1 = p.Pos
 	p.Silent++
+	p.LookBegin(1)
 	for {
 		p.Spend()
 		x5 = p.Mark()
@@ -706,10 +711,12 @@ func e19(p *rt.Parser, _ int) (*rt.Node, bool) {
 		goto L2
 	}
 	p.SetCapture(0, v8)
+	p.LookEnd(true)
 	p.Silent--
 	p.Pos = x1
 	goto L3
 L2:
+	p.LookEnd(false)
 	p.Silent--
 	p.Pos = x1
 	goto fail
@@ -1055,6 +1062,7 @@ func i3(p *rt.TParser) (any, bool) {
 	p.Enter()
 	x1 = p.Pos
 	p.Silent++
+	p.LookBegin(1)
 	for {
 		p.Spend()
 		x5 = p.Pos
@@ -1073,10 +1081,12 @@ func i3(p *rt.TParser) (any, bool) {
 		goto L2
 	}
 	k7 = v9
+	p.LookEnd(true)
 	p.Silent--
 	p.Pos = x1
 	goto L3
 L2:
+	p.LookEnd(false)
 	p.Silent--
 	p.Pos = x1
 	goto fail

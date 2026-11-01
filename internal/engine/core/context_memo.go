@@ -627,6 +627,9 @@ func (p *Parser) LookEnd(ok bool) {
 		p.mergeDeps(ds)
 		return
 	}
+	if p.ContextMemoUnexamined {
+		examined, from = f.pos, f.pos
+	}
 	val, ok2 := obsOutcome(ok, f.pos, examined, from)
 	gp := f.gp
 	present, known := p.present(gp)
@@ -666,7 +669,7 @@ func (p *Parser) canonicalSeed(pos, gp int, g growKey, e *MemoEntry) (*MemoEntry
 			return c.e, c.id
 		}
 		budget := 64
-		if c.e.Examined == e.Examined && c.e.From == e.From && len(c.e.Errs) == 0 && nodesEqual(p, c.e.Node, e.Node, &budget) {
+		if (p.ContextMemoUnexamined || c.e.Examined == e.Examined && c.e.From == e.From) && len(c.e.Errs) == 0 && nodesEqual(p, c.e.Node, e.Node, &budget) {
 			return c.e, c.id
 		}
 	}

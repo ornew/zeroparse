@@ -1058,7 +1058,7 @@ func (p *Parser) controlledEnvValues(slots []int) []any {
 func (p *Parser) memoGet(rule, pos, min int, key []any) *memoEntry {
 	if p.Stream != nil {
 		// A call at a position before the pruned memo needs no entry (a
-		// start rule called at 0, or still growing there).
+		// start rule called at 0).
 		if pos -= p.Stream.memoBase; pos < 0 {
 			return nil
 		}
@@ -1076,7 +1076,7 @@ func (p *Parser) memoGetControlled(rule, pos, min int, key []any) *memoEntry {
 	}
 	for e := p.memo.slots[pos]; e != nil; e = e.next {
 		p.Spend()
-		if e.rule == int32(rule) && e.min == int32(min) && (e.growing || p.memoKeyEqual(e.env, key)) {
+		if e.rule == int32(rule) && e.min == int32(min) && p.memoKeyEqual(e.env, key) {
 			return e
 		}
 	}

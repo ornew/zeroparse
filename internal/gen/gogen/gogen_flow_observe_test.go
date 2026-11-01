@@ -401,7 +401,10 @@ func checkObservations(t *testing.T, group string, cases []gentest.Case, start s
 				checked++
 				events += len(r.events)
 				var eng []engine.TraceEvent
-				o := engine.ParseOptions{Expectations: true, Backend: engine.Closure, Unit: engine.CodePoints, Recognize: entry == "recognize"}
+				// Generated parsers record no examined range outside a Document parse, so they reuse
+				// the steps and lookahead outcomes of left-recursion contexts that differ only in it.
+				o := engine.ParseOptions{Expectations: true, Backend: engine.Closure, Unit: engine.CodePoints, Recognize: entry == "recognize",
+					ContextMemoUnexamined: true}
 				o.Trace = func(e engine.TraceEvent) { eng = append(eng, e) }
 				prog.ParseWith(start, c.Inputs[j], o)
 				if msg := engineTraceMismatch(eng, r.events, c.Inputs[j]); msg != "" {

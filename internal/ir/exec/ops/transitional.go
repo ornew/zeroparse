@@ -13,18 +13,23 @@ const (
 	Call = "call"
 	// Obs is the observation of a parse.
 	Obs = "observe"
-	// Growth is the left-recursion growths in progress and the reads of the current call.
+	// Growth is the left-recursion growths in progress and the dependency memo of their contexts.
 	Growth = "growth"
 )
 
 // Names of the handle types of the transitional operations.
 const (
-	Rule  = "Rule"
-	Body  = "Body"
-	Mark  = "ExpMark"
-	Set   = "ExpSet"
-	Kept  = "ExpKept"
-	Reuse = "Reuse"
+	Rule = "Rule"
+	Body = "Body"
+	Mark = "ExpMark"
+	Set  = "ExpSet"
+	Kept = "ExpKept"
+	// Ctx is the context state of a memoized call (ctx.enter).
+	Ctx = "Ctx"
+	// Res is a result that a context keeps, a seed included, or the result of a growth.
+	Res = "CtxResult"
+	// Grow is the state of the growth of a leader (grow.begin).
+	Grow = "Grow"
 )
 
 // Registers of the parser VM.
@@ -46,16 +51,20 @@ func Transitional(m *exec.Module) {
 	m.AddComponent(Call, `The call bookkeeping of the target outside the call protocol: the tracked path of
 Documents and observation, and the work charged per call.`)
 	m.AddComponent(Obs, `The observation of a parse.`)
-	m.AddComponent(Growth, `The left-recursion growths in progress, the position of the innermost one, and
-the least depth of the growing or unstable results that the current call has read.`)
+	m.AddComponent(Growth, `The left-recursion growths in progress with their seeds, the frames that record
+what the calls in their contexts depend on, and the tables of the results kept in each context (the
+dependency memo).`)
 
 	rule := m.AddHandle(Rule, Rules, "A rule's descriptor.")
 	body := m.AddHandle(Body, Rules, "The invocation of a rule's body that a generated call passes.")
 	mark := m.AddHandle(Mark, Exp, "The record that an isolation set aside.")
 	set := m.AddHandle(Set, Exp, "The expectations an isolation recorded, valid until the next record.")
 	kept := m.AddHandle(Kept, Exp, "Expectations kept beyond the record, as a memo entry keeps them.")
-	reuse := m.AddHandle(Reuse, Call, `How long the results of a Document call may be reused: after edits, until
-the next edit, or only in this parse.`)
+	ctx := m.AddHandle(Ctx, Growth, `The context state of a memoized call: the growths of its rule's cycle at its
+position, their present set, and whether the call records its dependencies.`)
+	res := m.AddHandle(Res, Growth, `A result that a context keeps (a seed, or the result of a call or a growth step
+that read a seed), or the last result of a growth.`)
+	grow := m.AddHandle(Grow, Growth, "The state of the growth of a left-recursion leader.")
 	value, errs, entry, values := exec.THandle(Value), exec.THandle(Errs), exec.THandle(Entry), exec.THandle(Values)
 	result := []exec.Type{value, exec.TBool}
 	regs := []string{Pos, Silent}
@@ -85,10 +94,6 @@ result.`})
 		Contract: `Records a call of the rule at the position and reports whether its memoization is deferred:
 seen.first for a rule whose memoization the target defers, false for one it memoizes eagerly (in a
 stream, or for a rule without a seen index).`})
-	add(&exec.Op{Name: "call.growStep", Component: Call, Writes: []string{Call}, NoReturn: true,
-		Cost: exec.Cost{Const: 1},
-		Contract: `Charges a growth step of a left-recursion leader, before each evaluation of its body
-(the evaluation of the seed included): one unit, with the checks of the target's Spend.`})
 
 	for _, a := range []struct{ name, doc string }{
 		{"rule.memo", "Reports whether the rule is memoized."},
@@ -152,56 +157,89 @@ farthest position of the ended record and its expectations.`})
 	add(&exec.Op{Name: "memo.setExpected", Component: Memo, Params: append(entryArg, exec.P("far", exec.TInt), exec.P("k", kept)),
 		Writes:   []string{Memo},
 		Contract: `Records the expectations k at far of the call that computed entry e.`})
-	add(&exec.Op{Name: "memo.grown", Component: Memo, Params: []exec.Param{exec.P("rule", exec.TInt), exec.P("pos", exec.TInt),
-		exec.P("level", exec.TInt), exec.P("key", values)}, Results: []exec.Type{entry}, Reads: []string{Memo},
-		Contract: `Returns the entry that a finished growth left under the key, or the null entry when a
-stream commit pruned it.`,
-		Requires: `A growth under the key has just finished; outside streams it left its entry.`})
-	add(&exec.Op{Name: "memo.detached", Component: Memo, Results: []exec.Type{entry},
-		Contract: `Returns a new entry under no key, which no lookup finds.`})
-
 	add(&exec.Op{Name: "memo.recordDoc", Component: Memo, Params: entryArg, Reads: []string{Call}, Writes: []string{Memo},
-		Features: []string{Document}, Contract: `Records with the entry the examined frontier of the current call and how
-long its result may be reused, for the reuse of the entry (doc.readEntry).`})
+		Features: []string{Document}, Contract: `Records with the entry the examined frontier of the current call, for the
+reuse of the entry (doc.readEntry).`})
 	add(&exec.Op{Name: "memo.forgetDoc", Component: Memo, Params: entryArg, Writes: []string{Memo}, Features: []string{Document},
 		Contract: `Forgets the Document record of the entry e, which the call replaces, where the target keeps
 the records beside the entries.`})
-	add(&exec.Op{Name: "lr.stale", Component: Growth, Params: []exec.Param{exec.P("r", rule), exec.P("pos", exec.TInt)},
-		Results: []exec.Type{exec.TBool}, Reads: []string{Growth, Rules},
-		Contract: `Reports whether the result of the rule at pos is evaluated again instead of reused: the rule
-is a member of a left-recursive cycle, other than its leader, and the innermost growth is at pos.`})
-	add(&exec.Op{Name: "lr.read", Component: Growth, Params: entryArg, Reads: []string{Growth, Memo}, Writes: []string{Growth},
-		Contract: `Records that the current call read the result of entry e: the depth of a growing entry, or
-zero for an unstable one, lowers the least depth read.`})
-	add(&exec.Op{Name: "lr.depth", Component: Growth, Results: []exec.Type{exec.TInt}, Reads: []string{Growth},
-		Contract: `Returns the number of growths in progress.`})
-	add(&exec.Op{Name: "lr.enter", Component: Growth, Results: []exec.Type{exec.TInt}, Reads: []string{Growth},
-		Writes: []string{Growth},
-		Contract: `Starts tracking the reads of a call: returns the least depth read so far, for lr.leave, and
-resets it to none.`})
-	add(&exec.Op{Name: "lr.leave", Component: Growth, Params: []exec.Param{exec.P("read", exec.TInt)},
+	ctxArg := exec.P("c", ctx)
+	resArg := []exec.Param{exec.P("s", res)}
+	add(&exec.Op{Name: "ctx.enter", Component: Growth, Params: call, Results: []exec.Type{ctx, res},
+		Reads: []string{Growth, Rules}, Writes: []string{Growth},
+		Contract: `Begins a memoized call of the rule at the position: returns its context state and, if the
+rule is a leader that grows at the position, its current seed, which the call reads (with the
+dependency on its identity); otherwise the null result. The context of a call of a rule of a
+left-recursive cycle is the growths of its cycle in progress at the position; another call has
+none.`})
+	add(&exec.Op{Name: "ctx.found", Component: Growth, Params: resArg, Results: []exec.Type{exec.TBool},
+		Contract: `Reports whether s is a result, not the null result.`})
+	add(&exec.Op{Name: "ctx.ok", Component: Growth, Params: resArg, Results: []exec.Type{exec.TBool}, Reads: []string{Growth},
+		Contract: `Returns whether the result s succeeded.`})
+	add(&exec.Op{Name: "ctx.value", Component: Growth, Params: resArg, Results: []exec.Type{value}, Reads: []string{Growth},
+		Contract: `Returns the value of the result s.`})
+	add(&exec.Op{Name: "ctx.replay", Component: Growth, Params: append(resArg, exec.P("seed", exec.TBool)),
+		Reads: []string{Growth}, Writes: append([]string{Growth}, regs...), NoReturn: true,
+		Contract: `Applies the result s as the call that it records would have: counts a reuse, extends the
+examined frontier of a Document parse, adds its expectations unless it is a seed, and on success moves
+the position to its end and records its recovered errors again.`})
+	add(&exec.Op{Name: "ctx.allows", Component: Growth, Params: append([]exec.Param{ctxArg}, entryArg...),
+		Results: []exec.Type{exec.TBool}, Reads: []string{Growth, Memo},
+		Contract: `Reports whether the call with the context state c may reuse the memo entry e: always outside a
+context, and in one only when the leaders growing there are among those that grew where e was stored
+(its present set).`})
+	add(&exec.Op{Name: "ctx.active", Component: Growth, Params: []exec.Param{ctxArg}, Results: []exec.Type{exec.TBool},
+		Contract: `Reports whether the call with the context state c is in a context.`})
+	add(&exec.Op{Name: "ctx.lookup", Component: Growth, Params: []exec.Param{ctxArg, exec.P("r", rule), exec.P("min", exec.TInt),
+		exec.P("key", values)}, Results: []exec.Type{res}, Reads: []string{Growth}, Writes: []string{Growth},
+		Contract: `Returns the result kept in the context of the call for the rule at the position, the level
+and the key that holds there: the seeds it read have the same identities, and the lookaheads it
+observed the same outcomes, in the current context; it records those dependencies for the enclosing
+call. Otherwise the null result.`,
+		Requires: `c is in a context.`})
+	add(&exec.Op{Name: "ctx.push", Component: Growth, Params: []exec.Param{ctxArg}, Writes: []string{Growth},
+		Contract: `Starts recording the dependencies of the evaluation of the call, if it is in a context.`})
+	add(&exec.Op{Name: "ctx.pop", Component: Growth, Params: []exec.Param{ctxArg}, Results: []exec.Type{exec.TInt},
 		Reads: []string{Growth}, Writes: []string{Growth},
-		Contract: `Ends tracking the reads of a call, which also count as reads of the call that made it: the
-least depth read becomes at most read.`})
-	add(&exec.Op{Name: "lr.changeable", Component: Growth, Params: []exec.Param{exec.P("depth", exec.TInt)},
-		Results: []exec.Type{exec.TBool}, Reads: []string{Growth},
-		Contract: `Reports whether the result of a call that began with depth growths in progress can change:
-it read the seed of one of them or an unstable result, so it is not memoized.`})
-	add(&exec.Op{Name: "lr.begin", Component: Growth, Params: []exec.Param{exec.P("pos", exec.TInt)},
-		Results: []exec.Type{exec.TInt}, Reads: []string{Growth}, Writes: []string{Growth},
-		Contract: `Starts a growth at pos: it becomes the innermost growth. Returns the position of the
-enclosing innermost growth, for lr.end.`})
-	add(&exec.Op{Name: "lr.end", Component: Growth, Params: []exec.Param{exec.P("prev", exec.TInt)},
-		Reads: []string{Growth}, Writes: []string{Growth},
-		Contract: `Ends the innermost growth and restores prev as the position of the innermost growth.`,
-		Requires: `prev is the result of the matching lr.begin.`})
-	add(&exec.Op{Name: "memo.mark", Component: Memo, Params: entryArg, Reads: []string{Growth}, Writes: []string{Memo},
-		Contract: `Records in the growing entry e the number of growths in progress, its depth.`})
-	add(&exec.Op{Name: "memo.settle", Component: Memo, Params: entryArg, Reads: []string{Growth, Memo}, Writes: []string{Memo},
-		Contract: `Marks the entry e of a growth that has just ended unstable if the growth read the seed of an
-enclosing growth or an unstable result and the entry is reused in one kind of context only: it is
-silent or has recovered errors.`,
-		Requires: `e was finished by memo.finishSeed, and lr.end has ended its growth.`})
+		Contract: `Ends recording the dependencies of the evaluation and returns where its result goes:
+ctx.storeMemo for the memo (it read no seed and made no observation), ctx.storeCtx for the table of
+the context, or another value for nowhere (its context's leaders have no present set).`})
+	for _, a := range []struct{ name, doc string }{
+		{"ctx.storeMemo", "Returns the value of ctx.pop for a result stored in the memo."},
+		{"ctx.storeCtx", "Returns the value of ctx.pop for a result kept in the table of its context."},
+	} {
+		add(&exec.Op{Name: a.name, Component: Growth, Results: []exec.Type{exec.TInt}, Contract: a.doc})
+	}
+	add(&exec.Op{Name: "memo.setPresent", Component: Memo, Params: append(entryArg, ctxArg), Reads: []string{Growth},
+		Writes:   []string{Memo},
+		Contract: `Records with the entry e the present set of the context state c, for ctx.allows.`})
+	add(&exec.Op{Name: "ctx.keep", Component: Growth, Params: []exec.Param{ctxArg, exec.P("r", rule), exec.P("pos", exec.TInt),
+		exec.P("min", exec.TInt), exec.P("key", values), exec.P("ok", exec.TBool), exec.P("end", exec.TInt), exec.P("silent", exec.TBool),
+		exec.P("value", value), exec.P("errs", errs), exec.P("far", exec.TInt), exec.P("k", kept)},
+		Reads: []string{Growth, Call}, Writes: []string{Growth}, NoReturn: true,
+		Contract: `Keeps the result of the call in the table of its context with the dependencies that ctx.pop
+ended, and the examined frontier of a Document parse.`,
+		Requires: `The last ctx.pop of c returned ctx.storeCtx.`})
+	add(&exec.Op{Name: "ctx.done", Component: Growth, Params: []exec.Param{ctxArg}, Writes: []string{Growth},
+		Contract: `Passes the dependencies that ctx.pop ended to the evaluation that encloses the call.`})
+
+	add(&exec.Op{Name: "grow.begin", Component: Growth, Params: call, Results: []exec.Type{grow},
+		Reads: []string{Growth, Rules}, Writes: []string{Growth}, NoReturn: true,
+		Contract: `Starts the growth of the leader at the binding level min at the position from a failure,
+charging one unit: the growth is in a context when other leaders of its cycle grow at the position.`})
+	add(&exec.Op{Name: "grow.next", Component: Growth, Params: []exec.Param{exec.P("g", grow)}, Results: []exec.Type{exec.TBool},
+		Reads: []string{Growth}, Writes: append([]string{Growth}, regs...), NoReturn: true,
+		Contract: `Reports whether the body must be evaluated for the next step of the growth g. In a context
+it first takes the steps that the memoized steps and jumps of the context give, and starts recording
+what the step it reports depends on.`})
+	add(&exec.Op{Name: "grow.step", Component: Growth, Params: []exec.Param{exec.P("g", grow), exec.P("value", value),
+		exec.P("ok", exec.TBool)}, Reads: []string{Growth}, Writes: append([]string{Growth}, regs...), NoReturn: true,
+		Contract: `Receives the result of a step of the growth g: adopts it as the seed, charging one unit, and
+returns to the start of the growth if the match grew, and otherwise ends the growth.`})
+	add(&exec.Op{Name: "grow.end", Component: Growth, Params: []exec.Param{exec.P("g", grow)}, Results: []exec.Type{res},
+		Reads: []string{Growth}, Writes: append([]string{Growth}, regs...),
+		Contract: `Ends the growth g and returns its last seed: the position moves to its end and its recovered
+errors replace those recorded since the growth began.`})
 
 	add(&exec.Op{Name: "obs.memoHit", Component: Obs, Writes: []string{Obs}, Features: []string{Observe},
 		Contract: `Counts a reuse of a memo entry in the observation, if the parse is observed.`})
@@ -226,21 +264,19 @@ an unobserved parse, so that observation does not change reuse.`})
 	add(&exec.Op{Name: "doc.examinedEnd", Component: Call, Params: []exec.Param{exec.P("enclosing", exec.TInt)},
 		Results: []exec.Type{exec.TInt, exec.TBool}, Reads: []string{Call}, Writes: []string{Call}, Features: []string{Document},
 		Contract: `Ends measuring the frontier of an observed call and merges it into the enclosing one; returns
-the call's frontier and true in a Document parse, and false otherwise. In a provisional context, the
-result is raised to the position without changing the frontier the Document keeps.`,
+the call's frontier and true in a Document parse, and false otherwise.`,
 		Requires: `enclosing is the result of the matching doc.examinedBegin.`})
 	add(&exec.Op{Name: "doc.enter", Component: Call, Params: []exec.Param{exec.P("pos", exec.TInt)},
-		Results: []exec.Type{exec.TInt, reuse}, Reads: []string{Call}, Writes: []string{Call}, Features: []string{Document},
-		Contract: `Begins a rule call at pos in a Document parse: returns the examined frontier and the reuse of
-the enclosing call, and starts the call's frontier past pos and its reuse at after edits.`})
-	add(&exec.Op{Name: "doc.leave", Component: Call, Params: []exec.Param{exec.P("high", exec.TInt), exec.P("reuse", reuse)},
+		Results: []exec.Type{exec.TInt}, Reads: []string{Call}, Writes: []string{Call}, Features: []string{Document},
+		Contract: `Begins a rule call at pos in a Document parse: returns the examined frontier of the enclosing
+call, and starts the call's frontier past pos.`})
+	add(&exec.Op{Name: "doc.leave", Component: Call, Params: []exec.Param{exec.P("high", exec.TInt)},
 		Reads: []string{Call}, Writes: []string{Call}, Features: []string{Document},
 		Contract: `Ends a rule call in a Document parse: the enclosing call's frontier becomes the farther of high
-and the call's, and its reuse the shorter of reuse and the call's.`,
-		Requires: `high and reuse are the results of the matching doc.enter.`})
+and the call's.`,
+		Requires: `high is the result of the matching doc.enter.`})
 	doc := []string{Document}
 	inDoc := `The parse reads a Document.`
-	reuseArg := []exec.Param{exec.P("u", reuse)}
 	add(&exec.Op{Name: "doc.active", Component: Call, Results: []exec.Type{exec.TBool}, Reads: []string{Call}, Features: doc,
 		Contract: `Reports whether the parse reads a Document.`})
 	add(&exec.Op{Name: "doc.touch", Component: Call, Params: []exec.Param{exec.P("end", exec.TInt)}, Reads: []string{Call},
@@ -249,29 +285,11 @@ and the call's, and its reuse the shorter of reuse and the call's.`,
 	add(&exec.Op{Name: "doc.readEntry", Component: Call, Params: entryArg, Reads: []string{Call, Memo}, Writes: []string{Call},
 		Features: doc,
 		Contract: `Records that the current call read the entry e: extends its examined frontier to the one recorded
-with e and limits its reuse to the one recorded with e.`, Requires: `The parse reads a Document, and e has a record (memo.recordDoc).`})
-	add(&exec.Op{Name: "doc.reuse", Component: Call, Results: []exec.Type{reuse}, Reads: []string{Call}, Features: doc,
-		Contract: `Returns how long the result of the current call may be reused.`, Requires: inDoc})
-	add(&exec.Op{Name: "doc.setReuse", Component: Call, Params: reuseArg, Writes: []string{Call}, Features: doc,
-		Contract: `Sets how long the result of the current call may be reused to u.`, Requires: inDoc})
-	add(&exec.Op{Name: "doc.limitReuse", Component: Call, Params: reuseArg, Reads: []string{Call}, Writes: []string{Call},
-		Features: doc,
-		Contract: `Limits how long the result of the current call may be reused to u: the reuse becomes the
-shorter of the two.`, Requires: inDoc})
+with e.`, Requires: `The parse reads a Document, and e has a record (memo.recordDoc).`})
 	add(&exec.Op{Name: "doc.reused", Component: Call, Writes: []string{Call}, Features: doc,
 		Contract: `Counts a reused memo entry in the statistics of the Document.`, Requires: inDoc})
 	add(&exec.Op{Name: "doc.evaluated", Component: Call, Writes: []string{Call}, Features: doc,
 		Contract: `Counts an evaluated rule body in the statistics of the Document.`, Requires: inDoc})
-	add(&exec.Op{Name: "doc.parseOnly", Component: Call, Params: []exec.Param{exec.P("pos", exec.TInt), exec.P("e", entry)},
-		Writes: []string{Call}, Features: doc,
-		Contract: `Records the entry e stored at pos as reused only in this parse, so that the parse removes it
-from the memo when it ends.`, Requires: inDoc})
-	for _, a := range []struct{ name, doc string }{
-		{"reuse.untilEdit", "Returns the reuse until the next edit."},
-		{"reuse.inParse", "Returns the reuse only in this parse."},
-	} {
-		add(&exec.Op{Name: a.name, Component: Call, Results: []exec.Type{reuse}, Features: doc, Contract: a.doc})
-	}
 	add(&exec.Op{Name: "call.body", Component: Call, Params: call, Results: result, Writes: append([]string{Call}, regs...),
 		NoReturn: true,
 		Contract: `Calls the rule at the binding level min without observation: the call, or the plain invocation,

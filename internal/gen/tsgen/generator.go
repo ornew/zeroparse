@@ -42,6 +42,10 @@ const tsRuntimeMarker = "// --- Runtime ---\n"
 // Each parsing expression becomes a function and actions and predicates become TypeScript
 // expressions, as in the Go generator; the embedded runtime (tsrt) mirrors runtime. opts.Package
 // is not used. opts.Types adds declarations and Node-to-value conversion entry points.
+// maxLeaderBits is the number of leaders of each left-recursion cycle that have a bit in the present
+// sets of the runtime's dependency memo (Rule.leaderBit), as in the Go runtime.
+const maxLeaderBits = 32
+
 func Generate(g *grammar.Grammar, c gen.Compiler, opts gen.GenOptions) ([]gen.GeneratedFile, error) {
 	return GenerateParser(g, c, opts, nil)
 }
@@ -559,6 +563,7 @@ func (g *Generator) rules() {
 	}
 	// Each rule is a constant, which the generated code refers to.
 	var vars []string
+	leaders := map[int]int{}
 	for _, r := range all {
 		if !g.tableRow(r) {
 			continue
@@ -576,8 +581,15 @@ func (g *Generator) rules() {
 		if r.Rec {
 			fmt.Fprintf(init, "%s.rec = true;\n", g.ruleVar(r))
 		}
-		if r.Member {
-			fmt.Fprintf(init, "%s.member = true;\n", g.ruleVar(r))
+		if r.Cycle != 0 {
+			fmt.Fprintf(init, "%s.cycle = %d;\n", g.ruleVar(r), r.Cycle)
+			if r.Leader {
+				// The first maxLeaderBits leaders of each cycle have a bit in present sets.
+				if k := leaders[r.Cycle]; k < maxLeaderBits {
+					fmt.Fprintf(init, "%s.leaderBit = %d;\n", g.ruleVar(r), int32(uint32(1)<<k))
+				}
+				leaders[r.Cycle]++
+			}
 		}
 		if w := r.WhereName(); w != r.Name {
 			fmt.Fprintf(init, "%s.where = %s;\n", g.ruleVar(r), TsString(w))

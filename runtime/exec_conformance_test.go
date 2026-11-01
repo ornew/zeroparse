@@ -12,12 +12,8 @@ import (
 
 // The generated Go runtime is the first implementation of the parser VM's pilot operations under
 // conformance (design 065). The binding calls the runtime's own functions; where an operation is
-// inline code of a composition, it does what that code does: the seed operations allocate an entry
-// and store it with memoPut as grow does, and finishSeed clears the flag as grow does.
-
-// growingProbe is a key value no stored key has: a lookup with it finds only a growing entry,
-// which memoTable.get matches whatever the values.
-var growingProbe = []any{new(byte)}
+// inline code of a composition, it does what that code does: memo.store allocates an entry and
+// stores it with memoPut as the call does.
 
 type rtMachine struct {
 	p     *Parser
@@ -79,37 +75,16 @@ func (m *rtMachine) Call(o *exec.Op, args []any) (res []any) {
 		rule, pos, level, env := key()
 		e := p.memoGet(rule, pos, level, env)
 		return []any{e, e != nil}
-	case "memo.lookupGrowing":
-		e := p.memoGet(i(0), i(1), i(2), growingProbe)
-		return []any{e, e != nil}
 	case "memo.store":
 		rule, pos, level, env := key()
 		e := p.memo.alloc()
 		*e = memoEntry{ok: args[4].(bool), end: i(5), silent: args[6].(bool)}
 		p.memoPut(rule, pos, level, env, e)
 		return []any{e}
-	case "memo.seed":
-		rule, pos, level, env := key()
-		e := p.memo.alloc()
-		*e = memoEntry{end: pos, growing: true}
-		p.memoPut(rule, pos, level, env, e)
-		return []any{e}
-	case "memo.reseed":
-		rule, pos, level, env := key()
-		e := p.memo.alloc()
-		*e = memoEntry{ok: true, end: i(4), growing: true}
-		p.memoPut(rule, pos, level, env, e)
-		return []any{e}
-	case "memo.finishSeed":
-		e := args[0].(*memoEntry)
-		e.growing, e.silent = false, args[1].(bool)
-		return nil
 	case "memo.ok":
 		return []any{args[0].(*memoEntry).ok}
 	case "memo.end":
 		return []any{int64(args[0].(*memoEntry).end)}
-	case "memo.growing":
-		return []any{args[0].(*memoEntry).growing}
 	case "memo.silent":
 		return []any{args[0].(*memoEntry).silent}
 	case "seen.first":
@@ -125,7 +100,7 @@ func (m *rtMachine) Call(o *exec.Op, args []any) (res []any) {
 }
 
 var (
-	rtMemoOps   = []string{"memo.lookup", "memo.lookupGrowing", "memo.store", "memo.seed", "memo.reseed", "memo.finishSeed", "memo.ok", "memo.end", "memo.growing", "memo.silent", "seen.first"}
+	rtMemoOps   = []string{"memo.lookup", "memo.store", "memo.ok", "memo.end", "memo.silent", "seen.first"}
 	rtBudgetOps = []string{"budget.charge", "budget.used"}
 )
 

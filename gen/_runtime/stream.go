@@ -478,7 +478,7 @@ func (p *Parser) streamDiscard(keep int) {
 }
 
 // pruneStreamMemo discards the memo entries before pos, which no later call
-// can look up. Growing left-recursive entries are owned by active calls.
+// can look up.
 func (p *Parser) pruneStreamMemo(pos int) {
 	s, t := p.Stream, &p.memo
 	k := pos - s.memoBase
@@ -489,10 +489,8 @@ func (p *Parser) pruneStreamMemo(pos int) {
 		for e := head; e != nil; {
 			p.Spend()
 			next := e.next
-			if !e.growing {
-				*e = memoEntry{next: t.free}
-				t.free = e
-			}
+			*e = memoEntry{next: t.free}
+			t.free = e
 			e = next
 		}
 	}

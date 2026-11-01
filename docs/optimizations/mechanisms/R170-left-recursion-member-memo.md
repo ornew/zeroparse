@@ -5,16 +5,17 @@ call sites at one position is evaluated once instead of once per call.
 
 ## Mechanism and Invariants
 
-A member's result is memoized under three rules. A call that read the seed of a growth already in progress when it
-started stores nothing: the seed changes with each growth step. While a leader grows at a position, a member result
-there is evaluated again instead of reused, since it may have read an earlier result of the leader. A call that read
-an unstable result, the result of a leader that read an enclosing seed and can grow again at its position because it
-is reused in one kind of context only (inside or outside lookaheads), stores nothing either; a call reads a
-leader's result by a memo hit or by finishing the leader's growth. The parser counts the
-growing left recursions, stamps each growing result with that depth, and tracks per memoized call the least depth it
-read (0 for an unstable result); the innermost growth's position decides the second rule. Every other result
-depends only on the rule, the position and the variables. Documents keep their provisional results, which an edit
-does not reuse. Leaders keep their own memoization, and the transient policy applies to members.
+The result of a call of a rule of a cycle is a function of the growths of its cycle in progress at its position,
+its context: the leaders that grow there and the seeds they have reached. A call records what its result depended
+on: the seeds it read, each by an identity that equal step results of a leader share; the outcome of each lookahead
+whose evaluation read a seed, in place of those seeds; and the leaders that grew at the position (the present set,
+one bit per leader). A result that read no seed and observed no lookahead goes to the memo with its present set and
+answers any call whose context it includes. Any other result is kept in the table of its context, which lasts while
+the first growth there lasts, and answers a call in a context with the same present set where the seeds it read have
+the same identities and the lookaheads it observed have the same outcomes. A growth in a context memoizes its steps
+the same way and records runs of steps that read only its own seed as jumps. Leaders grow from failure; a call of a
+leader that grows at its position reads the seed. No dependent result reaches the memo of a Document, so later parses
+reuse only results that depend on the rule, the position and the variables. The transient policy applies to members.
 
 ## Scope and State
 
@@ -23,18 +24,20 @@ ordinary parses.
 
 ## Reference Control
 
-None beyond `DisableMemo`, which disables memoization of members and other rules together.
+`DisableMemo` disables memoization of members and other rules together. Tests compare the engine with its internal
+parse option `ContextMemoOff`, which evaluates every call in a context again.
 
 ## Evidence and Implementation
 
 Evidence record: [130](../130-memoizing-members-of-left-recursion-cycles.md).
 
-Source owners: [`CompileProgram`](../../../internal/compile/compile.go) (the memo and member flags),
-[`CallBegin`, `CallEnd` and `GrowBegin`](../../../internal/engine/core/runtime.go), [`Parser.readResult`
-and `memberStale`](../../../runtime/runtime.go), [the calls and growths of the generated Go
-runtime](../../../runtime/call.go), [the call protocol in Exec IR](../../../internal/ir/exec/core/core.go)
-with [its growth operations](../../../internal/ir/exec/ops/transitional.go),
-[`Parser.readResult` of the TypeScript runtime](../../../internal/gen/tsgen/tsrt/runtime.ts).
+Source owners: [`CompileProgram`](../../../internal/compile/compile.go) (the memo flags and the cycle numbers),
+[`CallBegin`, `CallEnd` and `GrowBegin`](../../../internal/engine/core/runtime.go) with
+[the engine's dependency memo](../../../internal/engine/core/context_memo.go),
+[the dependency memo of the generated Go runtime](../../../runtime/context_memo.go) and
+[its calls and growths](../../../runtime/call.go), [the call protocol in Exec IR](../../../internal/ir/exec/core/core.go)
+with [its context and growth operations](../../../internal/ir/exec/ops/transitional.go),
+[`Parser.ctxEnter` and the growths of the TypeScript runtime](../../../internal/gen/tsgen/tsrt/runtime.ts).
 
 Related mechanisms: [R020](R020-deferred-memoization.md), [R120](R120-transient-rule-memo-policy.md).
 

@@ -35,8 +35,8 @@ type goSpec struct {
 // goSpecs are the functions of the Go runtime that the compositions replace.
 var goSpecs = []goSpec{
 	// Parser.Call takes the tracked path for observation and Documents, so it neither observes nor
-	// reads a Document itself; a stream may prune a growing start rule's entry.
-	{fn: "call", on: []string{ops.Document, ops.Stream}, name: "Call"},
+	// reads a Document itself.
+	{fn: "call", on: []string{ops.Document}, name: "Call"},
 	{fn: "grow", name: "grow"},
 	{fn: "call", typed: true, on: []string{ops.Document, ops.Observe, ops.Typed}, name: "callBody"},
 	{fn: "callMemo", typed: true, on: []string{ops.Document, ops.Observe, ops.Typed}, name: "CallMemo"},
@@ -51,7 +51,7 @@ var goSpecs = []goSpec{
 	// memoized calls, the call without observation, and the entry of the path.
 	{fn: "document", on: []string{ops.Document}, name: "callDocument"},
 	{fn: "unmemoized", name: "callUnmemoized"},
-	{fn: "memoized", on: []string{ops.Document, ops.Observe, ops.Stream}, name: "callMemo"},
+	{fn: "memoized", on: []string{ops.Document, ops.Observe}, name: "callMemo"},
 	{fn: "body", on: []string{ops.Document}, name: "callBody"},
 	{fn: "tracked", on: []string{ops.Document, ops.Observe}, name: "callTracked"},
 	// The rule call of a Document parse in the typed runtime.
@@ -85,12 +85,15 @@ func goTarget(s goSpec) *execgo.Target {
 	t := &execgo.Target{Recv: "p *Parser", Source: "internal/ir/exec/core"}
 	handles := map[string]string{
 		ops.Rule: "*Rule", ops.Value: "*Node", ops.Entry: "*memoEntry", ops.Values: "[]any", ops.Errs: "[]*SyntaxError",
-		ops.Mark: "ExpMark", ops.Set: "[]ExpID", ops.Kept: "[]ExpID", ops.Reuse: "docReuse",
+		ops.Mark: "ExpMark", ops.Set: "[]ExpID", ops.Kept: "[]ExpID",
+		ops.Ctx: "ctxCallState", ops.Res: "*ctxResult", ops.Grow: "growState",
 	}
 	names := map[string]string{"call": "Call", "grow": "grow", "unmemoized": "callUnmemoized", "memoized": "callMemo",
 		"document": "callDocument", "body": "callBody", "observed": "callObserved"}
 	entryType, valueField, alloc := "memoEntry", "node", "p.memo.alloc()"
 	rule := func(r string) string { return r }
+	// step passes the value of a growth step as the node or the typed value of growStep.
+	step := func(v string) string { return v + ", nil" }
 	if typed {
 		t.Recv = "p *TParser"
 		handles[ops.Rule], handles[ops.Value], handles[ops.Entry] = "*TRule", "any", "*tmemoEntry"
@@ -98,6 +101,7 @@ func goTarget(s goSpec) *execgo.Target {
 		names = map[string]string{"call": "callBody", "callMemo": "CallMemo", "grow": "grow"}
 		entryType, valueField, alloc = "tmemoEntry", "val", "p.memoSlab.one()"
 		rule = func(r string) string { return r + ".Rule" }
+		step = func(v string) string { return "nil, " + v }
 	}
 	names[s.fn] = s.name
 	t.Handle = func(name string) string { return handles[name] }
@@ -119,7 +123,7 @@ func goTarget(s goSpec) *execgo.Target {
 			return fmt.Sprintf("p.callTracked(%s, %s)", a[0], a[1])
 		case "call.trackBody":
 			return fmt.Sprintf("p.DocumentCall(%s, 0, %s)", a[0], a[1])
-		case "call.spend", "call.growStep":
+		case "call.spend":
 			return "p.Spend()"
 		case "call.first":
 			return "p.FirstCall(" + rule(a[0]) + ")"
@@ -159,18 +163,12 @@ func goTarget(s goSpec) *execgo.Target {
 			return "p.Keep(" + a[0] + ")"
 		case "exp.merge", "exp.mergeKept":
 			return fmt.Sprintf("p.MergeExpected(%s, %s)", a[0], a[1])
-		case "memo.far", "memo.expected", "memo.ok", "memo.end", "memo.growing", "memo.silent", "memo.errs":
+		case "memo.far", "memo.expected", "memo.ok", "memo.end", "memo.silent", "memo.errs":
 			return a[0] + "." + strings.TrimPrefix(c.Callee, "memo.")
 		case "memo.value":
 			return a[0] + "." + valueField
 		case "memo.setExpected":
 			return fmt.Sprintf("%s.far, %s.expected = %s, %s", a[0], a[0], a[1], a[2])
-		case "memo.grown":
-			return fmt.Sprintf("p.memoGet(%s, %s, %s, %s)", a[0], a[1], a[2], a[3])
-		case "memo.detached":
-			return "&" + entryType + "{}"
-		case "memo.finishSeed":
-			return fmt.Sprintf("%s.growing = false\n%s.silent = %s", a[0], a[0], a[1])
 		case "obs.memoHit":
 			return "p.Observation.memoHit()"
 		case "obs.enter":
@@ -182,7 +180,7 @@ func goTarget(s goSpec) *execgo.Target {
 		case "doc.examinedEnd":
 			return "p.ExaminedEnd(" + a[0] + ")"
 		case "doc.leave":
-			return fmt.Sprintf("p.docHigh = max(%s, p.docHigh)\np.docReuse = max(%s, p.docReuse)", a[0], a[1])
+			return fmt.Sprintf("p.docHigh = max(%s, p.docHigh)", a[0])
 		case "obs.active":
 			return "p.Observation != nil"
 		case "doc.active":
@@ -191,55 +189,59 @@ func goTarget(s goSpec) *execgo.Target {
 			return "p.documentTouch(" + a[0] + ")"
 		case "doc.readEntry":
 			if typed {
-				return fmt.Sprintf("meta := p.TypedDocument.meta[%s]\np.documentTouch(meta.examined)\np.docReuse = max(p.docReuse, meta.reuse)", a[0])
+				return fmt.Sprintf("meta := p.TypedDocument.meta[%s]\np.documentTouch(meta.examined)", a[0])
 			}
-			return fmt.Sprintf("p.documentTouch(%s.examined)\np.docReuse = max(p.docReuse, %s.reuse)", a[0], a[0])
+			return fmt.Sprintf("p.documentTouch(%s.examined)", a[0])
 		case "doc.evaluated":
 			return "p.Document.stats.Evaluated++"
 		case "memo.forgetDoc":
 			return "delete(p.TypedDocument.meta, " + a[0] + ")"
-		case "doc.reuse":
-			return "p.docReuse"
-		case "doc.setReuse":
-			return "p.docReuse = " + a[0]
-		case "doc.limitReuse":
-			return "p.docReuse = max(p.docReuse, " + a[0] + ")"
 		case "doc.reused":
 			return "p.Document.stats.Reused++"
-		case "doc.parseOnly":
-			if typed {
-				return fmt.Sprintf("p.TypedDocument.parseOnly = append(p.TypedDocument.parseOnly, tmemoPlace{%s, %s})", a[0], a[1])
-			}
-			return fmt.Sprintf("p.docParseOnly = append(p.docParseOnly, memoPlace{%s, %s})", a[0], a[1])
-		case "reuse.untilEdit":
-			return "reuseUntilEdit"
-		case "reuse.inParse":
-			return "reuseInParse"
 		case "memo.recordDoc":
 			if typed {
-				return "p.TypedDocument.meta[" + a[0] + "] = typedDocumentMeta{examined: p.docHigh, reuse: p.docReuse}"
+				return "p.TypedDocument.meta[" + a[0] + "] = typedDocumentMeta{examined: p.docHigh}"
 			}
-			return a[0] + ".examined, " + a[0] + ".reuse = p.docHigh, p.docReuse"
+			return a[0] + ".examined = p.docHigh"
 		case "call.body":
 			return fmt.Sprintf("p.%s(%s, %s)", s.body, a[0], a[1])
-		case "lr.stale":
-			return fmt.Sprintf("p.memberStale(%s.Member, %s)", a[0], a[1])
-		case "lr.read":
-			return fmt.Sprintf("p.readResult(%s.growing, %s.depth)", a[0], a[0])
-		case "lr.depth":
-			return "p.growths"
-		case "lr.enter":
-			return "p.enterCall()"
-		case "lr.leave":
-			return "p.leaveCall(" + a[0] + ")"
-		case "lr.changeable":
-			return "p.readDepth <= " + a[0]
-		case "lr.end":
-			return "p.growths--\np.seedPos = " + a[0]
-		case "memo.mark":
-			return a[0] + ".depth = int32(p.growths)"
-		case "memo.settle":
-			return fmt.Sprintf("%s.depth = finalDepth(p.readDepth, p.growths, %s.silent || len(%s.errs) > 0)", a[0], a[0], a[0])
+		case "ctx.found":
+			return a[0] + " != nil"
+		case "ctx.ok":
+			return a[0] + ".ok"
+		case "ctx.value":
+			return a[0] + "." + valueField
+		case "ctx.replay":
+			return fmt.Sprintf("p.replayCtx(%s, %s)", a[0], a[1])
+		case "ctx.allows":
+			return fmt.Sprintf("%s.memoAllows(%s.present)", a[0], a[1])
+		case "ctx.active":
+			return a[0] + ".ctx"
+		case "ctx.lookup":
+			return fmt.Sprintf("p.ctxLookup(&%s, %s.Id, %s, %s)", a[0], a[1], a[2], a[3])
+		case "ctx.push":
+			return "p.ctxPush(&" + a[0] + ")"
+		case "ctx.pop":
+			return "p.ctxPop(&" + a[0] + ")"
+		case "ctx.storeMemo":
+			return "storeMemo"
+		case "ctx.storeCtx":
+			return "storeCtx"
+		case "memo.setPresent":
+			return fmt.Sprintf("%s.present = %s.present", a[0], a[1])
+		case "ctx.keep":
+			return fmt.Sprintf("p.ctxKeep(&%s, %s.Id, %s, %s, %s, &ctxResult{%s: %s, ok: %s, end: %s, examined: p.examinedNow(), silent: %s, errs: %s, far: %s, expected: %s})",
+				a[0], a[1], a[2], a[3], a[4], valueField, a[8], a[5], a[6], a[7], a[9], a[10], a[11])
+		case "ctx.done":
+			return "p.ctxDone(&" + a[0] + ")"
+		case "grow.begin":
+			return fmt.Sprintf("p.growBegin(%s, %s)", rule(a[0]), a[1])
+		case "grow.next":
+			return "p.growNext(&" + a[0] + ")"
+		case "grow.step":
+			return fmt.Sprintf("p.growStep(&%s, %s, %s)", a[0], step(a[1]), a[2])
+		case "grow.end":
+			return "p.growEnd(&" + a[0] + ")"
 		}
 		panic("core: no Go implementation of " + c.Callee)
 	}
@@ -256,21 +258,19 @@ func goTarget(s goSpec) *execgo.Target {
 				s += "\n" + dst[1] + op + dst[0] + " != nil"
 			}
 			return s, true
-		case "lr.begin":
-			return fmt.Sprintf("%s%sp.seedPos\np.growths++\np.seedPos = %s", dst[0], op, a[0]), true
-		case "doc.enter":
-			return fmt.Sprintf("%s, %s%sp.docHigh, p.docReuse\np.docHigh, p.docReuse = %s+1, reuseAfterEdits", dst[0], dst[1], op, a[0]), true
-		case "memo.store", "memo.seed", "memo.reseed":
-			e := dst[0]
-			var fields string
-			switch c.Callee {
-			case "memo.store":
-				fields = fmt.Sprintf("%s: %s, ok: %s, end: %s, silent: %s, errs: %s", valueField, a[7], a[4], a[5], a[6], a[8])
-			case "memo.seed":
-				fields = fmt.Sprintf("end: %s, growing: true", a[1])
-			case "memo.reseed":
-				fields = fmt.Sprintf("%s: %s, ok: true, end: %s, growing: true, errs: %s", valueField, a[5], a[4], a[6])
+		case "ctx.enter":
+			// The context of a call of a rule of no cycle, or outside every growth, is empty.
+			c, seed := dst[0], dst[1]
+			s := ""
+			if define {
+				s = fmt.Sprintf("var %s ctxCallState\nvar %s *ctxResult\n", c, seed)
 			}
+			return s + fmt.Sprintf("if %s.Cycle != 0 && len(p.gamma) != 0 {\n%s = p.ctxEnter(&%s, %s, %s)\n}", a[0], seed, c, rule(a[0]), a[1]), true
+		case "doc.enter":
+			return fmt.Sprintf("%s%sp.docHigh\np.docHigh = %s+1", dst[0], op, a[0]), true
+		case "memo.store":
+			e := dst[0]
+			fields := fmt.Sprintf("%s: %s, ok: %s, end: %s, silent: %s, errs: %s", valueField, a[7], a[4], a[5], a[6], a[8])
 			return fmt.Sprintf("%s%s%s\n*%s = %s{%s}\np.memoPut(%s, %s)", e, op, alloc, e, entryType, fields, key(), e), true
 		}
 		return "", false

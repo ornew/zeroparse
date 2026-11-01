@@ -30,21 +30,12 @@ func TestMemoModel(t *testing.T) {
 	if r := call(m, "memo.lookup", other...); r[1].(bool) {
 		t.Fatal("other values found the entry")
 	}
-	// Growth under other values: the guard finds the seed whatever the values.
-	s := call(m, "memo.seed", other...)[0]
-	if r := call(m, "memo.lookupGrowing", other[:3]...); r[0] != s {
-		t.Fatal("lookupGrowing missed the seed")
+	e2 := call(m, "memo.store", append(other, false, int64(5), true, nil, nil)...)[0]
+	if r := call(m, "memo.lookup", other...); r[0] != e2 || call(m, "memo.ok", e2)[0].(bool) || !call(m, "memo.silent", e2)[0].(bool) {
+		t.Fatal("lookup under other values")
 	}
-	if m.Allows(pilot.Op("memo.lookup"), k) {
-		t.Fatal("lookup of another key of a growing slot is allowed")
-	}
-	s2 := call(m, "memo.reseed", append(other, int64(6), nil, nil)...)[0]
-	call(m, "memo.finishSeed", s2, false)
-	if r := call(m, "memo.lookupGrowing", other[:3]...); r[1].(bool) {
-		t.Fatal("finished seed still growing")
-	}
-	if r := call(m, "memo.lookup", other...); r[0] != s2 || !call(m, "memo.ok", s2)[0].(bool) || call(m, "memo.end", s2)[0] != int64(6) {
-		t.Fatal("finished seed is not the complete entry")
+	if r := call(m, "memo.lookup", k...); r[0] != e {
+		t.Fatal("a store under other values replaced the entry")
 	}
 	if got := m.Quantity(ops.QKeyScan, nil, k); got != 4 {
 		t.Fatalf("key scan at 5 = %d, want 4 (two entries of one value)", got)

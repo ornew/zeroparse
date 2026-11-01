@@ -877,9 +877,13 @@ type Rule struct {
 	Leader bool
 	// Rec means the rule is on a cycle of calls: its entries count against the nesting limit.
 	Rec bool
-	// Member is a rule of a left-recursive cycle other than its leader: while a leader grows at a
-	// position, its results there are evaluated again (see memberStale).
-	Member bool
+	// Cycle numbers the left-recursion cycle of a leader or a member of one from 1, and is 0 for
+	// any other rule: a call of a rule of a cycle can read the seeds of the cycle's leaders that grow
+	// at its position (context_memo.go).
+	Cycle int32
+	// leaderBit is the bit of a leader in the present sets of the results of its cycle, or 0
+	// (setLeaderBits).
+	leaderBit uint32
 	// DocMemo means Documents memoize the rule, transient or not, as the engine does for a leader
 	// and for a rule marked for memoization.
 	DocMemo bool
@@ -1014,6 +1018,7 @@ func NewGrammar(maxDepth int) *grammar {
 func (g *grammar) SetRules(rules []*Rule, nseen int) {
 	g.rules, g.nseen = rules, nseen
 	defer g.indexInitVals()
+	setLeaderBits(rules)
 	for _, r := range rules {
 		r.g = g
 		r.kinds = newRuleKinds(r.Name)
@@ -1374,20 +1379,23 @@ type Parser struct {
 	sourceInfo bool
 	// Document is set only by the private incremental runner.
 	Document *documentState
-	docHigh  int      // exclusive upper bound examined by the active rule call
-	docReuse docReuse // the reuse that the results the active call read allow (docReuse)
-	// docParseOnly are the memo entries this Document parse stored with reuseInParse, which the
-	// Document removes when the parse ends (memoTable.removeParseOnly).
-	docParseOnly []memoPlace
-	// growths is the number of left recursions that grow, and seedPos the position of the
-	// innermost one. readDepth is the least depth (memoEntry.depth) of the growing results that the
-	// current call has read, 0 if it read an unstable result, or math.MaxInt if neither (see
-	// readResult).
-	growths, seedPos, readDepth int
-	unit                        PositionUnit
-	In                          []rune // code points (CodePoints)
-	bs                          string // the input (Bytes)
-	n                           int    // input length in units
+	docHigh  int // exclusive upper bound examined by the active rule call
+	// The state of left recursion (context_memo.go): the growths in progress, innermost last; the
+	// frames that record dependencies, and their dependencies; the dependencies of the call that
+	// ctxPop ended; the context tables; the lookaheads in progress; the lookahead sites whose
+	// outcome is being looked up; and the last seed identity given.
+	gamma    []growRec
+	frames   []depFrame
+	deps     []dep
+	popped   []dep
+	ctxs     []*ctxTable
+	looks    []lookRec
+	obsGuard []int32
+	seedSeq  uint64
+	unit     PositionUnit
+	In       []rune // code points (CodePoints)
+	bs       string // the input (Bytes)
+	n        int    // input length in units
 	// src and offs give token text without copying in CodePoints mode: offs[i] is the byte offset
 	// of code point i (len(in)+1 entries). For invalid UTF-8, offs is nil until the first text
 	// replaces src by the decoded input (with U+FFFD substituted) and builds its table; decoded
@@ -1716,65 +1724,19 @@ type memoEntry struct {
 	// silent means the result was computed inside a lookahead without recording expectations;
 	// outside lookaheads it is computed again.
 	silent bool
-	// growing marks a provisional result of a growing left-recursive call. Lookups match it
-	// whatever the variable values of the call: every call of the rule at the position and
-	// level reads it while the rule grows there.
-	growing bool
-	reuse   docReuse // which later Document parses may reuse the result
-	// depth is, for a growing result, the number of left recursions that grow, its own included
-	// (Parser.growths). For a final result it is 0, or unstableResult for the result of a leader
-	// whose growth read the seed of another leader, or an unstable result, when the leader can
-	// grow again at its position in this parse: the result is reused only inside lookaheads
-	// (silent) or only in one kind of context (it has recovered errors). Growing again, the leader
-	// can read other results and have another one, so a result that reads it is not memoized (see
-	// readResult). One field keeps the entry at 128 bytes.
-	depth int32
+	// present is the set of leaders (Rule.leaderBit) that grew at the position when a result of a
+	// rule of their cycle was evaluated; it is reused only where every leader that grows there is in
+	// the set (ctxCallState.memoAllows).
+	present uint32
 }
 
-// docReuse tells which later Document parses may reuse a memoized result. A result allows at most
-// the reuse of the results it read; the levels are ordered by how much they restrict reuse.
-type docReuse uint8
-
-const (
-	// reuseAfterEdits: a later parse reuses the result while no edit reaches the input it examined.
-	reuseAfterEdits docReuse = iota
-	// reuseUntilEdit: the result read the seed of a growing left recursion, so its examined
-	// frontier is not reliable; it is reused until the next edit.
-	reuseUntilEdit
-	// reuseInParse: the result depends on the order in which its parse evaluated the calls (the
-	// growth of a leader that read the seed of another leader, or an unstable result); a later
-	// parse, of the same text or not, does not repeat that order, so only this parse reuses it.
-	reuseInParse
-)
-
-// memoPlace is a memo entry and its position.
-type memoPlace struct {
-	pos int
-	e   *memoEntry
-}
-
-// unstableResult is the depth of an unstable final result (memoEntry.depth).
-const unstableResult = -1
-
-// finalDepth returns the depth of the final result of a leader after its growth: unstableResult
-// if the growth read a result that can still change (read, the least depth it read, is at most
-// growths, the number of growths that enclose it) and the result is reused in one kind of context
-// only (oneContext: it is silent or has recovered errors), 0 otherwise.
-func finalDepth(read, growths int, oneContext bool) int32 {
-	if oneContext && read <= growths {
-		return unstableResult
-	}
-	return 0
-}
-
-// get returns the entry for the rule, position, level and variable values, or the growing entry
-// of the rule at the position and level whatever its variable values.
+// get returns the entry for the rule, position, level and variable values.
 func (t *memoTable) get(rule, pos, min int, env []any) *memoEntry {
 	if pos >= len(t.slots) {
 		return nil
 	}
 	for e := t.slots[pos]; e != nil; e = e.next {
-		if e.rule == int32(rule) && e.min == int32(min) && (e.growing || sameValues(e.env, env)) {
+		if e.rule == int32(rule) && e.min == int32(min) && sameValues(e.env, env) {
 			return e
 		}
 	}
@@ -2660,19 +2622,13 @@ func (p *Parser) ExaminedBegin() int {
 }
 
 // ExaminedEnd returns the call's frontier and merges it into the enclosing one.
-// Outside a Document parse the frontier is unknown. A call that reuses a
-// growing left-recursive seed sees the frontier recorded with an earlier seed;
-// such results are provisional and never reused after an edit, so in a
-// provisional context the report is raised to the call's end without changing the frontier the Document keeps.
+// Outside a Document parse the frontier is unknown.
 func (p *Parser) ExaminedEnd(enclosing int) (int, bool) {
 	if p.Document == nil {
 		return 0, false
 	}
 	x := p.docHigh
 	p.docHigh = max(enclosing, x)
-	if p.docReuse != reuseAfterEdits {
-		x = max(x, p.Pos)
-	}
 	return x, true
 }
 
@@ -2680,56 +2636,6 @@ func (p *Parser) ExaminedEnd(enclosing int) (int, bool) {
 func (p *Parser) releaseObservation() {
 	p.Observation.release()
 	p.Observation = nil
-}
-
-// leaderReuse returns the reuse that the result of the current Document call allows, given the
-// reuse of the results it read (docReuse). The result of a leader is not reused after an edit, and
-// is reused only in this parse when its growth read a result that can still change (settled is
-// false: the seed of a growth that began before the call, or an unstable result), because a later
-// parse evaluates it without that growth.
-func (p *Parser) leaderReuse(leader, settled bool) docReuse {
-	switch {
-	case !leader:
-		return p.docReuse
-	case !settled:
-		return reuseInParse
-	}
-	return max(p.docReuse, reuseUntilEdit)
-}
-
-// readResult records that the current call read a memoized result of the depth: a growing one,
-// or an unstable one (unstableResult), which a call reads by reusing it or by finishing the growth
-// that produced it. A call that read the seed of a growth that began before it, or an unstable
-// result, is not memoized: its result can change. The seeds of growths that began and ended within
-// the call have their final values.
-func (p *Parser) readResult(growing bool, depth int32) {
-	if growing {
-		p.readDepth = min(p.readDepth, int(depth))
-	} else if depth == unstableResult {
-		p.readDepth = 0
-	}
-}
-
-// enterCall starts tracking the reads of a memoized call (readResult) and returns the state to
-// restore with leaveCall.
-func (p *Parser) enterCall() int {
-	read := p.readDepth
-	p.readDepth = math.MaxInt
-	return read
-}
-
-// leaveCall ends tracking the reads of a call, which also count as reads of the call that made it.
-func (p *Parser) leaveCall(read int) {
-	p.readDepth = min(read, p.readDepth)
-}
-
-// memberStale reports whether a memoized result at pos of a rule that is a member of a cycle
-// (member) must be evaluated again instead of reused: while a leader grows at pos, the result may
-// have read an earlier result of the leader there, which the growth is replacing step by step.
-// Only calls at pos read the seed of a growth at pos, and a growth that is not the innermost one
-// started at a position no later than the innermost one, so the innermost growth tells.
-func (p *Parser) memberStale(member bool, pos int) bool {
-	return member && p.growths != 0 && p.seedPos == pos
 }
 
 // invoke evaluates the body of r and makes the rule's value.

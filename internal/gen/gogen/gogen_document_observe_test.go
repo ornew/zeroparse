@@ -222,17 +222,19 @@ func observedRuntime(t *testing.T) string {
 			return replace(src, "p.Observation = newObservation(&o.observe)\n\tdefer p.releaseObservation()",
 				"p.Observation = newObservation(&o.observe)\n\tif ProbeHook != nil {\n\t\tProbeHook(p.Observation)\n\t}\n\tdefer p.releaseObservation()", 1)
 		case "call.go", "call_exec.go":
-			// The hand-written calls name the stored entry e and its typed record m, the printed ones
-			// entry and meta.
-			stored, meta := "e", "m"
+			// The hand-written calls name the stored entry e and the reused typed entry old, the
+			// printed ones entry and meta.
+			stores := []string{"*e = memoEntry{node: v, ok: ok, end: p.Pos, examined: p.docHigh,", "p.TypedDocument.meta[e] = typedDocumentMeta{examined: p.docHigh}"}
+			hits := []string{"e.examined", "p.TypedDocument.meta[old].examined"}
 			if name == "call_exec.go" {
-				stored, meta = "entry", "meta"
+				stores = []string{"entry.examined = p.docHigh\n", "p.TypedDocument.meta[entry] = typedDocumentMeta{examined: p.docHigh}"}
+				hits = []string{"e.examined", "meta.examined"}
 			}
 			keep := "FrontierHook(r.Name, start, min, p.docHigh, false); "
-			for _, old := range []string{stored + ".examined, " + stored + ".reuse = p.docHigh, p.docReuse\n", "p.TypedDocument.meta[" + stored + "] = typedDocumentMeta{examined: p.docHigh,"} {
+			for _, old := range stores {
 				src = replace(src, old, keep+old, 1)
 			}
-			for _, examined := range []string{"e.examined", meta + ".examined"} {
+			for _, examined := range hits {
 				old := "p.documentTouch(" + examined + ")\n"
 				src = replace(src, old, old+"FrontierHook(r.Name, start, min, "+examined+", true)\n", 1)
 			}

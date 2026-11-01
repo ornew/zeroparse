@@ -255,6 +255,7 @@ type ruleExtra struct {
 	Where      string
 	NodeType   string
 	OpNodeType string
+	Cycle      int32
 }
 
 var rulesSpec = [...]ruleSpec{
@@ -295,10 +296,10 @@ var rulesStrs = [...][]string{
 }
 
 var rulesExtras = [...]ruleExtra{
-	{8, "", "String", ""},
-	{11, "", "Number", ""},
-	{15, "", "Bool", ""},
-	{16, "", "Null", ""},
+	{8, "", "String", "", 0},
+	{11, "", "Number", "", 0},
+	{15, "", "Bool", "", 0},
+	{16, "", "Null", "", 0},
 }
 
 var recRulesSpec = [...]ruleSpec{

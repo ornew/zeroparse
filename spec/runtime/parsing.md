@@ -292,6 +292,13 @@ observable consequences, and no others.
 - **The nesting limit can depend on it.** A call that is answered from the memo
   does not nest, so whether a parse that comes close to the [nesting
   limit](#limits) succeeds can depend on memoization.
+- **Traces and evaluation counts can differ between backends.** Which calls a
+  parse evaluates and which it answers from the memo is part of the cost. The
+  rules above leave implementations a choice, such as whether examined ranges
+  keep the results of left-recursion contexts apart ([Evaluations of
+  Rules](#evaluations-of-rules)), so the calls in a trace and the evaluations
+  that a profile counts can differ between the engine and generated parsers.
+  The value, the positions, the recovered errors and the syntax error do not.
 
 ## Time and Memory
 
@@ -375,9 +382,13 @@ exceptions.
   computed while at least the growths of its context were in progress.
   Otherwise it reuses a result computed in a context of the same growths only
   if every growing result that it read is equal to the one there now and every
-  such lookahead has the same outcome and examined range. A result that read a
-  growing result is kept only until the first growth of its context ends, and
-  never enters the memo of a later parse.
+  such lookahead has the same outcome. Where the parse records the input that
+  evaluations examine, equal growing results and equal outcomes also need
+  equal examined ranges: in every parse of the engine, whose traces report the
+  range, and in a [Document](documents.md) parse of a generated Go parser; a
+  generated parser outside a Document parse and a TypeScript parser compare no
+  range. A result that read a growing result is kept only until the first
+  growth of its context ends, and never enters the memo of a later parse.
 - A growing rule evaluates its body once for each step of the growth, and the
   number of steps is at most two more than the length of the input it
   consumes. A leader that grows at a position where another growth of its

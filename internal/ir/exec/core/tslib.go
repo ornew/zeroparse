@@ -53,6 +53,7 @@ var tsTarget = &exects.Target{
 		return map[string]string{
 			ops.Rule: "Rule", ops.Value: "R", ops.Entry: "MemoEntry | null", ops.Values: "Value[] | null",
 			ops.Errs: "SyntaxError[]", ops.Kept: "number[]",
+			ops.Ctx: "CtxCall", ops.Res: "CtxResult | null", ops.Grow: "GrowState",
 		}[name]
 	},
 	FuncName: func(name string) string { return map[string]string{"call": "callBody", "grow": "grow"}[name] },
@@ -61,7 +62,7 @@ var tsTarget = &exects.Target{
 	},
 	Op: func(c *exec.Call, a []string) string {
 		switch c.Callee {
-		case "call.spend", "call.growStep":
+		case "call.spend":
 			return "this.spend()"
 		case "call.first":
 			return "this.firstCall(" + a[0] + ")"
@@ -90,38 +91,47 @@ var tsTarget = &exects.Target{
 			return fmt.Sprintf("this.mergeExpected(%s, %sFrom, %sTo)", a[0], a[1], a[1])
 		case "exp.mergeKept":
 			return fmt.Sprintf("this.mergeKept(%s, %s)", a[0], a[1])
-		case "memo.far", "memo.expected", "memo.ok", "memo.end", "memo.growing", "memo.silent", "memo.errs":
+		case "memo.far", "memo.expected", "memo.ok", "memo.end", "memo.silent", "memo.errs":
 			return a[0] + "." + strings.TrimPrefix(c.Callee, "memo.")
 		case "memo.value":
 			return a[0] + ".node"
 		case "memo.setExpected":
 			return fmt.Sprintf("%s.far = %s;\n%s.expected = %s", a[0], a[1], a[0], a[2])
-		case "memo.grown":
-			return fmt.Sprintf("this.memoGet(%s, %s, %s, %s) as MemoEntry", a[0], a[1], a[2], a[3])
-		case "memo.finishSeed":
-			return fmt.Sprintf("%s.growing = false;\n%s.silent = %s", a[0], a[0], a[1])
 		case "obs.memoHit":
 			return "this.observation?.memoHit()"
-		case "memo.detached":
-			return "newEntry(undefined, false, 0, false, false, noErrs)"
-		case "lr.stale":
-			return fmt.Sprintf("this.memberStale(%s.member, %s)", a[0], a[1])
-		case "lr.read":
-			return "this.readResult(" + a[0] + ")"
-		case "lr.depth":
-			return "this.growths"
-		case "lr.enter":
-			return "this.enterCall()"
-		case "lr.leave":
-			return "this.leaveCall(" + a[0] + ")"
-		case "lr.changeable":
-			return "this.readDepth <= " + a[0]
-		case "lr.end":
-			return "this.growths--;\nthis.seedPos = " + a[0]
-		case "memo.mark":
-			return a[0] + ".depth = this.growths"
-		case "memo.settle":
-			return fmt.Sprintf("%s.unstable = this.readDepth <= this.growths && (%s.silent || %s.errs.length > 0)", a[0], a[0], a[0])
+		case "ctx.found":
+			return a[0] + " !== null"
+		case "ctx.ok":
+			return a[0] + "!.ok"
+		case "ctx.value":
+			return a[0] + "!.node"
+		case "ctx.replay":
+			return fmt.Sprintf("this.replayCtx(%s!, %s)", a[0], a[1])
+		case "ctx.allows":
+			return fmt.Sprintf("memoAllows(%s, %s.present)", a[0], a[1])
+		case "ctx.active":
+			return a[0] + ".ctx"
+		case "ctx.lookup":
+			return fmt.Sprintf("this.ctxLookup(%s, %s.id, %s, %s)", a[0], a[1], a[2], a[3])
+		case "ctx.push", "ctx.pop", "ctx.done":
+			return fmt.Sprintf("this.%s(%s)", map[string]string{"ctx.push": "ctxPush", "ctx.pop": "ctxPop", "ctx.done": "ctxDone"}[c.Callee], a[0])
+		case "ctx.storeMemo":
+			return "storeMemo"
+		case "ctx.storeCtx":
+			return "storeCtx"
+		case "memo.setPresent":
+			return fmt.Sprintf("%s.present = %s.present", a[0], a[1])
+		case "ctx.keep":
+			return fmt.Sprintf("this.ctxKeep(%s, %s.id, %s, %s, %s, newCtxResult(%s, %s, %s, %s, %s, %s))",
+				a[0], a[1], a[2], a[3], a[4], a[8], a[6], a[7], a[9], a[10], a[11])
+		case "grow.begin":
+			return fmt.Sprintf("this.growBegin(%s, %s)", a[0], a[1])
+		case "grow.next":
+			return "this.growNext(" + a[0] + ")"
+		case "grow.step":
+			return fmt.Sprintf("this.growStep(%s, %s)", a[0], a[1])
+		case "grow.end":
+			return "this.growEnd(" + a[0] + ")"
 		}
 		panic("core: no TypeScript implementation of " + c.Callee)
 	},
@@ -133,8 +143,8 @@ var tsTarget = &exects.Target{
 			return name
 		}
 		key := func() string { return strings.Join(a[:4], ", ") }
-		entry := func(e, node, ok, end, silent, growing, errs string) string {
-			return fmt.Sprintf("%s = newEntry(%s, %s, %s, %s, %s, %s);\nthis.memoPut(%s, %s);", lhs(e), node, ok, end, silent, growing, errs, key(), e)
+		entry := func(e, node, ok, end, silent, errs string) string {
+			return fmt.Sprintf("%s = newEntry(%s, %s, %s, %s, %s);\nthis.memoPut(%s, %s);", lhs(e), node, ok, end, silent, errs, key(), e)
 		}
 		switch c.Callee {
 		case "memo.lookup":
@@ -144,13 +154,12 @@ var tsTarget = &exects.Target{
 			}
 			return s, true
 		case "memo.store":
-			return entry(dst[0], a[7], a[4], a[5], a[6], "false", a[8]), true
-		case "memo.seed":
-			return entry(dst[0], "undefined", "false", a[1], "false", "true", "noErrs"), true
-		case "memo.reseed":
-			return entry(dst[0], a[5], "true", a[4], "false", "true", a[6]), true
-		case "lr.begin":
-			return fmt.Sprintf("%s = this.seedPos;\nthis.growths++;\nthis.seedPos = %s;", lhs(dst[0]), a[0]), true
+			return entry(dst[0], a[7], a[4], a[5], a[6], a[8]), true
+		case "ctx.enter":
+			// The context of a call of a rule of no cycle, or outside every growth, is empty.
+			c, seed := dst[0], dst[1]
+			return fmt.Sprintf("let %s = noCtx;\nlet %s: CtxResult | null = null;\nif (%s.cycle !== 0 && this.gamma.length !== 0) {\n  %s = newCtxCall();\n  %s = this.ctxEnter(%s, %s, %s);\n}",
+				c, seed, a[0], c, seed, c, a[0], a[1]), true
 		case "rec.add":
 			return fmt.Sprintf("for (const x of %s) {\n  this.spend();\n  this.recovered.push(x);\n}", a[0]), true
 		case "exp.isolate":

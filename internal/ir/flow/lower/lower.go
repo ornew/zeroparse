@@ -580,7 +580,7 @@ func (l *lowerer) node(n core.Node, s *scope, build bool, fail *flow.Label) flow
 		}
 		start := l.decl("x", flow.TypeInt)
 		l.set(start, pos)
-		l.emit(&flow.Silent{Delta: 1})
+		l.emit(&flow.Silent{Delta: 1, Site: n.Site})
 		f, done := l.label(), l.label()
 		bd := l.open(done)
 		bf := l.open(f)
@@ -588,12 +588,12 @@ func (l *lowerer) node(n core.Node, s *scope, build bool, fail *flow.Label) flow
 		l.cut = nil
 		l.node(n.Body, s, n.Body.Attrs().Want, f)
 		l.cut = prev
-		l.emit(&flow.Silent{Delta: -1})
+		l.emit(&flow.Silent{Delta: -1, Site: n.Site, Ok: true})
 		l.set(flow.RegPos, use(start))
 		if l.used[f] {
 			l.exit(done)
 			l.close(bf)
-			l.emit(&flow.Silent{Delta: -1})
+			l.emit(&flow.Silent{Delta: -1, Site: n.Site})
 			l.set(flow.RegPos, use(start))
 			l.exit(fail)
 			l.close(bd)
@@ -853,18 +853,18 @@ func (l *lowerer) shapeOne(n core.Node, x flow.Expr, start flow.Expr, capture bo
 // not lowers a negative lookahead.
 func (l *lowerer) not(n *core.Look, s *scope, fail *flow.Label) flow.Expr {
 	m := l.mark(s, n.Body, true)
-	l.emit(&flow.Silent{Delta: 1})
+	l.emit(&flow.Silent{Delta: 1, Site: n.Site})
 	f := l.label()
 	bf := l.open(f)
 	prev := l.cut
 	l.cut = nil
 	l.node(n.Body, s, false, f)
 	l.cut = prev
-	l.emit(&flow.Silent{Delta: -1})
+	l.emit(&flow.Silent{Delta: -1, Site: n.Site, Ok: true})
 	l.reset(m)
 	l.exit(fail)
 	l.close(bf)
-	l.emit(&flow.Silent{Delta: -1})
+	l.emit(&flow.Silent{Delta: -1, Site: n.Site})
 	l.reset(m)
 	return &flow.Nil{}
 }

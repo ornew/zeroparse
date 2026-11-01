@@ -519,7 +519,13 @@ func (p *tsFlowPrinter) stmt(s flow.Stmt) {
 	case *flow.Silent:
 		if s.Delta > 0 {
 			p.write("p.silent++;\n")
+			if s.Site != 0 {
+				p.write(fmt.Sprintf("p.lookBegin(%d);\n", s.Site))
+			}
 		} else {
+			if s.Site != 0 {
+				p.write(fmt.Sprintf("p.lookEnd(%t);\n", s.Ok))
+			}
 			p.write("p.silent--;\n")
 		}
 	case *flow.Peek:

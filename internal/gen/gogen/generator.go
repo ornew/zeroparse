@@ -680,9 +680,6 @@ func (g *Generator) rules() {
 			if r.Leader {
 				flags = append(flags, "RuleLeader")
 			}
-			if r.Member {
-				flags = append(flags, "RuleMember")
-			}
 			if r.Novalue {
 				flags = append(flags, "RuleNovalue")
 			}
@@ -708,8 +705,8 @@ func (g *Generator) rules() {
 			if w == r.Name {
 				w = ""
 			}
-			if w != "" || r.NodeType != "" || r.OpNodeType != "" {
-				extras = append(extras, fmt.Sprintf("\t{%d, %q, %q, %q},\n", r.ID, w, r.NodeType, r.OpNodeType))
+			if w != "" || r.NodeType != "" || r.OpNodeType != "" || r.Cycle != 0 {
+				extras = append(extras, fmt.Sprintf("\t{%d, %q, %q, %q, %d},\n", r.ID, w, r.NodeType, r.OpNodeType, r.Cycle))
 			}
 		}
 		if err := ruleTableLimits(len(strs), g.Prog.NSeen); err != nil {
@@ -720,7 +717,7 @@ func (g *Generator) rules() {
 		// any type of the layout of RuleSpec and RuleExtra.
 		if !g.ruleTypesDone {
 			g.ruleTypesDone = true
-			g.Vars.WriteString("// ruleSpec and ruleExtra have the layout of RuleSpec and RuleExtra, with the fields in this order:\n// name, value, flags, seen, scope, vars; and id, where, node type, operators rule node type.\ntype ruleSpec struct {\n\tName  string\n\tValue *Shaper\n\tFlags uint8\n\tSeen  int32\n\tScope uint16\n\tVars  uint16\n}\n\ntype ruleExtra struct {\n\tId         int\n\tWhere      string\n\tNodeType   string\n\tOpNodeType string\n}\n\n")
+			g.Vars.WriteString("// ruleSpec and ruleExtra have the layout of RuleSpec and RuleExtra, with the fields in this order:\n// name, value, flags, seen, scope, vars; and id, where, node type, operators rule node type, cycle.\ntype ruleSpec struct {\n\tName  string\n\tValue *Shaper\n\tFlags uint8\n\tSeen  int32\n\tScope uint16\n\tVars  uint16\n}\n\ntype ruleExtra struct {\n\tId         int\n\tWhere      string\n\tNodeType   string\n\tOpNodeType string\n\tCycle      int32\n}\n\n")
 		}
 		fmt.Fprintf(&g.Vars, "// %s is the compact form of the rule table, built by NewRules.\nvar %s = [...]ruleSpec{\n%s}\n\n", spec, spec, tab.String())
 		fmt.Fprintf(&g.Vars, "var %s = [...][]string{\n", strTable)

@@ -175,6 +175,9 @@ type Look struct {
 	base
 	Body Node
 	Neg  bool
+	// Site numbers the lookahead from 1 among the lookaheads of the module: an observation of its
+	// outcome in a left-recursion context is recorded by it (Parser.LookBegin).
+	Site int
 }
 
 // Cut commits the enclosing choice, option or repetition.

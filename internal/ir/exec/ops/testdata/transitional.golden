@@ -41,8 +41,9 @@ component observe
   // The observation of a parse.
 
 component growth
-  // The left-recursion growths in progress, the position of the innermost one, and
-  // the least depth of the growing or unstable results that the current call has read.
+  // The left-recursion growths in progress with their seeds, the frames that record
+  // what the calls in their contexts depend on, and the tables of the results kept in each context (the
+  // dependency memo).
 
 register pos int
   // The position of the parse in the input.
@@ -77,31 +78,26 @@ handle ExpSet of expected
 handle ExpKept of expected
   // Expectations kept beyond the record, as a memo entry keeps them.
 
-handle Reuse of call
-  // How long the results of a Document call may be reused: after edits, until
-  // the next edit, or only in this parse.
+handle Ctx of growth
+  // The context state of a memoized call: the growths of its rule's cycle at its
+  // position, their present set, and whether the call records its dependencies.
+
+handle CtxResult of growth
+  // A result that a context keeps (a seed, or the result of a call or a growth step
+  // that read a seed), or the last result of a growth.
+
+handle Grow of growth
+  // The state of the growth of a left-recursion leader.
 
 op memo.lookup(rule int, pos int, level int, key Values) (Entry, bool)
   component memo
   reads memo
   cost <= 1 + 1*key_scan
   contract:
-    // Returns the entry stored or seeded under the key, if one is there and not replaced, and
-    // true; otherwise false and an entry that must not be used. Two keys are equal when their rules,
-    // positions and levels are equal and the host's value equality holds for their values.
-  requires:
-    // If a growing entry exists for the rule, position and level, the key is the one it was
-    // seeded with. Compositions look a left-recursion leader up with memo.lookupGrowing first.
+    // Returns the entry stored under the key, if one is there and not replaced, and true;
+    // otherwise false and an entry that must not be used. Two keys are equal when their rules, positions
+    // and levels are equal and the host's value equality holds for their values.
   law: two lookups with no write of memo between them return the same result
-
-op memo.lookupGrowing(rule int, pos int, level int) (Entry, bool)
-  component memo
-  reads memo
-  cost <= 1 + 1*key_scan
-  contract:
-    // Returns the growing entry of the rule at the position and level, whatever key values it
-    // was seeded with, and true; otherwise false. This is the left-recursion guard: while a rule grows at a
-    // position, every call of it there reads the growing result.
 
 op memo.store(rule int, pos int, level int, key Values, ok bool, end int, silent bool, value Value, errs Errs) Entry
   component memo
@@ -113,42 +109,7 @@ op memo.store(rule int, pos int, level int, key Values, ok bool, end int, silent
     // context, its value and its recovered errors under the key, replacing the entry stored under the same
     // key, and returns it. Entries under other keys are unchanged.
   requires:
-    // No growing entry exists for the rule, position and level; end is at least pos.
-
-op memo.seed(rule int, pos int, level int, key Values) Entry
-  component memo
-  reads memo
-  writes memo
-  cost <= 2 + 1*key_scan + 1*slot_growth
-  contract:
-    // Starts the growth of a left-recursion leader: stores a growing entry that fails and ends
-    // at pos, not silent, with no value and no recovered errors, under the key, replacing the entry stored
-    // under the same key, and returns it.
-  requires:
-    // No growing entry exists for the rule, position and level.
-
-op memo.reseed(rule int, pos int, level int, key Values, end int, value Value, errs Errs) Entry
-  component memo
-  reads memo
-  writes memo
-  cost <= 2 + 1*key_scan + 1*slot_growth
-  contract:
-    // Records a longer seed: replaces the growing entry under the key by a growing entry that
-    // succeeds and ends at end, not silent, with the value and the recovered errors, and returns it. The
-    // replaced entry is no longer found.
-  requires:
-    // The key has a growing entry; end is greater than pos.
-
-op memo.finishSeed(e Entry, silent bool)
-  component memo
-  writes memo
-  cost <= 0
-  contract:
-    // Ends a growth: the growing entry e becomes complete, with its outcome, end, value and
-    // recovered errors, and silent as given. Lookups of its key return it as a complete entry, and
-    // memo.lookupGrowing no longer finds it.
-  requires:
-    // e is the growing entry most recently seeded or reseeded under its key.
+    // end is at least pos.
 
 op memo.ok(e Entry) bool
   component memo
@@ -163,13 +124,6 @@ op memo.end(e Entry) int
   cost <= 0
   contract:
     // Returns the end of the match of entry e; for a failure, the position of the call.
-
-op memo.growing(e Entry) bool
-  component memo
-  reads memo
-  cost <= 0
-  contract:
-    // Returns whether entry e is the growing entry of a left-recursion leader.
 
 op memo.silent(e Entry) bool
   component memo
@@ -303,15 +257,6 @@ transitional op call.first(r Rule) bool
     // Records a call of the rule at the position and reports whether its memoization is deferred:
     // seen.first for a rule whose memoization the target defers, false for one it memoizes eagerly (in a
     // stream, or for a rule without a seen index).
-
-transitional op call.growStep()
-  component call
-  writes call
-  noreturn
-  cost <= 1
-  contract:
-    // Charges a growth step of a left-recursion leader, before each evaluation of its body
-    // (the evaluation of the seed included): one unit, with the checks of the target's Spend.
 
 transitional op rule.memo(r Rule) bool
   component rules
@@ -471,22 +416,6 @@ transitional op memo.setExpected(e Entry, far int, k ExpKept)
   contract:
     // Records the expectations k at far of the call that computed entry e.
 
-transitional op memo.grown(rule int, pos int, level int, key Values) Entry
-  component memo
-  reads memo
-  cost <= 0
-  contract:
-    // Returns the entry that a finished growth left under the key, or the null entry when a
-    // stream commit pruned it.
-  requires:
-    // A growth under the key has just finished; outside streams it left its entry.
-
-transitional op memo.detached() Entry
-  component memo
-  cost <= 0
-  contract:
-    // Returns a new entry under no key, which no lookup finds.
-
 transitional op memo.recordDoc(e Entry)
   component memo
   reads call
@@ -494,8 +423,8 @@ transitional op memo.recordDoc(e Entry)
   features document
   cost <= 0
   contract:
-    // Records with the entry the examined frontier of the current call and how
-    // long its result may be reused, for the reuse of the entry (doc.readEntry).
+    // Records with the entry the examined frontier of the current call, for the
+    // reuse of the entry (doc.readEntry).
 
 transitional op memo.forgetDoc(e Entry)
   component memo
@@ -506,94 +435,172 @@ transitional op memo.forgetDoc(e Entry)
     // Forgets the Document record of the entry e, which the call replaces, where the target keeps
     // the records beside the entries.
 
-transitional op lr.stale(r Rule, pos int) bool
+transitional op ctx.enter(r Rule, min int) (Ctx, CtxResult)
   component growth
   reads growth, rules
+  writes growth
   cost <= 0
   contract:
-    // Reports whether the result of the rule at pos is evaluated again instead of reused: the rule
-    // is a member of a left-recursive cycle, other than its leader, and the innermost growth is at pos.
+    // Begins a memoized call of the rule at the position: returns its context state and, if the
+    // rule is a leader that grows at the position, its current seed, which the call reads (with the
+    // dependency on its identity); otherwise the null result. The context of a call of a rule of a
+    // left-recursive cycle is the growths of its cycle in progress at the position; another call has
+    // none.
 
-transitional op lr.read(e Entry)
+transitional op ctx.found(s CtxResult) bool
+  component growth
+  cost <= 0
+  contract:
+    // Reports whether s is a result, not the null result.
+
+transitional op ctx.ok(s CtxResult) bool
+  component growth
+  reads growth
+  cost <= 0
+  contract:
+    // Returns whether the result s succeeded.
+
+transitional op ctx.value(s CtxResult) Value
+  component growth
+  reads growth
+  cost <= 0
+  contract:
+    // Returns the value of the result s.
+
+transitional op ctx.replay(s CtxResult, seed bool)
+  component growth
+  reads growth
+  writes growth, pos, silent
+  noreturn
+  cost <= 0
+  contract:
+    // Applies the result s as the call that it records would have: counts a reuse, extends the
+    // examined frontier of a Document parse, adds its expectations unless it is a seed, and on success moves
+    // the position to its end and records its recovered errors again.
+
+transitional op ctx.allows(c Ctx, e Entry) bool
   component growth
   reads growth, memo
-  writes growth
   cost <= 0
   contract:
-    // Records that the current call read the result of entry e: the depth of a growing entry, or
-    // zero for an unstable one, lowers the least depth read.
+    // Reports whether the call with the context state c may reuse the memo entry e: always outside a
+    // context, and in one only when the leaders growing there are among those that grew where e was stored
+    // (its present set).
 
-transitional op lr.depth() int
+transitional op ctx.active(c Ctx) bool
   component growth
-  reads growth
   cost <= 0
   contract:
-    // Returns the number of growths in progress.
+    // Reports whether the call with the context state c is in a context.
 
-transitional op lr.enter() int
-  component growth
-  reads growth
-  writes growth
-  cost <= 0
-  contract:
-    // Starts tracking the reads of a call: returns the least depth read so far, for lr.leave, and
-    // resets it to none.
-
-transitional op lr.leave(read int)
+transitional op ctx.lookup(c Ctx, r Rule, min int, key Values) CtxResult
   component growth
   reads growth
   writes growth
   cost <= 0
   contract:
-    // Ends tracking the reads of a call, which also count as reads of the call that made it: the
-    // least depth read becomes at most read.
-
-transitional op lr.changeable(depth int) bool
-  component growth
-  reads growth
-  cost <= 0
-  contract:
-    // Reports whether the result of a call that began with depth growths in progress can change:
-    // it read the seed of one of them or an unstable result, so it is not memoized.
-
-transitional op lr.begin(pos int) int
-  component growth
-  reads growth
-  writes growth
-  cost <= 0
-  contract:
-    // Starts a growth at pos: it becomes the innermost growth. Returns the position of the
-    // enclosing innermost growth, for lr.end.
-
-transitional op lr.end(prev int)
-  component growth
-  reads growth
-  writes growth
-  cost <= 0
-  contract:
-    // Ends the innermost growth and restores prev as the position of the innermost growth.
+    // Returns the result kept in the context of the call for the rule at the position, the level
+    // and the key that holds there: the seeds it read have the same identities, and the lookaheads it
+    // observed the same outcomes, in the current context; it records those dependencies for the enclosing
+    // call. Otherwise the null result.
   requires:
-    // prev is the result of the matching lr.begin.
+    // c is in a context.
 
-transitional op memo.mark(e Entry)
+transitional op ctx.push(c Ctx)
+  component growth
+  writes growth
+  cost <= 0
+  contract:
+    // Starts recording the dependencies of the evaluation of the call, if it is in a context.
+
+transitional op ctx.pop(c Ctx) int
+  component growth
+  reads growth
+  writes growth
+  cost <= 0
+  contract:
+    // Ends recording the dependencies of the evaluation and returns where its result goes:
+    // ctx.storeMemo for the memo (it read no seed and made no observation), ctx.storeCtx for the table of
+    // the context, or another value for nowhere (its context's leaders have no present set).
+
+transitional op ctx.storeMemo() int
+  component growth
+  cost <= 0
+  contract:
+    // Returns the value of ctx.pop for a result stored in the memo.
+
+transitional op ctx.storeCtx() int
+  component growth
+  cost <= 0
+  contract:
+    // Returns the value of ctx.pop for a result kept in the table of its context.
+
+transitional op memo.setPresent(e Entry, c Ctx)
   component memo
   reads growth
   writes memo
   cost <= 0
   contract:
-    // Records in the growing entry e the number of growths in progress, its depth.
+    // Records with the entry e the present set of the context state c, for ctx.allows.
 
-transitional op memo.settle(e Entry)
-  component memo
-  reads growth, memo
-  writes memo
+transitional op ctx.keep(c Ctx, r Rule, pos int, min int, key Values, ok bool, end int, silent bool, value Value, errs Errs, far int, k ExpKept)
+  component growth
+  reads growth, call
+  writes growth
+  noreturn
   cost <= 0
   contract:
-    // Marks the entry e of a growth that has just ended unstable if the growth read the seed of an
-    // enclosing growth or an unstable result and the entry is reused in one kind of context only: it is
-    // silent or has recovered errors.
+    // Keeps the result of the call in the table of its context with the dependencies that ctx.pop
+    // ended, and the examined frontier of a Document parse.
   requires:
-    // e was finished by memo.finishSeed, and lr.end has ended its growth.
+    // The last ctx.pop of c returned ctx.storeCtx.
+
+transitional op ctx.done(c Ctx)
+  component growth
+  writes growth
+  cost <= 0
+  contract:
+    // Passes the dependencies that ctx.pop ended to the evaluation that encloses the call.
+
+transitional op grow.begin(r Rule, min int) Grow
+  component growth
+  reads growth, rules
+  writes growth
+  noreturn
+  cost <= 0
+  contract:
+    // Starts the growth of the leader at the binding level min at the position from a failure,
+    // charging one unit: the growth is in a context when other leaders of its cycle grow at the position.
+
+transitional op grow.next(g Grow) bool
+  component growth
+  reads growth
+  writes growth, pos, silent
+  noreturn
+  cost <= 0
+  contract:
+    // Reports whether the body must be evaluated for the next step of the growth g. In a context
+    // it first takes the steps that the memoized steps and jumps of the context give, and starts recording
+    // what the step it reports depends on.
+
+transitional op grow.step(g Grow, value Value, ok bool)
+  component growth
+  reads growth
+  writes growth, pos, silent
+  noreturn
+  cost <= 0
+  contract:
+    // Receives the result of a step of the growth g: adopts it as the seed, charging one unit, and
+    // returns to the start of the growth if the match grew, and otherwise ends the growth.
+
+transitional op grow.end(g Grow) CtxResult
+  component growth
+  reads growth
+  writes growth, pos, silent
+  cost <= 0
+  contract:
+    // Ends the growth g and returns its last seed: the position moves to its end and its recovered
+    // errors replace those recorded since the growth began.
 
 transitional op obs.memoHit()
   component observe
@@ -655,22 +662,21 @@ transitional op doc.examinedEnd(enclosing int) (int, bool)
   cost <= 0
   contract:
     // Ends measuring the frontier of an observed call and merges it into the enclosing one; returns
-    // the call's frontier and true in a Document parse, and false otherwise. In a provisional context, the
-    // result is raised to the position without changing the frontier the Document keeps.
+    // the call's frontier and true in a Document parse, and false otherwise.
   requires:
     // enclosing is the result of the matching doc.examinedBegin.
 
-transitional op doc.enter(pos int) (int, Reuse)
+transitional op doc.enter(pos int) int
   component call
   reads call
   writes call
   features document
   cost <= 0
   contract:
-    // Begins a rule call at pos in a Document parse: returns the examined frontier and the reuse of
-    // the enclosing call, and starts the call's frontier past pos and its reuse at after edits.
+    // Begins a rule call at pos in a Document parse: returns the examined frontier of the enclosing
+    // call, and starts the call's frontier past pos.
 
-transitional op doc.leave(high int, reuse Reuse)
+transitional op doc.leave(high int)
   component call
   reads call
   writes call
@@ -678,9 +684,9 @@ transitional op doc.leave(high int, reuse Reuse)
   cost <= 0
   contract:
     // Ends a rule call in a Document parse: the enclosing call's frontier becomes the farther of high
-    // and the call's, and its reuse the shorter of reuse and the call's.
+    // and the call's.
   requires:
-    // high and reuse are the results of the matching doc.enter.
+    // high is the result of the matching doc.enter.
 
 transitional op doc.active() bool
   component call
@@ -707,41 +713,9 @@ transitional op doc.readEntry(e Entry)
   cost <= 0
   contract:
     // Records that the current call read the entry e: extends its examined frontier to the one recorded
-    // with e and limits its reuse to the one recorded with e.
+    // with e.
   requires:
     // The parse reads a Document, and e has a record (memo.recordDoc).
-
-transitional op doc.reuse() Reuse
-  component call
-  reads call
-  features document
-  cost <= 0
-  contract:
-    // Returns how long the result of the current call may be reused.
-  requires:
-    // The parse reads a Document.
-
-transitional op doc.setReuse(u Reuse)
-  component call
-  writes call
-  features document
-  cost <= 0
-  contract:
-    // Sets how long the result of the current call may be reused to u.
-  requires:
-    // The parse reads a Document.
-
-transitional op doc.limitReuse(u Reuse)
-  component call
-  reads call
-  writes call
-  features document
-  cost <= 0
-  contract:
-    // Limits how long the result of the current call may be reused to u: the reuse becomes the
-    // shorter of the two.
-  requires:
-    // The parse reads a Document.
 
 transitional op doc.reused()
   component call
@@ -762,31 +736,6 @@ transitional op doc.evaluated()
     // Counts an evaluated rule body in the statistics of the Document.
   requires:
     // The parse reads a Document.
-
-transitional op doc.parseOnly(pos int, e Entry)
-  component call
-  writes call
-  features document
-  cost <= 0
-  contract:
-    // Records the entry e stored at pos as reused only in this parse, so that the parse removes it
-    // from the memo when it ends.
-  requires:
-    // The parse reads a Document.
-
-transitional op reuse.untilEdit() Reuse
-  component call
-  features document
-  cost <= 0
-  contract:
-    // Returns the reuse until the next edit.
-
-transitional op reuse.inParse() Reuse
-  component call
-  features document
-  cost <= 0
-  contract:
-    // Returns the reuse only in this parse.
 
 transitional op call.body(r Rule, min int) (Value, bool)
   component call

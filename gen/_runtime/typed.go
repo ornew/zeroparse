@@ -409,7 +409,6 @@ const (
 	RuleDocMemo
 	RuleSplice
 	RuleRec
-	RuleMember
 )
 
 // RuleExtra holds the fields of the Rule with the Id that are rarely set.
@@ -420,6 +419,7 @@ type RuleExtra struct {
 	Where      string
 	NodeType   string
 	OpNodeType string
+	Cycle      int32
 }
 
 // NewRules builds the rule table of the specs, with the string lists their Scope and Vars index and
@@ -440,6 +440,7 @@ func NewRules[S ~struct {
 	Where      string
 	NodeType   string
 	OpNodeType string
+	Cycle      int32
 }](specs []S, strs [][]string, extras []E) []*Rule {
 	table := make([]Rule, len(specs))
 	rules := make([]*Rule, len(specs))
@@ -453,13 +454,12 @@ func NewRules[S ~struct {
 		}
 		r.Memo, r.Leader, r.Novalue = s.Flags&RuleMemo != 0, s.Flags&RuleLeader != 0, s.Flags&RuleNovalue != 0
 		r.DocMemo, r.Splice, r.Rec = s.Flags&RuleDocMemo != 0, s.Flags&RuleSplice != 0, s.Flags&RuleRec != 0
-		r.Member = s.Flags&RuleMember != 0
 		r.Scope, r.Vars = strs[s.Scope], strs[s.Vars]
 	}
 	for _, extra := range extras {
 		e := RuleExtra(extra)
 		r := rules[e.Id]
-		r.Where, r.NodeType, r.OpNodeType = e.Where, e.NodeType, e.OpNodeType
+		r.Where, r.NodeType, r.OpNodeType, r.Cycle = e.Where, e.NodeType, e.OpNodeType, e.Cycle
 	}
 	return rules
 }
@@ -953,8 +953,7 @@ type tmemoEntry struct {
 	min      int32
 	ok       bool
 	silent   bool
-	growing  bool  // matched whatever the variable values, as in memoEntry
-	depth    int32 // as in memoEntry
+	present  uint32 // as in memoEntry
 }
 
 func (p *TParser) memoGet(rule, pos, min int, env []any) *tmemoEntry {
@@ -965,7 +964,7 @@ func (p *TParser) memoGet(rule, pos, min int, env []any) *tmemoEntry {
 		return nil
 	}
 	for e := p.memoSlots[pos]; e != nil; e = e.next {
-		if e.rule == int32(rule) && e.min == int32(min) && (e.growing || sameValues(e.env, env)) {
+		if e.rule == int32(rule) && e.min == int32(min) && sameValues(e.env, env) {
 			return e
 		}
 	}
@@ -979,7 +978,7 @@ func (p *TParser) memoGetControlled(rule, pos, min int, key []any) *tmemoEntry {
 	}
 	for e := p.memoSlots[pos]; e != nil; e = e.next {
 		p.Spend()
-		if e.rule == int32(rule) && e.min == int32(min) && (e.growing || p.memoKeyEqual(e.env, key)) {
+		if e.rule == int32(rule) && e.min == int32(min) && p.memoKeyEqual(e.env, key) {
 			return e
 		}
 	}
@@ -1056,45 +1055,16 @@ type typedDocumentState struct {
 	owner *documentState
 	slots []*tmemoEntry
 	meta  map[*tmemoEntry]typedDocumentMeta
-	// parseOnly are the entries the current parse stored with reuseInParse, which are removed
-	// when it ends (removeParseOnly).
-	parseOnly []tmemoPlace
-}
-
-// tmemoPlace is a typed memo entry and its position.
-type tmemoPlace struct {
-	pos int
-	e   *tmemoEntry
-}
-
-// removeParseOnly removes the entries of the parse that only that parse reuses (reuseInParse) from
-// the memo and the metadata.
-func (d *typedDocumentState) removeParseOnly() {
-	for _, x := range d.parseOnly {
-		delete(d.meta, x.e)
-		if x.pos >= len(d.slots) {
-			continue
-		}
-		for link := &d.slots[x.pos]; *link != nil; link = &(*link).next {
-			if *link == x.e {
-				*link = x.e.next
-				break
-			}
-		}
-	}
-	clear(d.parseOnly)
-	d.parseOnly = d.parseOnly[:0]
 }
 
 type typedDocumentMeta struct {
 	examined int
-	reuse    docReuse
 }
 
 // invalidate drops the memo entries that an edit at start can change, relinking the chains in place.
 // No parse runs during an edit (Document.parsing rejects it), and results hold values, not memo entries
 // or chains, so no TParser or result refers to the chains while they change. Entries whose examined frontier reaches
-// start, growing entries and entries that are not reused after edits (docReuse) are dropped, as are all entries from start onward.
+// start are dropped, as are all entries from start onward.
 func (d *typedDocumentState) invalidate(start int) {
 	kept := min(start, len(d.slots))
 	for pos := kept; pos < len(d.slots); pos++ {
@@ -1107,7 +1077,7 @@ func (d *typedDocumentState) invalidate(start int) {
 		link := &d.slots[pos]
 		for e := *link; e != nil; e = *link {
 			m, complete := d.meta[e]
-			if complete && !e.growing && m.reuse == reuseAfterEdits && m.examined <= start {
+			if complete && m.examined <= start {
 				link = &e.next
 				continue
 			}

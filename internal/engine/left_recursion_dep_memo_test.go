@@ -10,26 +10,10 @@ import (
 	"zeroparse.dev/zp/internal/gentest"
 )
 
-// depMemoGrammars returns the grammars that the dependency memo tests compare: a grammar where
-// one growth step of a leader at a position has two different results with the same end, in two
-// growths of the leader within the growth of another leader there (B at 0 grows to ("a" "a")@B and,
-// with the seed "a"@A of A, to ("a"@A "a")@B), random grammars whose cycles have several leaders
-// and members, read inside and outside lookaheads, with and without cuts, and random grammars whose
-// items recover from errors.
+// depMemoGrammars returns the grammars that the dependency memo tests compare
+// (gentest.DependencyMemoCases).
 func depMemoGrammars(seeds int) []gentest.Case {
-	cases := []gentest.Case{{
-		Name: "equal ends of different results",
-		Src: `@start
-rule main = A $$
-rule A = C / "a" / C / "b" C C
-rule B = B "b" / A "a" / C / "a" "a"
-rule C = B A / &A "a" "c"`,
-		Inputs: []string{"aaa", "aa", "aaab", "aac"},
-	}}
-	for s := int64(0); s < int64(seeds); s++ {
-		cases = append(cases, gentest.RandomCycleGrammar(s, false), gentest.RandomCycleGrammar(s, true), gentest.RandomRecoveringCycleGrammar(s))
-	}
-	return cases
+	return gentest.DependencyMemoCases(seeds)
 }
 
 // depMemoDiffers compares, on every backend, the results of the grammar with the dependency
@@ -125,52 +109,77 @@ func TestLeftRecursionDependencyMemoControls(t *testing.T) {
 	}
 }
 
-// depMemoShapes are grammars whose leaders grow inside the growth of another leader at the same
-// position, with an input family whose parse evaluates a number of calls linear in its length.
-var depMemoShapes = []struct {
-	name, rules string
-	input       func(n int) string
-}{
-	{"lookahead regrowth", `S $$
-rule S = &R S "q" / "y"
-rule R = R ("q" / "r") / S "t" / "y"`, func(n int) string { return "y" + strings.Repeat("q", n) }},
-	{"nested reads", `S $$
-rule S = S "q" / R "s" / "y"
-rule R = R "r" / S "t"`, func(n int) string { return "y" + strings.Repeat("ts", n) }},
-	{"mutual", `A $$
-rule A = A "a" / B "b" / "x"
-rule B = B "c" / A "d" / "y"`, func(n int) string { return "x" + strings.Repeat("dcb", n) }},
-	{"every step reads a success", `S $$
-rule S = &R S "q" / "y"
-rule R = &S R "q" / "y"`, func(n int) string { return "y" + strings.Repeat("q", n) }},
-	{"every step reads an end", `S $$
-rule S = &R S "q" / "y"
-rule R = &(S "q") R "q" / "y"`, func(n int) string { return "y" + strings.Repeat("q", n) }},
-	{"three leaders", `S $$
-rule S = &R S "q" / "y"
-rule R = &T R "q" / "y"
-rule T = T "q" / S "z" / "y"`, func(n int) string { return "y" + strings.Repeat("q", n) }},
-}
-
-// TestLeftRecursionDependencyMemoLinear checks that the shapes of depMemoShapes evaluate a number
-// of calls linear in the length of the input on every backend: doubling the input at most a little
-// more than doubles the evaluations.
+// TestLeftRecursionDependencyMemoLinear checks that the shapes of gentest.DependencyMemoShapes
+// evaluate a number of calls linear in the length of the input on every backend: doubling the input
+// at most a little more than doubles the evaluations.
 func TestLeftRecursionDependencyMemoLinear(t *testing.T) {
 	t.Parallel()
-	for _, s := range depMemoShapes {
-		prog := mustCompile(t, "@start\nrule main = "+s.rules, compile.Options{SourceInfo: true})
+	for _, s := range gentest.DependencyMemoShapes {
+		prog := mustCompile(t, "@start\nrule main = "+s.Rules, compile.Options{SourceInfo: true})
 		for _, b := range []Backend{Closure, Bytecode, BytecodeIterative} {
 			evals := func(n int) int {
 				var pr Profile
-				if _, err := prog.ParseWith("", s.input(n), ParseOptions{Backend: b, Trace: pr.Trace}); err != nil {
-					t.Fatalf("%s %s n=%d: %v", s.name, b, n, err)
+				if _, err := prog.ParseWith("", s.Input(n), ParseOptions{Backend: b, Trace: pr.Trace}); err != nil {
+					t.Fatalf("%s %s n=%d: %v", s.Name, b, n, err)
 				}
 				return pr.Evals
 			}
 			small, large := evals(80), evals(160)
 			if large > small*5/2 {
-				t.Errorf("%s %s: %d evaluations at 80, %d at 160", s.name, b, small, large)
+				t.Errorf("%s %s: %d evaluations at 80, %d at 160", s.Name, b, small, large)
 			}
+		}
+	}
+}
+
+// TestLeftRecursionDependencyMemoUnexamined checks that leaving the examined range out of the
+// identities of growth steps and the outcomes of lookaheads (ParseOptions.ContextMemoUnexamined,
+// what generated parsers do outside a Document parse) changes only what is evaluated: the random
+// grammars give the results of evaluating every call in a context again, and on mutual leaders it
+// takes a step that the examined range keeps apart.
+func TestLeftRecursionDependencyMemoUnexamined(t *testing.T) {
+	t.Parallel()
+	seeds := 200
+	if testing.Short() {
+		seeds = 40
+	}
+	n := 0
+	compiled := 0
+	for _, c := range depMemoGrammars(seeds) {
+		if g, err := parseTest(c.Src); err != nil {
+			continue
+		} else if _, err := Compile(g, compile.Options{}); err != nil {
+			continue
+		}
+		compiled++
+		memo, ref := mustCompile(t, c.Src), mustCompile(t, c.Src, compile.Options{DisableMemo: true})
+		for _, in := range c.Inputs {
+			for _, backend := range []Backend{Closure, Bytecode, BytecodeIterative} {
+				got, err := memo.ParseWith("", in, ParseOptions{Backend: backend, ContextMemoUnexamined: true})
+				want, wantErr := ref.ParseWith("", in, ParseOptions{Backend: backend, ContextMemoOff: true})
+				a, b := gentest.ResultJSON(got, err), gentest.ResultJSON(want, wantErr)
+				if a != b && !strings.Contains(a+b, "budget") && !strings.Contains(a+b, "limit") {
+					if n++; n <= 5 {
+						t.Errorf("%s\n%q %s:\n got %s\nwant %s", c.Src, in, backend, a, b)
+					}
+				}
+			}
+		}
+	}
+	if n > 0 || compiled < seeds*2 {
+		t.Errorf("%d differences in %d grammars", n, compiled)
+	}
+	prog := mustCompile(t, "rule main = a $$\nrule a = a \"x\" / b \"y\" / \"n\"\nrule b = b \"z\" / a \"w\" / \"m\"")
+	for _, b := range []Backend{Closure, Bytecode, BytecodeIterative} {
+		evals := func(unexamined bool) int {
+			var pr Profile
+			if _, err := prog.ParseWith("", "mzy", ParseOptions{Backend: b, Trace: pr.Trace, ContextMemoUnexamined: unexamined}); err != nil {
+				t.Fatalf("%s: %v", b, err)
+			}
+			return pr.Evals
+		}
+		if strict, loose := evals(false), evals(true); loose >= strict {
+			t.Errorf("%s: %d evaluations without examined ranges, %d with them", b, loose, strict)
 		}
 	}
 }

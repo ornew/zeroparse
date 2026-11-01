@@ -154,6 +154,7 @@ type ruleExtra struct {
 	Where      string
 	NodeType   string
 	OpNodeType string
+	Cycle      int32
 }
 
 var rulesSpec = [...]ruleSpec{
@@ -170,7 +171,7 @@ var rulesStrs = [...][]string{
 }
 
 var rulesExtras = [...]ruleExtra{
-	{2, "", "Number", ""},
+	{2, "", "Number", "", 0},
 }
 
 var lit8 = []rune("(")

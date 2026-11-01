@@ -450,7 +450,13 @@ func (p *flowPrinter) stmt(s flow.Stmt) {
 	case *flow.Silent:
 		if s.Delta > 0 {
 			p.write("p.Silent++\n")
+			if s.Site != 0 {
+				p.write(fmt.Sprintf("p.LookBegin(%d)\n", s.Site))
+			}
 		} else {
+			if s.Site != 0 {
+				p.write(fmt.Sprintf("p.LookEnd(%t)\n", s.Ok))
+			}
 			p.write("p.Silent--\n")
 		}
 	case *flow.Peek:

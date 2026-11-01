@@ -43,7 +43,6 @@ func Cases() []Case {
 		got, found := lookup(b, "got", "f1", k)
 		b.Assert(exec.And(found, exec.Eq(got, e)), "lookup returns the stored entry")
 		b.Assert(exec.And(exec.C("memo.ok", got), exec.Eq(exec.C("memo.end", got), exec.Int(9))), "the entry keeps its outcome and end")
-		b.Assert(exec.Not(exec.C("memo.growing", got)), "a stored entry is complete")
 		b.Assert(exec.Not(exec.C("memo.silent", got)), "the entry keeps whether it is silent")
 		for i, other := range [][]exec.Expr{key(1, 5, 0, 8), key(2, 5, 0, 7), key(1, 5, 1, 7), key(1, 6, 0, 7)} {
 			_, f := lookup(b, fmt.Sprint("o", i), fmt.Sprint("of", i), other)
@@ -53,37 +52,6 @@ func Cases() []Case {
 		got2, _ := lookup(b, "got2", "f2", k)
 		b.Assert(exec.And(exec.Eq(got2, e2), exec.Not(exec.C("memo.ok", got2))), "a store replaces the entry under the same key")
 		b.Assert(exec.C("memo.silent", got2), "with its silent attribute")
-	})
-
-	add("memo_growth", ref.Config{}, func(b *exec.Builder) {
-		k := key(3, 2, 0, 1)
-		s := b.Let("s", exec.C("memo.seed", k...))
-		b.Assert(exec.And(exec.C("memo.growing", s), exec.Not(exec.C("memo.ok", s))), "a seed is a growing failure")
-		b.Assert(exec.Eq(exec.C("memo.end", s), exec.Int(2)), "a seed ends at its position")
-		g, found := b.LetN([]string{"g", "fg"}, exec.C("memo.lookupGrowing", exec.Int(3), exec.Int(2), exec.Int(0)))[0], exec.L("fg")
-		b.Assert(exec.And(found, exec.Eq(g, s)), "the guard finds the seed")
-		s2 := b.Let("s2", exec.C("memo.reseed", append(slices.Clone(k), exec.Int(6), noValue, noErrs)...))
-		g2 := b.LetN([]string{"g2", "fg2"}, exec.C("memo.lookupGrowing", exec.Int(3), exec.Int(2), exec.Int(0)))[0]
-		b.Assert(exec.Eq(g2, s2), "the guard finds the longer seed")
-		got, _ := lookup(b, "got", "f", k)
-		b.Assert(exec.Eq(got, s2), "lookup of the seed's key finds the longer seed")
-		b.Do("memo.finishSeed", s2, exec.BoolC(true))
-		_, fg3 := b.LetN([]string{"g3", "fg3"}, exec.C("memo.lookupGrowing", exec.Int(3), exec.Int(2), exec.Int(0)))[0], exec.L("fg3")
-		b.Assert(exec.Not(fg3), "a finished growth has no growing entry")
-		done, _ := lookup(b, "done", "fd", k)
-		b.Assert(exec.And(exec.Eq(done, s2), exec.And(exec.C("memo.ok", done), exec.Not(exec.C("memo.growing", done)))), "the finished seed is a complete success")
-		b.Assert(exec.Eq(exec.C("memo.end", done), exec.Int(6)), "with the end of the last growth")
-		b.Assert(exec.C("memo.silent", done), "and the silent attribute given when it finished")
-	})
-
-	add("memo_guard_ignores_values", ref.Config{}, func(b *exec.Builder) {
-		a := store(b, "a", key(4, 0, 0, 1), true, 1)
-		s := b.Let("s", exec.C("memo.seed", key(4, 0, 0, 2)...))
-		g := b.LetN([]string{"g", "fg"}, exec.C("memo.lookupGrowing", exec.Int(4), exec.Int(0), exec.Int(0)))[0]
-		b.Assert(exec.Eq(g, s), "the guard finds the seed, not the entry under other values")
-		b.Do("memo.finishSeed", s, exec.BoolC(false))
-		got, found := lookup(b, "got", "f", key(4, 0, 0, 1))
-		b.Assert(exec.And(found, exec.Eq(got, a)), "the entry under other values survives the growth")
 	})
 
 	add("memo_many_positions", ref.Config{}, func(b *exec.Builder) {
@@ -200,10 +168,8 @@ func Random(name string, rng *rand.Rand, opNames []string, n int, cfg ref.Config
 				}
 			}
 			switch o.Name {
-			case "memo.lookup", "memo.seed":
+			case "memo.lookup":
 				keyArgs(true)
-			case "memo.lookupGrowing":
-				keyArgs(false)
 			case "memo.store":
 				keyArgs(true)
 				ok := rng.IntN(2) == 0
@@ -211,20 +177,12 @@ func Random(name string, rng *rand.Rand, opNames []string, n int, cfg ref.Config
 				intArg(args[1].(int64) + rng.Int64N(4))
 				silent := rng.IntN(2) == 0
 				args, exprs = append(args, silent, nil, nil), append(exprs, exec.BoolC(silent), noValue, noErrs)
-			case "memo.reseed":
-				keyArgs(true)
-				intArg(args[1].(int64) + 1 + rng.Int64N(4))
-				args, exprs = append(args, nil, nil), append(exprs, noValue, noErrs)
-			case "memo.finishSeed", "memo.ok", "memo.end", "memo.growing", "memo.silent":
+			case "memo.ok", "memo.end", "memo.silent":
 				if len(entries) == 0 {
 					continue
 				}
 				e := entries[rng.IntN(len(entries))]
 				args, exprs = append(args, e.ref), append(exprs, exec.L(e.name))
-				if o.Name == "memo.finishSeed" {
-					silent := rng.IntN(2) == 0
-					args, exprs = append(args, silent), append(exprs, exec.BoolC(silent))
-				}
 			case "seen.first":
 				intArg(rng.Int64N(int64(max(cfg.Rules, 1))))
 				intArg(pos())
