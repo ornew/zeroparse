@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"zeroparse.dev/zp/internal/compile"
+	"zeroparse.dev/zp/internal/engine/core"
 	"zeroparse.dev/zp/internal/limits"
 )
 
@@ -30,12 +31,16 @@ func manyVariablesGrammar(n int) string {
 func TestManyVariables(t *testing.T) {
 	t.Parallel()
 	prog := mustCompile(t, manyVariablesGrammar(280))
+	var l limits.Limits
+	if core.BudgetControlsEnabled {
+		l.Budget = 1 << 40
+	}
 	for _, backend := range []Backend{Closure, Bytecode, BytecodeIterative} {
-		n, err := prog.ParseWith("main", "a", ParseOptions{Backend: backend, Limits: limits.Limits{Budget: 1 << 40}})
+		n, err := prog.ParseWith("main", "a", ParseOptions{Backend: backend, Limits: l})
 		if err != nil || n == nil {
 			t.Fatalf("%s: %v", backend, err)
 		}
-		if _, err := prog.ParseWith("main", "b", ParseOptions{Backend: backend, Limits: limits.Limits{Budget: 1 << 40}}); err == nil {
+		if _, err := prog.ParseWith("main", "b", ParseOptions{Backend: backend, Limits: l}); err == nil {
 			t.Fatalf("%s: parsed the wrong input", backend)
 		}
 	}
@@ -63,6 +68,9 @@ func minBudget(t testing.TB, prog *Program, backend Backend, input string) uint6
 }
 
 func TestManyVariablesBudget(t *testing.T) {
+	if !core.BudgetControlsEnabled {
+		t.Skip("budget controls are unavailable in the reference build")
+	}
 	prog := mustCompile(t, manyVariablesGrammar(280))
 	for _, backend := range []Backend{Closure, Bytecode, BytecodeIterative} {
 		t.Logf("%s: %d budget units", backend, minBudget(t, prog, backend, "a"))

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"zeroparse.dev/zp/internal/engine/core"
 	"zeroparse.dev/zp/internal/gentest"
 	"zeroparse.dev/zp/internal/limits"
 	"zeroparse.dev/zp/internal/value"
@@ -176,7 +177,11 @@ func TestLongExpectedLists(t *testing.T) {
 	} {
 		for _, b := range expectationBackends {
 			// A budget limit sorts and formats under budget controls, with the same result.
-			for _, l := range []limits.Limits{{}, {Budget: 1 << 50}} {
+			ls := []limits.Limits{{}}
+			if core.BudgetControlsEnabled {
+				ls = append(ls, limits.Limits{Budget: 1 << 50})
+			}
+			for _, l := range ls {
 				n, err := prog.ParseWith("main", c.input, ParseOptions{Backend: b, Expectations: true, Limits: l})
 				var se *SyntaxError
 				var list SyntaxErrors

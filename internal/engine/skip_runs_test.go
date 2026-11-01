@@ -138,6 +138,9 @@ func TestSkipRunsNegativeControls(t *testing.T) {
 // the result of the unlimited parse, and an unlimited parse after each stopped one does too. The
 // nested family stops in recording walks at most budgets.
 func TestSkipRunsBudgetAbort(t *testing.T) {
+	if !core.BudgetControlsEnabled {
+		t.Skip("budget controls are unavailable in the reference build")
+	}
 	var prog *Program
 	for _, g := range skipRunGrammars {
 		if g.Name == "nested recovery" {

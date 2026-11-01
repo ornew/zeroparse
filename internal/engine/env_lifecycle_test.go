@@ -265,3 +265,12 @@ func TestBindingBranchesFromOneSnapshot(t *testing.T) {
 		}
 	}
 }
+
+// memoTestVars returns n variable values: slot i holds i.
+func memoTestVars(n int) []any {
+	vals := make([]any, n)
+	for i := range vals {
+		vals[i] = i
+	}
+	return vals
+}

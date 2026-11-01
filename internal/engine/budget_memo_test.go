@@ -16,15 +16,6 @@ import (
 	"zeroparse.dev/zp/internal/value"
 )
 
-// memoTestVars returns n variable values: slot i holds i.
-func memoTestVars(n int) []any {
-	vals := make([]any, n)
-	for i := range vals {
-		vals[i] = i
-	}
-	return vals
-}
-
 // memoTestParser returns a parser whose variables are memoTestVars(n).
 func memoTestParser(n int) *core.Parser {
 	p := &core.Parser{}
