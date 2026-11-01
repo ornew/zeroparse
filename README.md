@@ -17,8 +17,8 @@ Never write a parser again.
 
 </div>
 
-Describe your language once. ZeroParse builds the parser: fast, safe and wherever you need it. Here is a complete
-calculator, operator precedence included:
+ZeroParse turns one grammar into every parser you need: generated code or a VM, fast, safe on any input and ready for
+your editor.
 
 ```zp
 // calc.zp
