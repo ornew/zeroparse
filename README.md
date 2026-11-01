@@ -1,6 +1,11 @@
 <div align="center">
 
-# ZeroParse
+<h1>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="site/static/assets/logo-white.svg">
+  <img src="site/static/assets/logo-black.svg" alt="ZeroParse" height="60">
+</picture>
+</h1>
 
 **One Grammar. Every Parser.**
 
