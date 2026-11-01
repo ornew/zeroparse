@@ -321,8 +321,9 @@ grammars carry the memo flag of cycle members, and the format may change before 
 5. The automatic budget option, after the single budget lands.
 6. The Complexity section of the specification, and corrected comments where the code claims linear time.
 
-Steps 1 and 4 and the specification of step 6 are implemented; the two runtime changes and the automatic budget are
-not, so E1, E2, E7, E8 and E9 remain negative controls.
+Steps 1 and 4 and the specification of step 6 are implemented. Of step 3, only the walks of `#recover` skips are
+recorded ([Optimization 132](../../optimizations/132-records-of-recovery-skip-walks.md)), which makes E8 linear; the
+other runtime changes and the automatic budget are not implemented, so E1, E2, E7 and E9 remain negative controls.
 
 ## Alternatives Considered
 
