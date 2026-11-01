@@ -8,8 +8,11 @@ import (
 	"zeroparse.dev/zp/grammar"
 )
 
-// maxFiniteValues caps the set of values that finiteVars computes for an int variable.
-const maxFiniteValues = 4096
+// maxFiniteValues caps the product of the numbers of values of the variables with finite values,
+// and so the set of values that finiteVars computes for an int variable. A memoized rule can be
+// evaluated once for each combination of values at a position, so the cap bounds the constant
+// factor of the linear cost that the exemption claims.
+const maxFiniteValues = 128
 
 // maxLenOperand caps the length bound of a capture whose length a binding of an int variable reads,
 // and maxOperandCombinations the combinations of such lengths that one binding reads.
@@ -20,20 +23,31 @@ const (
 
 // finiteVars returns the variables whose values in every parse lie in a set bounded by a constant
 // of the grammar: every bool variable, and every int variable whose initial value and bindings
-// reach at most maxFiniteValues values (see finiteInt).
+// reach a finite set (see finiteInt), when the product of the sizes of those sets is at most
+// maxFiniteValues. Past that product, no variable has finite values.
 func (k *classifier) finiteVars() map[string]bool {
 	byVar := map[string][]*binding{}
 	for _, b := range k.binds {
 		byVar[b.b.Name] = append(byVar[b.b.Name], b)
 	}
 	out := map[string]bool{}
+	product := 1
 	for _, v := range k.g.Vars() {
+		n, ok := 0, false
 		switch k.varType[v.Name] {
 		case "bool":
-			out[v.Name] = true
+			n, ok = 2, true
 		case "int":
-			out[v.Name] = k.finiteInt(v, byVar[v.Name])
+			n, ok = k.finiteInt(v, byVar[v.Name])
 		}
+		if !ok {
+			continue
+		}
+		product *= n
+		if product > maxFiniteValues {
+			return map[string]bool{}
+		}
+		out[v.Name] = true
 	}
 	return out
 }
@@ -65,13 +79,13 @@ type intDomain struct {
 // valueLen), which it reads at every length up to the bound. A binding that fails to evaluate,
 // as by a division by zero, binds nothing; one whose value eval does not know leaves the set
 // unbounded.
-func (k *classifier) finiteInt(v *grammar.VarDef, binds []*binding) bool {
+func (k *classifier) finiteInt(v *grammar.VarDef, binds []*binding) (int, bool) {
 	init := 0
 	if v.Value != nil {
 		r, res := eval(v.Value, domainEnv{v: v.Name})
 		x, isInt := r.(int)
 		if res != evalOK || !isInt {
-			return false
+			return 0, false
 		}
 		init = x
 	}
@@ -80,7 +94,7 @@ func (k *classifier) finiteInt(v *grammar.VarDef, binds []*binding) bool {
 	for _, b := range binds {
 		ops, ok := k.lenOperands(b)
 		if !ok {
-			return false
+			return 0, false
 		}
 		d.lens[b] = ops
 		d.binds[b.b] = b
@@ -96,12 +110,12 @@ func (k *classifier) finiteInt(v *grammar.VarDef, binds []*binding) bool {
 					}
 				}
 				if d.over {
-					return false
+					return 0, false
 				}
 			}
 		}
 	}
-	return !d.over
+	return len(d.set), !d.over
 }
 
 func (d *intDomain) add(y int) {
@@ -352,8 +366,9 @@ func (k *classifier) valueLen(e grammar.Expr, seen map[string]bool) (int, bool) 
 		}
 		return m, true
 	case *grammar.Seq:
-		// A tuple with at most one element for each item, or the value of a single item.
-		m := len(e.Items)
+		// A tuple with at most one element for each item, where a plain group of a sequence
+		// splices its own elements into the tuple, or the value of a single item.
+		m := splicedLen(e)
 		for _, it := range e.Items {
 			n, ok := k.valueLen(it, seen)
 			if !ok {
@@ -382,6 +397,28 @@ func (k *classifier) valueLen(e grammar.Expr, seen map[string]bool) (int, bool) 
 		return k.valueLen(r.Expr, seen)
 	}
 	return 0, false
+}
+
+// splicedLen returns the number of items of the tuple of the sequence e: a plain group of a
+// sequence adds its own items, and every other item, such as a capture, an option, a choice, a
+// repetition or a call, adds one.
+func splicedLen(e *grammar.Seq) int {
+	n := 0
+	for _, it := range e.Items {
+		for {
+			g, ok := it.(*grammar.Group)
+			if !ok {
+				break
+			}
+			it = g.Expr
+		}
+		if s, ok := it.(*grammar.Seq); ok {
+			n += splicedLen(s)
+		} else {
+			n++
+		}
+	}
+	return n
 }
 
 // termLen bounds what len gives for the value of the action term t of rule.

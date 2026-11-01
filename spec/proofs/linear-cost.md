@@ -273,7 +273,8 @@ parameter once keeps the constant of the class proportional to $m$.
 
 Let $v$ be a variable with
 [finite values](../runtime/parsing.md#conditions-for-linear-cost) and $S_v$
-its set of values, of at most 4096 values for an `int` and 2 for a `bool`.
+its set of values, of 2 values for a `bool`; the product of the value sets of
+all tracked variables is at most 128.
 Then $v$ holds a value of $S_v$ at every step of every parse, and the
 variables with finite values contribute at most the product of their $|S_v|$,
 a constant, to $K$.
@@ -316,7 +317,11 @@ So $x$ reaches $b$. The binding reads only $v$, literals and operands
 `len($c)`, and the length of the value of each capture $c$ is at most its
 bound, since the value is the text of an expression that matches at most that
 many characters, a list or tuple with at most that many elements, or the
-value of a rule whose action gives such a value. The value of $b$ is
+value of a rule whose action gives such a value. A sequence builds a tuple of
+the values of its items, in which a plain group of a sequence is replaced by
+the elements of its own tuple, so the tuple has at most the number of items
+counted with those groups spliced in; a sequence whose value is that of a
+single item has the bound of that item. The value of $b$ is
 therefore determined by $x$ and lengths within the bounds, by the rules of
 [Operators and Functions](../language/actions.md#operators-and-functions),
 for ints within $2^{53}$ in magnitude, which every backend computes alike:
@@ -329,9 +334,10 @@ therefore drawn, for the variables with finite values, from the product of
 their sets, so they contribute at most the product of the $|S_v|$ to the
 number of combinations $K$. $\square$
 
-The bounds of 4096 values, of 256 for a length and of 4096 combinations of
-lengths keep $S_v$ cheap to compute; the proof needs only that they are
-finite. The values that reach a binding depend on the order of the elements
+The bound of 128 on the product keeps the constant $K$ small: a memoized
+rule can be evaluated once for each combination of values at a position. The
+bounds of 256 for a length and of 4096 combinations of lengths keep $S_v$
+cheap to compute. The proof needs only that the bounds are finite. The values that reach a binding depend on the order of the elements
 before it: a test after the binding, or after a call that follows it, has not
 been evaluated when the binding reads $v$, so it filters nothing that the
 binding reads.

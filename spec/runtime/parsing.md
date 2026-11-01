@@ -745,16 +745,21 @@ necessary.
    because a failed alternative undoes its bindings before the next is tried.
    A binding after the recursive call binds a value that no later evaluation
    of it sees, because bindings in a called rule are not visible to its
-   caller. A variable with **finite values** is exempt from this condition: a
-   `bool` variable, or an `int` variable whose values form a set of at most
-   4096 values, the least set that holds its initial value and, for each of
-   its bindings, the values that the binding binds from the values that can
-   reach it. Every binding of the variable must read only the variable
+   caller. The variables with **finite values** are exempt from this
+   condition: the `bool` variables and the `int` variables whose values form a
+   finite set, the least set that holds the initial value and, for each of the
+   variable's bindings, the values that the binding binds from the values that
+   can reach it, when the product of the value sets of all tracked variables
+   is at most 128, counting 2 for a `bool`; past that product, no variable has
+   finite values. Every binding of the variable must read only the variable
    itself, `int` and `bool` literals, and operands `len($c)` of a capture `c`
    whose value has a length of at most 256 that the classifier can see: the
    text of an expression that matches a bounded number of characters, a list
    or tuple with a bounded number of elements, or the value of a rule whose
-   action gives such a value. It combines them with `+`, `-`, `*`, `/`, `%`,
+   action gives such a value. The tuple of a sequence has one element for each
+   item, where a plain group of a sequence splices its own elements into it,
+   so `x:("#" ("a" "b"))` has 3, while a capture, an option, a choice, a
+   repetition or a call is one element. It combines them with `+`, `-`, `*`, `/`, `%`,
    comparisons, `&&`, `||`, unary `-` and `!` and parentheses. The binding is
    evaluated at every length of each operand up to its bound, at most 4096
    combinations, and a value whose evaluation is an error, as a division by

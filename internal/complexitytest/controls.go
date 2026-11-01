@@ -368,6 +368,41 @@ func Controls() []Control {
 			Input:  func(n int) string { return rep("#", n) },
 			Sizes:  double(50), ShortSizes: double(25), Order: Poly(3), Class: ClassExp,
 		},
+		// A plain group of a sequence splices its elements into the tuple around it: len($x) is 3
+		// here, so the binding adds 1 on every call, while dividing by 4 adds nothing.
+		{
+			Name: "Counter adding the length of a spliced tuple", Family: "bounded binding",
+			Source: "var v int\nrule main = (r / .)* $$\nrule r = x:(\"#\" (\"a\" \"b\")) {v := v + len($x) / 3} r / \"y\" {v >= 0}\n",
+			Input:  func(n int) string { return rep("#ab", n) },
+			Sizes:  double(50), ShortSizes: double(25), Order: Poly(3), Class: ClassExp,
+		},
+		{
+			Name: "Counter adding a spliced tuple length below its step", Family: "bounded binding",
+			Source: "var v int\nrule main = (r / .)* $$\nrule r = x:(\"#\" (\"a\" \"b\")) {v := v + len($x) / 4} r / \"y\" {v >= 0}\n",
+			Input:  func(n int) string { return rep("#ab", n) },
+			Sizes:  double(250), ShortSizes: double(100), Order: Linear, Class: ClassLinear, Positive: true,
+		},
+		// The product of the numbers of values of the variables with finite values is at most 128:
+		// seven flag bits are exempt; a counter with 130 values, or two with 12 each, are not,
+		// though they measure linear.
+		{
+			Name: "Seven flag bits", Family: "bounded binding",
+			Source: "var ctx int\nrule main = (r / .)* $$\nrule r = \"a\" {ctx := ctx - ctx / 1 % 2 * 1 + 1} r / \"b\" {ctx := ctx - ctx / 2 % 2 * 2 + 2} r / \"c\" {ctx := ctx - ctx / 4 % 2 * 4 + 4} r / \"d\" {ctx := ctx - ctx / 8 % 2 * 8 + 8} r / \"e\" {ctx := ctx - ctx / 16 % 2 * 16 + 16} r / \"f\" {ctx := ctx - ctx / 32 % 2 * 32 + 32} r / \"g\" {ctx := ctx - ctx / 64 % 2 * 64 + 64} r / \"y\" {ctx >= 0}\n",
+			Input:  func(n int) string { return rep("abcdefg", n) },
+			Sizes:  double(100), ShortSizes: double(50), Order: Linear, Class: ClassLinear, Positive: true,
+		},
+		{
+			Name: "Counter with 130 values", Family: "bounded binding",
+			Source: "var v int\nrule main = (r / .)* $$\nrule r = \"#\" {v < 129} {v := v + 1} r / \"y\" {v >= 0}\n",
+			Input:  func(n int) string { return rep("##y", n) },
+			Sizes:  double(250), ShortSizes: double(100), Order: Linear, Class: ClassExp,
+		},
+		{
+			Name: "Two counters with 144 combinations", Family: "bounded binding",
+			Source: "var u int\nvar v int\nrule main = (r / .)* $$\nrule r = \"#\" {u < 11} {u := u + 1} r / \"(\" {v < 11} {v := v + 1} r / \"y\" {u + v >= 0}\n",
+			Input:  func(n int) string { return rep("#(", n) },
+			Sizes:  double(250), ShortSizes: double(100), Order: Linear, Class: ClassExp,
+		},
 	}
 	for i := range cs {
 		if cs[i].BecomesLinear && becomesLinearLanded {

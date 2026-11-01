@@ -407,13 +407,14 @@ The groups are addressed by these mechanisms:
   reasons for the class Unknown.
 - **Bounded-binding refinement of the classifier.** A binding that reads its own earlier value is not exponential when
   its values come from a set bounded by a constant. Condition 1 exempts a variable with finite values: a `bool`, or an
-  `int` whose bindings read only itself, literals and the lengths of captures bounded by a constant, with at most 4096
-  values reachable from its initial value
+  `int` whose bindings read only itself, literals and the lengths of captures bounded by a constant, with the values
+  reachable from its initial value forming a finite set, while the product of the value sets of all such variables
+  is at most 128, which keeps the constant of the linear cost small
   ([Lemma 8](../../../spec/proofs/linear-cost.md#lemma-8-finite-values)). The values that reach a binding are those
   after the earlier elements of its sequence, so the order matters: TypeScript's start rule sets its context flags
   `ctx` to 64 or 0 by a choice and then adds 2, which a closure over every value found would repeat without end, and
   its other bindings clear and set bits, adding `len` of the captures `"*"`, `"async"` and `list($m)`. The flags take
-  at most 128 values, and the TypeScript class is the polynomial of its identifier scans. This
+  128 values, the bound on the product, and the TypeScript class is the polynomial of its identifier scans. This
   also covers Python's `isdict`. Python's `lv` has an unguarded binding `lv := lv + 8192`, and its `ind`, CUE's `sv`
   and YAML's `n` read the lengths of unbounded captures. For TypeScript the profile shows a constant number of
   evaluations per byte and at most four evaluations of a

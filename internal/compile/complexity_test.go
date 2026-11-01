@@ -184,6 +184,13 @@ func TestClassifyComplexity(t *testing.T) {
 		// not filter what the binding reads.
 		{"flags set after a choice of values", "var ctx int\nrule main = (\"0\" {ctx := 64} / {ctx := 0}) (\"1\" {ctx := ctx + 2})? r $$\nrule r = g:\"*\"? \"#\" {ctx := ctx - ctx % 4 + len($g) * 2} r / \"(\" {ctx := ctx - ctx / 4 % 2 * 4 + 4} r \")\" / \"y\" {ctx / 4 % 2 == 1}\n", ClassLinear, 0},
 		{"guard after the call", "var v int\nrule main = r $$\nrule r = \"#\" {v := v + 1} r {v < 3} / \"y\" {v >= 0}\n", ClassExp, 0},
+		// A plain group of a sequence splices its elements into the tuple of the sequence around it.
+		{"counter that reads the length of a spliced tuple", "var v int\nrule main = (r / .)* $$\nrule r = x:(\"#\" (\"a\" \"b\")) {v := v + len($x) / 3} r / \"y\" {v >= 0}\n", ClassExp, 0},
+		{"counter that reads the length of a spliced tuple below its step", "var v int\nrule main = (r / .)* $$\nrule r = x:(\"#\" (\"a\" \"b\")) {v := v + len($x) / 4} r / \"y\" {v >= 0}\n", ClassLinear, 0},
+		// The values of all the variables with finite values combine: their product is at most 128.
+		{"counter with 128 values", "var v int\nrule main = r $$\nrule r = \"#\" {v < 127} {v := v + 1} r / \"y\" {v >= 0}\n", ClassLinear, 0},
+		{"counter with 129 values", "var v int\nrule main = r $$\nrule r = \"#\" {v < 128} {v := v + 1} r / \"y\" {v >= 0}\n", ClassExp, 0},
+		{"two counters with 144 combinations", "var u int\nvar v int\nrule main = r $$\nrule r = \"#\" {u < 11} {u := u + 1} r / \"(\" {v < 11} {v := v + 1} r / \"y\" {u + v >= 0}\n", ClassExp, 0},
 		{"Boolean toggled before a call", "var b bool\nrule main = r $$\nrule r = x:\"#\" {b := !b && len($x) > 0} r / \"y\" {b}\n", ClassLinear, 0},
 		{"counter divided by zero", "var v int\nrule main = r $$\nrule r = \"#\" {v := v + 1 / v} r / \"y\" {v >= 0}\n", ClassLinear, 0},
 		{"rebinding after the left call", "var k int\nrule main = e $$\nrule e = e \"x\" {k := k + 1} / \"x\" {k >= 0}\n", ClassLinearEnv, 0},
