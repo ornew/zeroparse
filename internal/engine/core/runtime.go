@@ -973,9 +973,33 @@ func (p *Parser) recordJumps(g *GrowState) {
 		acc.silent = acc.silent || s.silent
 		acc.deps = mergeSdeps(acc.deps, s.deps)
 		k := jumpKey{g: g.growKey(), present: g.present, seed: s.seed}
-		t.jumps[k] = append(t.jumps[k], acc)
+		if !p.jumpShadowed(t.jumps[k], &acc) {
+			t.jumps[k] = append(t.jumps[k], acc)
+		}
 	}
 	g.run = g.run[:0]
+}
+
+// jumpShadowed reports whether findJump never returns the jump j after the jumps js: one of them
+// is used wherever j is, since its observations are among j's and it is not inside a lookahead
+// where j is not. Leaving such jumps out keeps the list of a seed from growing in each growth
+// that ends its run there again, with the same observations and other shadows.
+func (p *Parser) jumpShadowed(js []jumpRec, j *jumpRec) bool {
+next:
+	for i := range js {
+		e := &js[i]
+		p.Spend()
+		if e.silent && !j.silent {
+			continue
+		}
+		for _, d := range e.deps {
+			if d.kind == depObs && !slicesContains(j.deps, d) {
+				continue next
+			}
+		}
+		return true
+	}
+	return false
 }
 
 // findJump returns a jump from the seed with identity id that holds in the current context.

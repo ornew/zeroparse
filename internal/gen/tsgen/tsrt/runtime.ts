@@ -3617,11 +3617,31 @@ export class Parser {
       const js = t.jumps.get(k);
       if (js === undefined) {
         t.jumps.set(k, [acc]);
-      } else {
+      } else if (!this.jumpShadowed(js, acc)) {
         js.push(acc);
       }
     }
     g.run.length = 0;
+  }
+
+  // jumpShadowed reports whether findJump never returns the jump j after the jumps js: one of them
+  // is used wherever j is, since its observations are among j's and it is not inside a lookahead
+  // where j is not. Leaving such jumps out keeps the list of a seed from growing in each growth that
+  // ends its run there again, with the same observations and other shadows.
+  jumpShadowed(js: JumpRec[], j: JumpRec): boolean {
+    next: for (const e of js) {
+      this.spend();
+      if (e.silent && !j.silent) {
+        continue;
+      }
+      for (const d of e.deps) {
+        if (d.kind === depObs && !j.deps.some((x) => x.kind === depObs && x.site === d.site && x.val === d.val)) {
+          continue next;
+        }
+      }
+      return true;
+    }
+    return false;
   }
 
   // findJump returns a jump from the seed with identity id that holds in the current context.

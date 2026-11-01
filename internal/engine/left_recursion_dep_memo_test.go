@@ -139,6 +139,23 @@ func TestLeftRecursionDependencyMemoLinear(t *testing.T) {
 	}
 }
 
+// TestLeftRecursionDependencyMemoDefaultBudget checks that the shapes of
+// gentest.DependencyMemoShapes parse a long input within the default budget, which grows linearly
+// with the input, on every backend. The budget also counts the work that evaluations do not show,
+// such as the scan of the jumps recorded for a seed.
+func TestLeftRecursionDependencyMemoDefaultBudget(t *testing.T) {
+	t.Parallel()
+	for _, s := range gentest.DependencyMemoShapes {
+		prog := mustCompile(t, "@start\nrule main = "+s.Rules)
+		in := s.Input(10000)
+		for _, b := range []Backend{Closure, Bytecode, BytecodeIterative} {
+			if _, err := prog.ParseWith("", in, ParseOptions{Backend: b}); err != nil {
+				t.Errorf("%s %s n=10000: %v", s.Name, b, err)
+			}
+		}
+	}
+}
+
 // TestLeftRecursionDependencyMemoUnexamined checks that leaving the examined range out of the
 // identities of growth steps and the outcomes of lookaheads (ParseOptions.ContextMemoUnexamined,
 // what generated parsers do outside a Document parse) changes only what is evaluated: the random

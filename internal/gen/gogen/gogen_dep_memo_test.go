@@ -202,7 +202,10 @@ func main() {
 
 // TestGeneratedLeftRecursionDependencyMemoLinear checks that the Parse and ParseAST of generated Go
 // parsers of gentest.DependencyMemoShapes evaluate a number of calls linear in the length of the
-// input: doubling the input at most a little more than doubles the evaluations.
+// input: doubling the input at most a little more than doubles the evaluations. They also parse an
+// input of length 10,000; with budget controls, within the default budget, which grows linearly with
+// the input and counts work that evaluations do not show, such as the scan of the jumps recorded
+// for a seed.
 func TestGeneratedLeftRecursionDependencyMemoLinear(t *testing.T) {
 	t.Parallel()
 	gentest.EachMode(t, testGeneratedLeftRecursionDependencyMemoLinear)
@@ -230,6 +233,8 @@ func testGeneratedLeftRecursionDependencyMemoLinear(t *testing.T) {
 			fmt.Fprintf(&calls, "\t{ var p zprt.Profile; if _, err := %s.Parse(%s, zprt.WithProfile(&p)); err != nil { panic(err) }; fmt.Print(p.Snapshot().Evals, \" \") }\n", pkg, in)
 			fmt.Fprintf(&calls, "\t{ var p zprt.Profile; if _, err := %s.ParseAST(%s, zprt.WithProfile(&p)); err != nil { panic(err) }; fmt.Print(p.Snapshot().Evals, \" \") }\n", pkg, in)
 		}
+		in := strconv.Quote(s.Input(10000))
+		fmt.Fprintf(&calls, "\t{ _, err := %s.Parse(%s); _, errAST := %s.ParseAST(%s); fmt.Print(err == nil, \" \", errAST == nil) }\n", pkg, in, pkg, in)
 		calls.WriteString("\tfmt.Println()\n")
 	}
 	main := `package main
@@ -259,8 +264,12 @@ func main() {
 	}
 	for i, s := range gentest.DependencyMemoShapes {
 		var parse80, ast80, parse160, ast160 int
-		if _, err := fmt.Sscan(lines[i], &parse80, &ast80, &parse160, &ast160); err != nil {
+		var parseLong, astLong bool
+		if _, err := fmt.Sscan(lines[i], &parse80, &ast80, &parse160, &ast160, &parseLong, &astLong); err != nil {
 			t.Fatalf("%s: %q: %v", s.Name, lines[i], err)
+		}
+		if !parseLong || !astLong {
+			t.Errorf("%s at 10000 within the default budget: Parse succeeded %v, ParseAST succeeded %v", s.Name, parseLong, astLong)
 		}
 		for _, r := range []struct {
 			name         string

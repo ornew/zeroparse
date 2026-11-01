@@ -127,7 +127,10 @@ func TestGeneratedTSLeftRecursionDependencyMemoControls(t *testing.T) {
 
 // TestGeneratedTSLeftRecursionDependencyMemoLinear checks that generated TypeScript parsers of
 // gentest.DependencyMemoShapes evaluate a number of calls linear in the length of the input:
-// doubling the input at most a little more than doubles the evaluations.
+// doubling the input at most a little more than doubles the evaluations. Generated with budget
+// controls, they parse an input of length 10,000 within the default budget, which grows linearly
+// with the input and counts work that evaluations do not show, such as the scan of the jumps
+// recorded for a seed.
 func TestGeneratedTSLeftRecursionDependencyMemoLinear(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -152,15 +155,22 @@ func TestGeneratedTSLeftRecursionDependencyMemoLinear(t *testing.T) {
 		}
 		write(fmt.Sprintf("g%d.ts", i), code)
 		fmt.Fprintf(&main, "import * as g%d from \"./g%[1]d.ts\";\n", i)
+		code, err = gentest.GenerateTSBundle(mustParse("@start\nrule main = "+s.Rules), gen.GenOptions{Start: "main", BudgetControls: true})
+		if err != nil {
+			t.Fatalf("%s: %v", s.Name, err)
+		}
+		write(fmt.Sprintf("c%d.ts", i), code)
+		fmt.Fprintf(&main, "import * as c%d from \"./c%[1]d.ts\";\n", i)
 	}
 	main.WriteString("const evals = (m, input) => {\n" +
 		"  const profile = new m.Profile();\n" +
 		"  const r = m.parseWithOptions(input, { profile });\n" +
 		"  if (r.error !== null) throw r.error;\n" +
 		"  return profile.snapshot().evals;\n" +
-		"};\n")
+		"};\n" +
+		"const withinBudget = (m, input) => m.parseWithOptions(input, {}).error === null;\n")
 	for i, s := range gentest.DependencyMemoShapes {
-		fmt.Fprintf(&main, "console.log(evals(g%[1]d, %[2]s), evals(g%[1]d, %[3]s));\n", i, strconv.Quote(s.Input(80)), strconv.Quote(s.Input(160)))
+		fmt.Fprintf(&main, "console.log(evals(g%[1]d, %[2]s), evals(g%[1]d, %[3]s), withinBudget(c%[1]d, %[4]s));\n", i, strconv.Quote(s.Input(80)), strconv.Quote(s.Input(160)), strconv.Quote(s.Input(10000)))
 	}
 	write("main.mjs", []byte(main.String()))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
@@ -177,8 +187,12 @@ func TestGeneratedTSLeftRecursionDependencyMemoLinear(t *testing.T) {
 	}
 	for i, s := range gentest.DependencyMemoShapes {
 		var small, large int
-		if _, err := fmt.Sscan(lines[i], &small, &large); err != nil {
+		var long bool
+		if _, err := fmt.Sscan(lines[i], &small, &large, &long); err != nil {
 			t.Fatalf("%s: %q: %v", s.Name, lines[i], err)
+		}
+		if !long {
+			t.Errorf("%s: no parse at 10000 within the default budget", s.Name)
 		}
 		if small == 0 || large > small*5/2 {
 			t.Errorf("%s: %d evaluations at 80, %d at 160", s.Name, small, large)

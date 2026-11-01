@@ -42,8 +42,11 @@ result of an evaluation:
   a step reads, and records runs of steps that read no seed but their own as jumps: from each seed of the run, the
   seed at its end, with the observations, expectations and examined input of the steps. A later growth of the leader
   in the same context takes a run at once when each lookahead that the steps observed has the same outcome now and
-  that outcome read no seed of the leader, so that it holds for every seed of the run. Equal step results of a
-  leader at a position get the same identity, so a result keyed by an earlier seed matches a later equal one.
+  that outcome read no seed of the leader, so that it holds for every seed of the run. The jumps from a seed are a
+  list scanned in order, and the first that holds is taken; a jump is not added after one whose observations are
+  among its own and that was recorded inside a lookahead only if the new one is, since that one is taken wherever
+  the new one would be. Equal step results of a leader at a position get the same identity, so a result keyed by an
+  earlier seed matches a later equal one.
 - **Reuse passes on what the result read.** A reused result passes on to the calls around it the seeds it read with
   their current identities, and for each lookahead it observed, the seeds that the lookahead's outcome read in the
   current context, as an evaluation there would.
@@ -77,8 +80,8 @@ Base `430194ee`, Go 1.27.1, Apple silicon, benchlock. Test binaries of the `benc
 interleaved for 10 rounds with `-benchtime=200ms -benchmem` over the generated forms of `Parse` and `Recognize`
 (left-recursive calculator, JSON, Minilang), `Incremental`, `IncrementalLong` and `Stream`; benchstat compared them.
 Tests: `TestLeftRecursionDependencyMemoRandom`, `TestLeftRecursionDependencyMemoControls`,
-`TestLeftRecursionDependencyMemoUnexamined`,
-`TestLeftRecursionDependencyMemoLinear`, `TestNestedLeaderResultNotReused`, `TestLeftRecursionMemberMemoLinear`,
+`TestLeftRecursionDependencyMemoUnexamined`, `TestLeftRecursionDependencyMemoLinear`,
+`TestLeftRecursionDependencyMemoDefaultBudget`, `TestNestedLeaderResultNotReused`, `TestLeftRecursionMemberMemoLinear`,
 `TestLeftRecursionMemberMemoMatchesNoMemo`, `TestLeftRecursionMemberMemoStale`, `TestLeftRecursionMemberMemoRandom`,
 `TestLeftRecursionMemberMemoRandomRecovering`, `TestGeneratedLeftRecursionDependencyMemo`,
 `TestGeneratedLeftRecursionDependencyMemoControls`, `TestGeneratedLeftRecursionDependencyMemoLinear`,
@@ -244,8 +247,13 @@ position is new in each step of that growth; when it covers the input that later
 each step, which [Conditions for Linear Cost](../../spec/runtime/parsing.md#conditions-for-linear-cost) excludes as
 condition 5. A context with more than 32 leaders of one cycle, or a result with more than six seeds and observations,
 is not memoized, and its calls are evaluated again. The jumps from a seed are a list that a growth scans for one whose
-observations hold; in a shape where every step reads a successful lookahead over another leader
-(`S = &R S "q" / "y"`, `R = &S R "q" / "y"` on `y` and n `q`), the evaluations stay linear but the list grows with
-each step, so the scan is quadratic: generated Go parses n = 1,000, 2,000 and 4,000 in 28, 79 and 281 ms, and the
-engine runs out of the default budget from n = 793. Not measured: grammars with many members called from several
-places, where memoization could cost more than it saves, as no example grammar of the repository has them.
+observations hold. In a shape where every step reads a successful lookahead over another leader
+(`S = &R S "q" / "y"`, `R = &S R "q" / "y"` on `y` and n `q`), each step records a jump from the same seed that
+differs from the earlier ones only in the identities of other seeds that it replays. Recording all of them would make
+the scan quadratic: generated Go would parse n = 1,000, 2,000 and 4,000 in 19, 71 and 274 ms, and the engine would
+run out of the default budget from n = 793. Leaving out the jumps that an earlier one shadows keeps the list from
+growing with n: the times are 2.4, 4.8 and 9.6 ms in generated Go, 3.8, 7.6 and 15 ms in the engine and 4.2, 8.8 and
+19 ms in generated TypeScript, and the engine parses n = 100,000 within the default budget. A list still grows with
+jumps whose observations have different outcomes, one for each combination of outcomes that occurs. Not measured:
+grammars with many members called from several places, where memoization could cost more than it saves, as no
+example grammar of the repository has them.
