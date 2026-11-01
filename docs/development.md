@@ -134,11 +134,7 @@ because `go install zeroparse.dev/zp/cmd/zp@version` refuses a module whose `go.
 parsers (`internal/bench/gen/`) and the test helpers of `internal/gentest/` import the runtime, so `GOWORK=off go build
 ./...` in the checkout builds them against that published version. A change to the runtime that the root module needs is
 therefore published in two commits: the change, then a commit that requires its pseudo-version (`GOWORK=off go get
-zeroparse.dev/zp/runtime@<commit> && GOWORK=off go mod tidy`, then `GOWORK=off go build ./...`). While `go.mod`
-requires the runtime at the placeholder `v0.0.0-00010101000000-000000000000`, `go get` cannot load the module graph, so
-the first bump away from it resolves the pseudo-version outside any module (`go list -m -f '{{.Version}}'
-zeroparse.dev/zp/runtime@<commit>` in an empty directory), sets it with `go mod edit -require`, and then runs
-`GOWORK=off go mod tidy`. A release tags the
+zeroparse.dev/zp/runtime@<commit> && GOWORK=off go mod tidy`, then `GOWORK=off go build ./...`). A release tags the
 runtime first and makes the root module require that tag ([tagging a release](releasing.md#tagging-a-release)).
 
 - A pattern such as `./...` matches the packages of the module of the current directory only, so the root suite is
