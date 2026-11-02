@@ -1589,6 +1589,54 @@ function mergeSkipExpected(a: number[], b: number[]): number[] {
 }
 export const noErrs: SyntaxError[] = [];
 
+/** memoScan is how many entries of a position's chain a lookup walks before it consults the
+ * position's hash index; see runtime/memo_index.go. */
+const memoScan = 32;
+
+/**
+ * memoKeyHash hashes a memo key deterministically, so that budgeted costs do not vary between runs.
+ * Values that are not hashed (nodes) all hash alike and are told apart by the key comparison. The
+ * hash costs one step plus one for each variable of the key, and the characters of string values,
+ * as comparing them would.
+ */
+function memoKeyHash(rule: number, min: number, env: Value[] | null, control: BudgetControl | null): number {
+  let h = 0x811c9dc5;
+  const mix = (x: number): void => {
+    h = Math.imul(h ^ x, 0x01000193);
+    h ^= h >>> 15;
+  };
+  mix(rule);
+  mix(min);
+  if (env !== null) {
+    control?.charge(1 + env.length);
+    for (const v of env) {
+      if (v === null) {
+        mix(0);
+      } else if (typeof v === "string") {
+        mix(v.length);
+        for (let from = 0; from < v.length; from += 128) {
+          const end = Math.min(from + 128, v.length);
+          control?.charge(end - from);
+          for (let i = from; i < end; i++) {
+            mix(v.charCodeAt(i));
+          }
+        }
+      } else if (typeof v === "number") {
+        mix(v | 0); // +0 and -0 are equal
+      } else if (typeof v === "bigint") {
+        mix(Number(BigInt.asIntN(32, v)));
+      } else if (typeof v === "boolean") {
+        mix(v ? 1 : 0);
+      } else {
+        mix(0x7f4a7c15);
+      }
+    }
+  } else {
+    control?.charge(1);
+  }
+  return h >>> 0;
+}
+
 // sameValues reports whether two lists of variable values are equal.
 export function sameValues(a: Value[] | null, b: Value[] | null, control: BudgetControl | null = null): boolean {
   if (a === null || b === null) {
@@ -2246,15 +2294,56 @@ export class Parser {
     return false;
   }
 
-  // memoGet returns the entry for the rule, position, level and variable values.
+  // memoGet returns the entry for the rule, position, level and variable values. A lookup walks the
+  // first memoScan entries of the position's chain and then asks the position's hash index, so
+  // it costs the size of its key and not the length of the chain.
   memoGet(rule: number, pos: number, min: number, env: Value[] | null): MemoEntry | null {
-    for (let e = this.slots[pos]; e; e = e.next) {
+    let e = this.slots[pos] || null;
+    for (let n = 0; e && n < memoScan; e = e.next, n++) {
       this.spend();
       if (e.rule === rule && e.min === min && sameValues(e.env, env, this.control)) {
         return e;
       }
     }
-    return null;
+    if (!e) {
+      return null;
+    }
+    const ix = this.memoIndexAt(pos);
+    return this.memoProbe(ix, memoKeyHash(rule, min, env, this.control), (x) => x.rule === rule && x.min === min && sameValues(x.env, env, this.control));
+  }
+
+  /** memoIndex holds the hash index of each position whose chain has more than memoScan entries. */
+  memoIndex: Map<number, Map<number, MemoEntry>> | null = null;
+  /** memoSlot is the slot where the last memoProbe found its entry, or would store one. */
+  memoSlot = 0;
+
+  // memoProbe returns the entry that match accepts among the entries of ix at h and above, leaving
+  // in memoSlot the slot where it is, or the free slot where it would be stored.
+  memoProbe(ix: Map<number, MemoEntry>, h: number, match: (x: MemoEntry) => boolean): MemoEntry | null {
+    for (let slot = h;; slot = (slot + 1) >>> 0) {
+      const x = ix.get(slot);
+      if (x === undefined || match(x)) {
+        this.memoSlot = slot;
+        return x === undefined ? null : x;
+      }
+    }
+  }
+
+  // memoIndexAt returns the hash index of the chain at pos, building it on first use.
+  memoIndexAt(pos: number): Map<number, MemoEntry> {
+    if (this.memoIndex === null) {
+      this.memoIndex = new Map();
+    }
+    let ix = this.memoIndex.get(pos);
+    if (ix === undefined) {
+      ix = new Map();
+      for (let e = this.slots[pos] || null; e; e = e.next) {
+        this.memoProbe(ix, memoKeyHash(e.rule, e.min, e.env, this.control), () => false);
+        ix.set(this.memoSlot, e);
+      }
+      this.memoIndex.set(pos, ix);
+    }
+    return ix;
   }
 
   // memoPut stores e under the key, replacing an entry with the same key.
@@ -2262,18 +2351,50 @@ export class Parser {
     e.rule = rule;
     e.min = min;
     e.env = env;
+    const same = (x: MemoEntry): boolean => x === e || (x.rule === rule && x.min === min && sameValues(x.env, env, this.control));
     let prev: MemoEntry | null = null;
-    for (let x = this.slots[pos]; x; prev = x, x = x.next) {
+    let x = this.slots[pos] || null;
+    let replaced: MemoEntry | null = null;
+    for (let n = 0; x && n < memoScan; prev = x, x = x.next, n++) {
       this.spend();
-      if (x.rule === rule && x.min === min && sameValues(x.env, env, this.control)) {
-        e.next = x.next;
-        if (prev === null) {
-          this.slots[pos] = e;
-        } else {
-          prev.next = e;
-        }
-        return;
+      if (same(x)) {
+        replaced = x;
+        break;
       }
+    }
+    let ix: Map<number, MemoEntry> | undefined;
+    let ixSlot = 0;
+    if (replaced === null && x) {
+      // A long chain: the index finds the entry to replace.
+      ix = this.memoIndexAt(pos);
+      replaced = this.memoProbe(ix, memoKeyHash(rule, min, env, this.control), same);
+      ixSlot = this.memoSlot;
+      if (replaced !== null) {
+        prev = null;
+        for (let y = this.slots[pos] || null; y !== replaced; prev = y, y = y!.next) {
+          this.spend();
+        }
+      }
+    } else if (replaced !== null) {
+      // The entry replaced among the first of a long chain is indexed too.
+      ix = this.memoIndex?.get(pos);
+      if (ix !== undefined) {
+        const r = replaced;
+        this.memoProbe(ix, memoKeyHash(r.rule, r.min, r.env, this.control), (y) => y === r);
+        ixSlot = this.memoSlot;
+      }
+    }
+    if (ix !== undefined) {
+      ix.set(ixSlot, e);
+    }
+    if (replaced !== null) {
+      e.next = replaced.next;
+      if (prev === null) {
+        this.slots[pos] = e;
+      } else {
+        prev.next = e;
+      }
+      return;
     }
     if (this.slots.length === 0) {
       // One slot per position, allocated at once: writes far beyond the end of an array would
